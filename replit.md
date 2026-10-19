@@ -1,44 +1,52 @@
-# [Project name]
+# Ayatrisya
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+Ayatrisya is Ametesx's AI workspace and creative productivity platform. The current deliverable is a web UI preview, not an operational AI service.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
+- Managed workflow: `artifacts/ayatrisya: web`
+- `pnpm --filter @workspace/ayatrisya run typecheck` — frontend TypeScript check
+- `PORT=25517 BASE_PATH=/ pnpm --filter @workspace/ayatrisya run build` — production frontend build
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- The UI does not require a database or the template API server.
 
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
+- Web UI: React, Vite, Wouter, Tailwind CSS, Lucide icons
+- The shared Express/OpenAPI/database packages are untouched template infrastructure.
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/ayatrisya` — public landing page and UI-only application
+- `artifacts/ayatrisya/src/data` — illustrative demo fixtures
+- `artifacts/ayatrisya/src/index.css` — theme and shared styling
+- The full user brief is preserved in `.local/conversation-workspace/files/attached_assets/`.
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- Follow the user’s development sequence: finish the UI, then integrate Ametesx's own trained AI models, then implement local-first storage, desktop filesystem access, and optional Google Drive support.
+- Do not connect third-party AI inference or image-generation APIs. Ametesx intends to train its own models.
+- Keep demo state in memory. Do not add a cloud database, persistent storage engine, OAuth, or paid subscriptions during the UI phase.
+- Do not imply that planned models, authentication, research, sync, downloads, or local filesystem operations are operational. Use explicit preview/unavailable states.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+Public landing, authentication previews, onboarding, chat, research, coding/desktop preview, image studio, documents, presentations, projects, library, settings, and account UI.
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- Preserve working code and assets when improving this app.
+- Use a premium dark-first graphite and violet-indigo identity, restrained motion, consistent icons, and accessible responsive layouts.
+- Never invent a historical/Sanskrit meaning or trademark claim for Ayatrisya.
+- Never use fake performance claims, reviews, statistics, citations, downloads, or authenticated-account success.
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- Build commands need the artifact's `PORT` and `BASE_PATH`; managed workflows inject them for previews.
+- Real local project coding requires a future desktop application. The browser preview must never claim arbitrary local-folder access.
+- Illustrative content and deterministic demo responses must stay visibly labeled.
 
 ## Pointers
 
