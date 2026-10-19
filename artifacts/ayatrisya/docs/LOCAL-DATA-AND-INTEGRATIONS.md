@@ -45,6 +45,43 @@ unavailable sign-in. Real Google/email sign-in, registration, reset emails and
 verification require owner-supplied configuration and live testing. No test here
 proves these production identity flows.
 
+## GitHub and Figma account connections
+
+Connections are optional and belong to the signed-in Firebase account. The OAuth
+callback and provider-token exchange run on the separate API service at
+`/api/integrations/{github|figma}/callback`. Register the exact HTTPS callback
+paths on each provider app for the preview and published app origins you use.
+Set `AYATRISYA_APP_ORIGIN` to the exact published HTTPS origin in production.
+The frontend and API service must share that origin.
+
+Use Replit Secrets for `GITHUB_OAUTH_CLIENT_ID`, `GITHUB_OAUTH_CLIENT_SECRET`,
+`FIGMA_OAUTH_CLIENT_ID`, and `FIGMA_OAUTH_CLIENT_SECRET`. Keep these server-only;
+never give them a `VITE_` prefix or put them in an `.env` file. The existing
+`SESSION_SECRET` encrypts short-lived OAuth state and provider sessions in
+HttpOnly cookies. The server verifies Firebase ID tokens against Google's public
+Firebase signing keys and binds each provider session to that Firebase user ID.
+Provider tokens do not go to browser JavaScript or the local content database.
+
+GitHub uses an OAuth App with the `read:user` scope. Register its homepage and
+callback in GitHub Developer settings; GitHub permits up to ten callback URLs.
+Figma uses an OAuth app with the `current_user:read` scope and the Figma REST API
+OAuth flow. Figma requires the callback URI to match the app registration. A
+draft Figma app can only be used by its creators/team; a public Figma app must
+be published and approved by Figma before other users can authorize it.
+
+These initial connections verify account identity only. They **do not** read
+GitHub repositories or Figma design files, and they do not send or sync Ayatrisya
+content. GitHub and Figma access tokens are encrypted in short-lived browser
+cookies and are refreshed server-side when the provider supports it. Disconnect
+clears Ayatrisya's session; revoke its authorization separately in the provider's
+security settings to invalidate the provider grant too.
+
+Set `FIREBASE_PROJECT_ID` on the API service to the same Firebase project as
+`VITE_FIREBASE_PROJECT_ID`. Missing OAuth app settings are reported as not
+configured; the app does not simulate a successful link. Browser tests cannot
+confirm a live provider grant without owner-created OAuth apps and an authorized
+test account.
+
 ## Optional user-owned Google Drive
 
 `VITE_GOOGLE_CLIENT_ID` is a public OAuth Web Client ID. Enable the Drive API in

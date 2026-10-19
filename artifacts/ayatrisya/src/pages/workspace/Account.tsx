@@ -6,6 +6,7 @@ import { useAuth } from '@/integrations/firebase/AuthProvider';
 import { usePrefs } from '@/hooks/use-prefs';
 import { repository } from '@/storage/repository';
 import { errMsg } from '@/lib/format';
+import { ProviderConnections } from '@/components/ProviderConnections';
 
 export function AccountPage({ notify, goto }: { notify: (m: string) => void; goto: (h: string) => void }) {
   const { user, loading, configured, error, sendVerification, refreshUser, signOut } = useAuth();
@@ -21,6 +22,7 @@ export function AccountPage({ notify, goto }: { notify: (m: string) => void; got
         <Button type="submit">Save</Button>
       </form>
     </section>
+    <ProviderConnections user={user} />
     {loading ? <p className="text-sm text-slate-400" role="status">Checking sign-in…</p> : user ? <section className="rounded-xl border border-white/[.075] bg-[#15171e] p-5" data-testid="account-details">
       <h2 className="text-sm font-semibold">Sign-in</h2>
       <dl className="mt-3 space-y-2 text-sm"><div><dt className="text-[11px] text-slate-500">Email</dt><dd>{user.email}</dd></div><div><dt className="text-[11px] text-slate-500">Verification</dt><dd>{user.emailVerified ? 'Verified' : 'Not verified'}</dd></div></dl>
