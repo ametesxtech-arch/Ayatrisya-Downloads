@@ -1,0 +1,817 @@
+# AYATRISYA — MASTER UI, APPLICATION & STORAGE BUILD PROMPT
+## By Ametesx | Premium AI Workspace | Production-Quality Frontend
+
+Act as a principal frontend engineer, product designer, application architect, accessibility specialist, and storage engineer.
+
+Build **Ayatrisya**, an original, premium AI workspace under the parent brand Ametesx. Create a complete, polished, responsive, functional application—not merely a landing page or static mockup.
+
+The application UI and storage system will be developed in Replit. A separate engineering environment is developing Ayatrisya's own AI models. Therefore, design the application around clean model interfaces without substituting third-party AI APIs or pretending that unfinished models already work.
+
+Do not stop after planning. Inspect the existing project, preserve working features, implement the application in logical phases, run available tests, fix errors, and report what is genuinely functional.
+
+---
+
+# 1. NON-NEGOTIABLE PROJECT RULES
+
+1. Product name: **Ayatrisya**. Parent brand: **Ametesx**. Keep spelling consistent.
+2. Do not redesign the product into a generic ChatGPT clone.
+3. Do not integrate OpenAI, Gemini, Claude, Groq, OpenRouter, Hugging Face Inference API, or other third-party AI inference APIs.
+4. Do not create fake AI responses and present them as real model output.
+5. Do not claim Google Drive synchronization, authentication, file upload, or model inference works until it has been tested end to end.
+6. Build functional local storage before implementing Google Drive synchronization.
+7. Use modular components, typed interfaces, clean error handling, and reusable design tokens.
+8. Never expose Firebase service-account credentials, private keys, OAuth client secrets, or tokens in frontend code.
+9. Never store private user content in an Ayatrisya-owned database by default.
+10. Do not hardcode fake usage statistics, fabricated model accuracy, fake files, or imaginary sync statuses.
+11. Do not remove existing project functionality without inspecting its dependencies and explaining the reason.
+12. Make the UI usable on desktop, tablet, and mobile.
+
+# 2. PRODUCT VISION
+
+Ayatrisya should feel like a premium, futuristic AI operating environment combining:
+- A powerful conversational workspace.
+- An organized project and knowledge library.
+- Image-generation and 3D-generation workspaces.
+- Music generation and voice interaction.
+- A document and presentation workspace.
+- A coding workspace that connects to the future Ayatrisya desktop application.
+- Private, local-first project and conversation storage.
+- Optional Google Drive backup and synchronization.
+
+The experience should feel cinematic and distinctive, but remain fast, readable, accessible, and practical.
+
+## Visual direction
+
+Use:
+- A refined dark interface.
+- Deep charcoal and midnight backgrounds.
+- Violet and indigo accents.
+- Restrained cyan highlights.
+- Subtle glassmorphism.
+- Fine borders, layered surfaces, and carefully controlled glow.
+- Smooth, purposeful transitions.
+- Premium typography and consistent spacing.
+- Elegant empty states and polished loading states.
+
+Avoid:
+- Excessive neon.
+- Huge gradients behind every element.
+- Excessive rounded cards.
+- Cluttered sidebars.
+- Constant animations.
+- Fake 3D elements that slow down the app.
+- Oversized typography inside working interfaces.
+- Copying another product's exact layout.
+
+Support dark mode as the primary appearance. Add a light theme if it can be implemented consistently.
+
+Respect reduced-motion preferences and maintain sufficient text contrast.
+
+# 3. REQUIRED TECHNICAL ARCHITECTURE
+
+First inspect the existing repository and retain its established framework if it is working correctly.
+
+If a new setup is required, prefer:
+- React.
+- TypeScript.
+- Vite.
+- Tailwind CSS or the project's existing styling solution.
+- React Router or an equivalent routing approach.
+- Firebase Authentication for identity.
+- IndexedDB for browser-local application data.
+- A small typed persistence abstraction.
+- A secure OAuth flow for optional Google Drive integration.
+
+Use the existing package manager and lockfile. Do not change package managers unnecessarily.
+
+Separate the application into these logical modules:
+
+`src/app/`
+- Application entry.
+- Routes.
+- Providers.
+- Authentication guards.
+- Error boundaries.
+
+`src/components/`
+- Shared buttons, dialogs, menus, cards, forms, tooltips, notifications, and navigation.
+
+`src/features/auth/`
+- Login.
+- Registration.
+- Google sign-in.
+- Password recovery.
+- Verification states.
+- Guest/demo mode.
+
+`src/features/chat/`
+- Conversation interface.
+- Message rendering.
+- Composer.
+- Attachments.
+- Model selector.
+- Chat history.
+
+`src/features/projects/`
+- Project list.
+- Project details.
+- Project files and metadata.
+
+`src/features/library/`
+- Local files.
+- Search and organization.
+- Storage status.
+
+`src/features/tools/`
+- Image studio.
+- 3D studio.
+- Music studio.
+- Voice.
+- Documents and presentations.
+- Coding workspace.
+
+`src/features/settings/`
+- Appearance.
+- Privacy.
+- Storage.
+- Account.
+- Model preferences.
+
+`src/storage/`
+- IndexedDB implementation.
+- Repository interfaces.
+- Migrations.
+- Backup and restore.
+- Quota estimation.
+- Data deletion.
+
+`src/integrations/firebase/`
+- Authentication configuration.
+- Auth services.
+- Safe error mapping.
+
+`src/integrations/google-drive/`
+- OAuth integration.
+- Drive file operations.
+- Sync queue.
+- Conflict handling.
+- Retry logic.
+
+`src/ai/`
+- Model interface definitions.
+- Model connection configuration.
+- Streaming response interface.
+- Capability detection.
+- Error states.
+
+`src/styles/`
+- Design tokens.
+- Themes.
+- Global styles.
+
+`src/tests/`
+- Unit tests.
+- Storage tests.
+- Authentication tests.
+- Integration tests.
+
+Keep components small and responsibilities clear. Avoid a single enormous application component.
+
+# 4. SCREEN ONE — CINEMATIC OPENING
+
+Create a memorable Ayatrisya splash experience.
+
+Requirements:
+- A custom Ayatrisya wordmark.
+- A clean emblem or abstract geometric logo.
+- A subtle animated background.
+- Elegant lighting and depth.
+- A short, smooth entrance animation.
+- A clear transition to authentication or the workspace.
+
+Do not keep users trapped in an animation. Provide a skip option or make the animation brief.
+
+Persist a preference to reduce or skip the introduction after the first visit.
+
+# 5. SCREEN TWO — AUTHENTICATION
+
+Create a premium authentication experience with:
+- Continue with Google.
+- Email and password sign-in.
+- Create account.
+- Confirm password where appropriate.
+- Forgot password.
+- Email verification state.
+- Sign out.
+- Loading and error states.
+- Privacy and terms links.
+
+Implement real Firebase Authentication using environment variables and the official SDK.
+
+Requirements:
+- No fake successful login.
+- Handle invalid credentials, network failures, duplicate accounts, and unverified email states.
+- Never expose secret credentials.
+- Keep the Firebase configuration documented.
+- Ensure authentication guards prevent signed-out users from accessing private account screens.
+
+## Guest mode
+
+Offer a clearly labelled guest/demo option.
+
+Guest mode must work without pretending that a Firebase account exists. Guest data should be local to that browser profile. Explain that guest data may be lost if the user clears browser storage or resets the browser.
+
+Allow a guest to sign in later without silently discarding their local content. Provide a carefully tested migration or import process.
+
+# 6. SCREEN THREE — ONBOARDING
+
+After the first successful login, present a concise onboarding flow.
+
+Collect only useful preferences:
+- Display name, optional.
+- Theme.
+- Preferred interface language.
+- Default chat mode.
+- Preferred model, when available.
+- Local-only or optional Google Drive storage preference.
+
+Include a clear privacy explanation:
+
+- Conversations and project files are stored locally by default.
+- Optional Drive synchronization stores user-authorized files in the user's own Google Drive.
+- Requests sent to a remote Ayatrisya model server must reach that server for processing.
+- Local storage is subject to browser/device limitations.
+- Ayatrisya must not silently upload user content or train models on private content.
+
+Persist onboarding completion locally. Keep optional preferences in the user's local profile unless a user explicitly enables an appropriate sync feature.
+
+# 7. MAIN WORKSPACE LAYOUT
+
+Build the primary workspace around three areas:
+
+## A. Left sidebar
+
+Include:
+- Ayatrisya logo and wordmark.
+- New Chat.
+- Search conversations.
+- Recent conversations.
+- Projects.
+- Tools.
+- Library.
+- Settings.
+- Storage and sync status.
+- Account menu.
+
+Sidebar behavior:
+- Expand/collapse on desktop.
+- Slide-out drawer on mobile.
+- Persist the collapsed state locally.
+- Support keyboard navigation.
+- Show clear active states.
+- Avoid overcrowding.
+
+Conversation history must come from the real storage repository, not hardcoded example entries.
+
+## B. Top navigation
+
+Include:
+- Current page or project title.
+- Model selector.
+- Chat mode selector.
+- Optional connection status.
+- Account/avatar menu.
+- Relevant contextual actions.
+
+Model choices:
+- **V1 Fast**.
+- **V2 Best Result**.
+
+These are product labels, not proof that either model exists or is ready. Load actual model availability from a capability/configuration interface. If the corresponding model endpoint is not configured or the model is not ready, display an accurate unavailable state.
+
+Never route to a third-party model as a fallback.
+
+Chat modes:
+- Normal.
+- Savage.
+- Joke.
+
+These modes should influence the model's instruction/configuration once the real Ayatrisya model integration is available. Do not fake different AI personalities by hardcoding responses.
+
+## C. Main content
+
+Create a spacious central area with:
+- Welcome message.
+- Suggested starting prompts.
+- Conversation messages.
+- Code, text, and Markdown rendering.
+- Copy message.
+- Regenerate response when supported.
+- Edit and resubmit a user message where supported.
+- Clear loading, error, and retry states.
+
+When no AI model is configured, show a friendly setup/unavailable state. Never fabricate a generated answer to make the interface appear functional.
+
+# 8. CHAT COMPOSER
+
+Design a premium message composer anchored at the bottom of the workspace.
+
+Include:
+- Multiline text input.
+- Send button.
+- Stop generation button when streaming is supported.
+- Attachment menu.
+- Image, document, and audio attachment options as supported.
+- Voice input.
+- Model selector access.
+- Mode selector access.
+- Character/token indicators only when meaningful and supported.
+
+Requirements:
+- Enter sends the message when appropriate.
+- Shift+Enter inserts a newline.
+- Composer grows to a sensible maximum height.
+- Show attachment previews and allow removal.
+- Validate file types and sizes.
+- Provide clear upload progress and error handling.
+- Support keyboard and screen-reader usage.
+
+Keep attachments local unless the user deliberately submits them to a model-processing endpoint or selects an explicit sync operation.
+
+# 9. AI MODEL CONNECTION LAYER
+
+Antigravity is developing Ayatrisya's own models separately.
+
+Build a provider-neutral interface for connecting those models without integrating any third-party AI service.
+
+For example, define interfaces conceptually equivalent to:
+
+- `getModelCapabilities()`
+- `generateResponse(messages, options)`
+- `cancelGeneration(requestId)`
+- `getConnectionHealth()`
+- `transcribeAudio(audio, options)`
+- `synthesizeSpeech(text, options)`
+
+Use typed requests and responses, and separate UI code from model transport code.
+
+Requirements:
+- Configure an optional self-hosted Ayatrisya endpoint using environment configuration.
+- Support streamed responses if the backend provides streaming.
+- Handle network errors, timeout, cancellation, invalid responses, and model unavailability.
+- Do not hardcode localhost URLs into production builds.
+- Do not expose server secrets in the browser.
+- Never send content to an external AI provider.
+- Do not store prompt bodies in application logs.
+- Never represent mock output as real model output.
+
+Provide an optional developer-only mock mode for visual testing. Clearly mark it as **DEMO — NOT REAL AI**, keep it disabled in production, and never mix its messages with real conversations without a visible label.
+
+# 10. LOCAL-FIRST STORAGE SYSTEM
+
+This is a core product feature, not an afterthought.
+
+## Browser storage
+
+Use IndexedDB through a well-maintained library or a small, tested repository abstraction.
+
+Persist:
+- Conversations and messages.
+- Conversation titles and timestamps.
+- User interface preferences.
+- Project metadata.
+- User-created notes.
+- Attachment metadata.
+- Local references to files where browser permissions allow them.
+- Sync queue and synchronization metadata.
+
+Use object stores with versioned schema migrations.
+
+Recommended conceptual stores:
+- `profiles`
+- `conversations`
+- `messages`
+- `projects`
+- `projectItems`
+- `attachments`
+- `preferences`
+- `syncQueue`
+- `syncMetadata`
+
+Avoid storing large base64 strings inside conversation records. Store binary blobs separately when appropriate and maintain references.
+
+Requirements:
+- IndexedDB transactions for related changes.
+- Search and pagination for large histories.
+- Data integrity checks.
+- Safe deletion and cleanup.
+- Export and restore.
+- Graceful handling of storage failures.
+- Schema migrations.
+- A local storage repository interface that can be unit tested.
+
+Do not promise a guaranteed 4 GB quota. Browser quotas vary by browser, device, available disk space, and storage policies. Use `navigator.storage.estimate()` when supported and report estimates accurately.
+
+Request persistent browser storage when appropriate, but never claim the request guarantees unlimited or permanent storage.
+
+## Local storage interface
+
+Create a Storage Settings page showing:
+- Storage mode.
+- Approximate used storage when available.
+- Approximate available quota when available.
+- Local conversation count.
+- Local project count.
+- Drive connection status.
+- Last successful sync, if known.
+- Pending sync operations, if any.
+- Export data.
+- Import backup.
+- Clear local data with explicit confirmation.
+
+Never show invented numbers.
+
+## Backup and restore
+
+Implement:
+- Export conversations and supported metadata to a documented backup format.
+- Export project metadata and user-owned content where technically permitted.
+- Import and validate backup files.
+- Detect duplicate IDs.
+- Offer merge or replace options.
+- Confirm destructive actions.
+- Handle malformed or incompatible backups safely.
+
+A backup is not a sync operation. Explain the difference in the UI.
+
+# 11. GOOGLE DRIVE — OPTIONAL USER-OWNED SYNC
+
+Google Drive integration is optional. The application must remain fully useful without it.
+
+Implement Drive integration only after local storage is stable and tested.
+
+## Authentication and permissions
+
+- Use an appropriate Google OAuth flow.
+- Request the narrowest viable scope.
+- Prefer `drive.file` when compatible with the required application workflow.
+- Do not request full Drive access without a demonstrated technical need and explicit approval.
+- Do not place client secrets in frontend source code.
+- Do not log OAuth tokens.
+- Do not send files through an Ayatrisya-owned content database as an intermediate step.
+
+If the required OAuth configuration cannot be completed in Replit, build the integration boundary, provide exact setup instructions, and clearly mark it as not yet connected. Do not simulate a successful connection.
+
+## Drive folder
+
+Offer a user-authorized Ayatrisya folder in the user's Google Drive.
+
+Organize supported content into clear folders, for example:
+- `Ayatrisya/Backups`
+- `Ayatrisya/Projects`
+- `Ayatrisya/Exports`
+
+Create folders through the actual Drive API only after successful authorization. Store returned Drive file IDs; never guess them.
+
+Do not upload all files automatically on first connection. Explain what will sync and obtain user consent.
+
+## Synchronization
+
+Implement a controlled sync engine:
+- Upload new or modified eligible files.
+- Download changes where the user has authorized bidirectional sync.
+- Track remote file IDs and modification metadata.
+- Maintain a pending operation queue.
+- Retry transient failures safely.
+- Detect conflicts.
+- Avoid infinite upload/download loops.
+- Prevent duplicate files where possible.
+- Display progress and actionable error messages.
+- Allow pause, resume, and manual sync.
+- Show the last confirmed successful operation.
+- Never label a queued or failed upload as completed.
+
+Handle deleted files and conflict resolution explicitly. Do not silently overwrite a newer version.
+
+Use stable identifiers, checksums where appropriate, and version metadata. Do not assume Drive metadata alone guarantees conflict-free synchronization.
+
+## Cross-device behavior
+
+Explain the distinction:
+- Browser local storage is device/browser-specific.
+- Google Drive provides cross-device access only for content that has actually synchronized successfully.
+- Desktop files remain on the computer unless the user enables a supported sync or backup action.
+- Drive permissions and offline availability depend on Google and the device.
+
+Do not promise instant or perfect synchronization.
+
+# 12. PROJECTS AND FILE LIBRARY
+
+Build a functional project dashboard.
+
+Project features:
+- Create, rename, archive, and delete projects.
+- Add descriptions and tags.
+- Sort and search.
+- Display recent activity from actual metadata.
+- Open project details.
+- Attach locally stored files where supported.
+- Export projects.
+- Show local versus Drive-backed status accurately.
+
+Library features:
+- File and note list.
+- Search.
+- Filter by type and project.
+- Sort by date, name, or size when known.
+- Rename and delete user-owned items.
+- Show file size when available.
+- Preview supported formats.
+- Download or export files.
+- Clearly indicate when a file exists only as metadata or a reference and is not locally available.
+
+Do not fabricate project content, file previews, or synchronization states.
+
+# 13. TOOL WORKSPACES
+
+Build distinct, polished interfaces for each tool. UI readiness must be separate from model readiness.
+
+## A. Image Studio
+
+Include:
+- Prompt input.
+- Aspect ratio.
+- Image dimensions where supported.
+- Generation history.
+- Output preview.
+- Download and save.
+- Clear model availability status.
+
+Do not claim images were generated unless a real image model returns them.
+
+## B. 3D Studio
+
+Include:
+- Prompt input.
+- Supported output-format selector.
+- Generation status.
+- 3D preview area.
+- Orbit, zoom, and reset controls where an actual viewer is integrated.
+- Export controls only for actual available files.
+
+Do not display a fake 3D model as a generated result.
+
+## C. Music Studio
+
+Include:
+- Text description input.
+- Duration and format options only when supported.
+- Playback controls.
+- Generation progress.
+- Download and save.
+- Error and unavailable states.
+
+Do not simulate generated audio.
+
+## D. Voice Studio
+
+Include:
+- Microphone permission request.
+- Record, stop, and playback controls.
+- Audio upload.
+- Transcription text area.
+- Text-to-speech input.
+- Speech playback.
+- Download generated audio.
+- Privacy notice.
+- Clear STT/TTS model readiness.
+
+Use the real Ayatrisya STT and TTS interfaces when available. Do not silently use external transcription or speech-generation services. Keep gTTS disabled by default and do not integrate it into the primary experience.
+
+## E. Documents and Presentations
+
+Build a workspace for user-created documents and presentation projects.
+
+Include:
+- Project creation.
+- Titles and descriptions.
+- Editor or editable content area.
+- Save and reopen.
+- Export to supported formats when a real export implementation exists.
+- Templates and layouts.
+- Local storage status.
+
+Do not advertise a finished PPT or document generator until its generation and export pipeline is connected and tested.
+
+## F. Coding Workspace
+
+Build a coding-project overview and a clear handoff to the future Ayatrisya desktop application.
+
+The web UI may:
+- Display project metadata.
+- Browse user-authorized project files.
+- Edit supported text files where safe.
+- Create a coding task.
+- Export a task specification.
+- Show desktop-app connection status if a real protocol is implemented.
+
+The desktop app will eventually provide full local project-folder access, file editing, and explicitly authorized tools.
+
+Do not pretend a browser can safely access arbitrary folders or execute terminal commands without permissions.
+
+Provide a prominent **Get Ayatrisya Desktop** action with a configurable download URL. If no actual release URL exists, show an honest coming-soon state instead of a broken link.
+
+# 14. SETTINGS
+
+Build the following settings sections.
+
+## Appearance
+- Dark/light theme.
+- Accent preference if supported.
+- Sidebar behavior.
+- Reduced motion.
+
+## AI preferences
+- V1 Fast and V2 Best Result selection.
+- Default chat mode.
+- Available model status.
+- Local/self-hosted endpoint configuration, restricted to appropriate developer settings.
+
+## Privacy
+- Local-first storage explanation.
+- Data export.
+- Data deletion.
+- Optional sync controls.
+- Explanation of remote inference processing.
+- No automatic private-data training.
+
+## Storage and sync
+- Local storage estimates.
+- Drive connection.
+- Folder and sync status.
+- Sync controls.
+- Conflict resolution.
+- Backup and restore.
+
+## Account
+- Profile.
+- Sign-in status.
+- Verification status.
+- Sign out.
+- Account deletion instructions or implementation only if properly supported.
+
+Every setting must have a real effect or be clearly identified as unavailable. Do not create decorative controls that do nothing.
+
+# 15. RESPONSIVE DESIGN AND ACCESSIBILITY
+
+Desktop:
+- Spacious workspace.
+- Persistent sidebar.
+- Keyboard shortcuts.
+- Contextual tool panels.
+
+Tablet:
+- Adaptive navigation.
+- Flexible tool panels.
+- Properly sized touch targets.
+
+Mobile:
+- Drawer navigation.
+- Bottom-anchored composer.
+- Responsive cards and dialogs.
+- No horizontal overflow.
+- Safe-area support.
+- Comfortable touch targets.
+
+Accessibility:
+- Semantic HTML.
+- Keyboard navigation.
+- Visible focus states.
+- Accessible dialog behavior.
+- Form labels and validation.
+- Screen-reader announcements for important status changes.
+- Adequate color contrast.
+- Reduced-motion support.
+
+# 16. PERFORMANCE AND SECURITY
+
+Implement:
+- Route-level lazy loading where appropriate.
+- Optimized asset delivery.
+- Avoid unnecessary rerenders.
+- Paginated conversation history.
+- Efficient storage queries.
+- Input validation.
+- Safe Markdown and code rendering.
+- Sanitization of untrusted HTML.
+- File type and size checks.
+- Dependency review.
+- Safe error boundaries.
+- No secrets in browser bundles.
+- No prompt or file content in diagnostic logs.
+- Confirmation for destructive actions.
+
+Never execute uploaded or generated files automatically.
+
+# 17. TESTING AND VERIFICATION
+
+Add tests for:
+- IndexedDB CRUD operations.
+- Schema migrations.
+- Conversation persistence after refresh.
+- Project creation and deletion.
+- Backup export/import.
+- Duplicate backup handling.
+- Storage quota failures.
+- Authentication state handling.
+- Guest mode.
+- Model unavailable states.
+- Streaming and cancellation where supported.
+- File validation.
+- Drive sync queue and conflict handling.
+- Privacy-sensitive logging.
+- Responsive layout and navigation.
+
+Use mocked Firebase and Drive boundaries for unit tests only. Clearly separate these tests from live integration tests.
+
+Perform real end-to-end tests for Firebase and Drive only when valid configuration and credentials are provided. Never claim a live integration passed merely because a mock test passed.
+
+Run the project's build, lint, type checks, and test suite. Fix errors before declaring the build complete.
+
+# 18. REQUIRED IMPLEMENTATION ORDER
+
+Work in this sequence:
+
+**Phase 1 — Repository audit**
+Inspect the existing application, framework, routes, styling, authentication, storage, and dependencies. Report what already works and what needs repair.
+
+**Phase 2 — Design system**
+Create design tokens, typography, navigation, buttons, dialogs, forms, themes, and responsive layouts.
+
+**Phase 3 — Main UI**
+Implement splash, authentication screens, onboarding, workspace, chat, projects, library, tools, and settings.
+
+**Phase 4 — Local storage**
+Implement IndexedDB repositories, migrations, persistence, export/import, storage estimates, and tests.
+
+**Phase 5 — Firebase authentication**
+Connect real sign-in, account creation, password recovery, verification, and sign-out. Verify each flow.
+
+**Phase 6 — Model integration boundary**
+Create the typed interfaces needed for Ayatrisya's own models. Add accurate model status and error states. Do not use third-party AI APIs.
+
+**Phase 7 — Google Drive**
+Implement OAuth, folder creation, file operations, sync queue, and conflict handling. Test with an authorized account.
+
+**Phase 8 — Tool workspaces**
+Complete Image, 3D, Music, Voice, Documents, Presentations, and Coding screens. Connect only capabilities that actually exist.
+
+**Phase 9 — Quality assurance**
+Test the entire app, fix visual and functional issues, and verify production build configuration.
+
+Do not build the entire application as one enormous component. Complete each phase cleanly and keep the project runnable after each significant change.
+
+# 19. FINAL ACCEPTANCE CRITERIA
+
+The application is not complete until:
+
+- The interface is polished and responsive.
+- Navigation and forms function.
+- Authentication is real when configured.
+- Conversations and projects persist locally.
+- Refreshing the browser does not unexpectedly lose stored records.
+- Export and import work with validation.
+- Storage estimates are accurate when available.
+- Drive operations are backed by real API responses.
+- Model integrations call only configured Ayatrisya-owned infrastructure.
+- No external AI inference APIs are used.
+- No fake outputs are presented as real AI results.
+- All unavailable features have honest states.
+- No private content is silently uploaded.
+- Build, type checks, and feasible automated tests pass.
+
+# 20. FINAL DELIVERY REPORT
+
+When finished, report:
+1. What was already present.
+2. What you implemented.
+3. Files and architecture changed.
+4. Authentication status.
+5. Local storage status.
+6. Google Drive status and which live flows were tested.
+7. AI integration status.
+8. Responsive and accessibility checks.
+9. Build and test results.
+10. Known limitations.
+11. Required environment variables and setup steps.
+12. Exact next steps to connect the separately developed Ayatrisya models.
+
+Separate these statuses:
+- Implemented.
+- Unit-tested.
+- Integration-tested.
+- Production-ready.
+
+Do not claim success without evidence.
+
+**Begin by auditing the existing repository, then build the design system and main workspace. Preserve working functionality and continue through the phases without substituting mock features for real implementations.**

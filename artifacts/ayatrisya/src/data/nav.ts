@@ -1,0 +1,16 @@
+export const tools = [
+  { name: 'Chat', href: '/workspace', detail: 'Think through a question' },
+  { name: 'Research notes', href: '/workspace/research', detail: 'Collect and organise notes' },
+  { name: 'Conversation history', href: '/workspace/history', detail: 'Pin, archive, export, delete' },
+  { name: 'Coding', href: '/workspace/coding', detail: 'Tasks and desktop handoff' },
+  { name: 'Image studio', href: '/workspace/images', detail: 'Image model status' },
+  { name: '3D studio', href: '/workspace/3d', detail: '3D model status' },
+  { name: 'Music studio', href: '/workspace/music', detail: 'Music model status' },
+  { name: 'Voice studio', href: '/workspace/voice', detail: 'Record, play back, local audio' },
+  { name: 'Documents', href: '/workspace/documents', detail: 'Write and organise' },
+  { name: 'Presentations', href: '/workspace/presentations', detail: 'Slides stored as JSON' },
+  { name: 'Projects', href: '/workspace/projects', detail: 'Plans, notes and files' },
+  { name: 'Library', href: '/workspace/library', detail: 'Everything stored in this browser' },
+  { name: 'Storage and backup', href: '/workspace/storage', detail: 'Usage, export, import' },
+  { name: 'Settings', href: '/workspace/settings', detail: 'Appearance, models, privacy' },
+];

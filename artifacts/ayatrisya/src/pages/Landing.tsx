@@ -5,7 +5,6 @@ import {
   ArrowRight,
   ArrowUpRight,
   Code2,
-  Download,
   FileText,
   FolderKanban,
   Globe2,
@@ -19,7 +18,8 @@ import {
   ShieldCheck,
   Sparkles,
 } from 'lucide-react';
-import { Button, Eyebrow, Panel } from '@/components/Primitives';
+import { DesktopButton } from '@/components/DesktopButton';
+import { Eyebrow, Panel } from '@/components/Primitives';
 import { cx } from '@/lib/cx';
 import { Mark, Brand } from '@/components/Brand';
 import { Toast } from '@/components/Toast';
@@ -57,7 +57,7 @@ export function Landing() {
             Sign in
           </Link>
           <Link
-            href="/workspace"
+            href="/intro"
             className="rounded-lg bg-[#7768db] px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-[#887be8]"
           >
             Open workspace <ArrowRight size={14} className="ml-1 inline" />
@@ -80,7 +80,7 @@ export function Landing() {
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
-                href="/workspace"
+                href="/intro"
                 className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-violet-500 px-5 font-semibold text-white shadow-[0_8px_30px_rgba(114,97,215,.2)] hover:bg-violet-400"
               >
                 Open workspace <ArrowRight size={16} />
@@ -93,8 +93,8 @@ export function Landing() {
               </a>
             </div>
             <div className="mt-9 flex items-center gap-3 text-[11px] text-slate-500">
-              <span className="h-px w-8 bg-slate-700" /> UI preview · AI and
-              integrations are not connected
+              <span className="h-px w-8 bg-slate-700" /> Local storage works · AI models
+              are not connected
             </div>
           </div>
           <ProductPreview />
@@ -166,7 +166,7 @@ export function Landing() {
                       {String(description)}
                     </p>
                     <span className="mt-4 block text-[10px] uppercase tracking-[.12em] text-slate-600">
-                      0{i + 1} · UI preview
+                      0{i + 1} · local-first
                     </span>
                   </div>
                 );
@@ -185,21 +185,10 @@ export function Landing() {
             </h2>
             <p className="mt-5 max-w-lg text-sm leading-7 text-slate-400">
               Real local project access requires the Ayatrisya desktop
-              application. It is not available yet. This web preview never reads
+              application. It is not released yet, and the web app never reads
               your filesystem.
             </p>
-            <Button
-              variant="outline"
-              className="mt-7"
-              onClick={() =>
-                setToast(
-                  'The desktop installer is not available yet. No download has been started.',
-                )
-              }
-            >
-              <Download size={15} /> Download for Windows{' '}
-              <span className="text-[10px] text-slate-500">COMING LATER</span>
-            </Button>
+            <DesktopButton className="mt-7" />
           </div>
           <div className="relative rounded-2xl border border-white/[.08] bg-[#14161c] p-5 shadow-2xl">
             <div className="flex items-center gap-2 border-b border-white/[.07] pb-4">
@@ -266,8 +255,9 @@ export function Landing() {
                 <ShieldCheck className="mb-5 text-violet-200" size={20} />
                 <h3 className="font-semibold">Files should remain yours</h3>
                 <p className="mt-2 text-xs leading-6 text-slate-500">
-                  Local-first storage is a product direction, not a capability
-                  available in this preview.
+                  Conversations, projects, notes and files are saved in your
+                  browser (IndexedDB) and survive a refresh. Export or import
+                  backups from Storage.
                 </p>
               </Panel>
               <Panel className="p-5">
@@ -275,7 +265,8 @@ export function Landing() {
                 <h3 className="font-semibold">Integrations are optional</h3>
                 <p className="mt-2 text-xs leading-6 text-slate-500">
                   Google Drive support may be added later as an opt-in
-                  integration. It is not connected today.
+                  manual backup and restore. It works only when an OAuth client is
+                  configured and has not been tested live.
                 </p>
               </Panel>
             </div>
@@ -283,18 +274,19 @@ export function Landing() {
         </section>
         <section className="mx-auto max-w-[1160px] px-5 py-20 md:px-9 md:py-28">
           <div className="rounded-2xl border border-violet-300/10 bg-[radial-gradient(ellipse_at_20%_0%,rgba(122,108,222,.13),transparent_55%),#14161c] px-7 py-12 text-center md:py-16">
-            <Eyebrow>Early workspace preview</Eyebrow>
+            <Eyebrow>Private by default</Eyebrow>
             <h2 className="display mx-auto max-w-2xl text-4xl font-semibold tracking-[-.06em] md:text-5xl">
               Start with a thought.
               <br />
               See where it takes you.
             </h2>
             <p className="mx-auto mt-4 max-w-md text-sm leading-6 text-slate-400">
-              Explore the workspace using local demo interactions. Nothing is
-              saved or sent to an AI service.
+              Your work is saved locally in this browser. AI models and
+              account sign-in are not connected unless this deployment
+              configures them; nothing is sent anywhere without your consent.
             </p>
             <Link
-              href="/workspace"
+              href="/intro"
               className="mt-7 inline-flex h-11 items-center gap-2 rounded-lg bg-violet-500 px-5 font-semibold text-white hover:bg-violet-400"
             >
               Enter the workspace <ArrowRight size={15} />
@@ -339,7 +331,7 @@ export function Landing() {
               Terms
             </button>
           </div>
-          <span>© Ametesx · UI preview</span>
+          <span>© Ametesx · local-first</span>
         </div>
       </footer>
       {toast && <Toast message={toast} close={() => setToast('')} />}
@@ -359,10 +351,10 @@ export function ProductPreview() {
             <i className="size-2 rounded-full bg-white/15" />
           </span>
           <span className="ml-3 text-[10px] text-slate-600">
-            Ayatrisya workspace
+            Layout illustration, no user data
           </span>
           <span className="ml-auto rounded-md border border-violet-300/10 bg-violet-300/[.06] px-2 py-1 text-[9px] text-violet-200">
-            DEMO
+            ILLUSTRATION
           </span>
         </div>
         <div className="grid min-h-[370px] grid-cols-[128px_1fr] sm:grid-cols-[160px_1fr]">
@@ -393,9 +385,8 @@ export function ProductPreview() {
             <div className="mt-6 px-2 text-[8px] uppercase tracking-widest text-slate-700">
               Recent
             </div>
-            <div className="mt-2 space-y-2 px-2 text-[9px] text-slate-600">
-              <div className="truncate">A clearer product narrative</div>
-              <div className="truncate">Notes on urban ecology</div>
+            <div className="mt-2 px-2 text-[9px] leading-4 text-slate-500">
+              No conversations yet. Yours will be listed here.
             </div>
           </aside>
           <div className="relative p-4 sm:p-6">
@@ -404,7 +395,7 @@ export function ProductPreview() {
                 New conversation
               </span>
               <span className="rounded-md border border-white/[.07] px-2 py-1 text-[9px] text-slate-500">
-                Seed · planned
+                V1 Fast · unavailable
               </span>
             </div>
             <div className="mx-auto mt-12 max-w-[390px]">

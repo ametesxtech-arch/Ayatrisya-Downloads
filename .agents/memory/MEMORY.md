@@ -1,0 +1,1 @@
+- [Browser data verification](browser-data-verification.md) — keep local lifecycle checks in one isolated browser profile; separate screenshots cannot prove persistence.

@@ -1,0 +1,16 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "ZyP9b4JMfrGnf2aNvejfb"
+uri = "file://artifacts/ayatrisya/docs/DELIVERY-REPORT.md"
+type = "text"
+title = "Ayatrisya implementation and verification report"
+description = "All 12 requested delivery sections, test evidence, setup variables and remaining integration limitations."
+logical_id = "b61c9d58-22f5-42a0-933d-40b5f072642d"
+content_hash = "sha256:0249ec689cb82602b543208bd0285e2b2a7e85b8ece819589ba73950ee284a31"
+size = 8190
+mtime_ms = 1792429412649
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:6600c136-8dfb-46e1-98e6-5445af5f27c2/b61c9d58-22f5-42a0-933d-40b5f072642d/4de4ad8a-8e9e-44de-821c-805444946dd4"
+storage_version_token = "1792429452418569"
+content_type = "text/markdown"

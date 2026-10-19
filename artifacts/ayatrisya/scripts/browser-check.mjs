@@ -1,0 +1,119 @@
+// Replit's Chromium and Node 24 are used; no hosted test account or app data is touched.
+import {spawn} from 'node:child_process';
+import fs from 'node:fs/promises';
+import assert from 'node:assert/strict';
+const dir=await fs.mkdtemp('/tmp/ayatrisya-browser-');
+const processHandle=spawn('chromium',['--headless','--no-sandbox','--disable-gpu','--disable-dev-shm-usage','--remote-debugging-port=0',`--user-data-dir=${dir}`,'about:blank'],{stdio:'ignore'});
+const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+const passed=[],errors=[],uploads=[];
+let socket;
+try {
+  let port;
+  for(let n=0;n<80;n++){try{port=(await fs.readFile(`${dir}/DevToolsActivePort`,'utf8')).split('\n')[0];break;}catch{await delay(100);}}
+  assert(port,'Chromium did not start');
+  const targets=await(await fetch(`http://127.0.0.1:${port}/json`)).json();
+  socket=new WebSocket(targets.find(target=>target.type==='page').webSocketDebuggerUrl);
+  await new Promise((resolve,reject)=>{socket.addEventListener('open',resolve,{once:true});socket.addEventListener('error',reject,{once:true});});
+  let sequence=0;
+  const pending=new Map();
+  socket.addEventListener('message',event=>{
+    const message=JSON.parse(event.data);
+    if(message.id){const entry=pending.get(message.id);pending.delete(message.id);message.error?entry?.reject(Error(JSON.stringify(message.error))):entry?.resolve(message.result);}
+    if(message.method==='Runtime.exceptionThrown')errors.push(message.params.exceptionDetails.text);
+    if(message.method==='Network.requestWillBeSent'&&!['GET','OPTIONS'].includes(message.params.request.method))uploads.push(message.params.request.method);
+  });
+  const call=(method,params={})=>new Promise((resolve,reject)=>{const id=++sequence;pending.set(id,{resolve,reject});socket.send(JSON.stringify({id,method,params}));});
+  const evaluate=async expression=>{
+    const result=await call('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true});
+    if(result.exceptionDetails)throw Error(result.exceptionDetails.exception?.description??result.exceptionDetails.text);
+    return result.result.value;
+  };
+  const wait=async(expression,label=expression)=>{
+    for(let n=0;n<100;n++){try{if(await evaluate(`Boolean(${expression})`))return;}catch{}await delay(100);}
+    throw Error(`Timed out: ${label}; page: ${await evaluate('document.body.innerText.slice(0,500)')}`);
+  };
+  const click=selector=>evaluate(`(()=>{const element=document.querySelector(${JSON.stringify(selector)});if(!element)throw Error('Missing ${selector} on '+location.pathname);element.click();})()`);
+  const clickText=text=>evaluate(`(()=>{const button=[...document.querySelectorAll('button')].find(x=>x.textContent.trim()===${JSON.stringify(text)});if(!button)throw Error('Button not found');button.click();})()`);
+  const input=async(selector,text)=>{await evaluate(`(()=>{const field=document.querySelector(${JSON.stringify(selector)});field.focus();field.select();})()`);await call('Input.insertText',{text});};
+  const go=async path=>{await call('Page.navigate',{url:`http://127.0.0.1:80${path}`});await wait(`document.querySelector('[aria-label="Model"]')`,'workspace load');await delay(200);};
+  const counts=()=>evaluate(`new Promise((resolve,reject)=>{const request=indexedDB.open('ayatrisya-local');request.onerror=()=>reject(request.error);request.onsuccess=async()=>{const db=request.result,names=['conversations','messages','projects','projectItems','attachments'];const values=await Promise.all(names.map(name=>new Promise((res,rej)=>{const query=db.transaction(name).objectStore(name).count();query.onsuccess=()=>res(query.result);query.onerror=()=>rej(query.error);})));db.close();resolve(Object.fromEntries(names.map((name,i)=>[name,values[i]])));};})`);
+  const setFile=async(selector,path)=>{const document=await call('DOM.getDocument');const node=await call('DOM.querySelector',{nodeId:document.root.nodeId,selector});await call('DOM.setFileInputFiles',{nodeId:node.nodeId,files:[path]});};
+  await call('Page.enable');await call('Runtime.enable');await call('Network.enable');
+  await call('Page.setDownloadBehavior',{behavior:'allow',downloadPath:dir});
+  await call('Emulation.setDeviceMetricsOverride',{width:1440,height:1000,deviceScaleFactor:1,mobile:false});
+  const tag=Date.now().toString(36),chat=`Persistence ${tag}`,project=`Release ${tag}`,documentTitle=`Draft ${tag}`,body=`Saved body ${tag}`;
+  await go('/workspace');await click('[data-testid="button-new-chat"]');
+  await wait(`location.pathname.startsWith('/workspace/chat/')`);
+  const chatPath=await evaluate('location.pathname');
+  await input('[data-testid="input-message"]',chat);await click('[data-testid="button-send"]');
+  await wait(`document.querySelector('[data-testid="status-not-sent"]')`);
+  await call('Page.reload');await wait(`document.querySelector('[data-testid^="message-"]')?.textContent.includes(${JSON.stringify(chat)})`);
+  await click('[aria-label="Edit message"]');await input('#edit-msg',`${chat} edited`);await clickText('Save edit');
+  await wait(`document.body.innerText.includes(${JSON.stringify(chat+' edited')})`);
+  passed.push('UI chat creation, local send, reload persistence and message edit');
+  await go('/workspace/projects');await click('[data-testid="button-new-project"]');
+  await wait(`document.querySelector('[data-testid="input-project-title"]')`);
+  await input('[data-testid="input-project-title"]',project);await click('[data-testid="button-save-project"]');
+  await wait(`document.body.innerText.includes(${JSON.stringify(project)})`);
+  passed.push('UI project creation and listing');
+  await go('/workspace/documents');await click('[data-testid="button-new"]');
+  await wait(`document.querySelector('[role="dialog"] input')`);await input('[role="dialog"] input',documentTitle);
+  await click('[role="dialog"] button[type="submit"]');
+  await wait(`document.querySelector('[data-testid="input-content"]')`);
+  await input('[data-testid="input-content"]',body);await click('[data-testid="button-save"]');
+  await wait(`document.querySelector('[data-testid="status-save"]')?.textContent==='Saved in this browser'`);
+  const documentPath=await evaluate('location.pathname');
+  await call('Page.reload');await wait(`document.querySelector('[data-testid="input-content"]')?.value===${JSON.stringify(body)}`);
+  passed.push('UI document edit, save and reload persistence');
+  const file=`${dir}/verification.txt`;
+  await fs.writeFile(file,`Actual file bytes ${tag}`);await go('/workspace/library');
+  await wait(`document.querySelector('input[type="file"]')`);await setFile('input[type="file"]',file);
+  await wait(`document.body.innerText.includes('verification.txt')`);
+  await go('/workspace/storage');await wait(`document.querySelector('[data-testid="storage-stats"]')`);
+  const before=await counts();await clickText('Export backup');
+  let backupPath;
+  for(let n=0;n<100;n++){const found=(await fs.readdir(dir)).find(name=>name.startsWith('ayatrisya-backup-')&&name.endsWith('.json'));if(found){backupPath=`${dir}/${found}`;break;}await delay(100);}
+  assert(backupPath,'Backup download missing');
+  const backup=JSON.parse(await fs.readFile(backupPath,'utf8'));
+  assert(backup.messages.some(message=>message.content===`${chat} edited`));
+  assert(backup.items.some(item=>item.content===body));
+  assert(backup.assets.some(asset=>Buffer.from(asset.base64,'base64').toString()===`Actual file bytes ${tag}`));
+  passed.push('UI upload and backup download preserve real text and binary bytes');
+  await setFile('[data-testid="input-import"]',backupPath);await wait(`document.querySelector('[role="dialog"]')`);
+  await clickText('Merge');await wait(`!document.querySelector('[role="dialog"]')`);
+  assert.deepEqual(await counts(),before);
+  const malformed=`${dir}/malformed.json`;await fs.writeFile(malformed,'{"format":"invalid"}');
+  await setFile('[data-testid="input-import"]',malformed);await wait(`document.body.innerText.includes('Not a valid backup')`);
+  assert.deepEqual(await counts(),before);
+  passed.push('UI duplicate Merge and malformed-import protection');
+  await go('/workspace');await click('[data-testid="button-new-chat"]');
+  await wait(`location.pathname.startsWith('/workspace/chat/')`);
+  await go('/workspace/storage');await setFile('[data-testid="input-import"]',backupPath);
+  await wait(`document.querySelector('[role="dialog"]')`);await clickText('Replace');
+  await wait(`document.body.innerText.includes('This clears every record')`);await clickText('Replace');
+  await wait(`!document.querySelector('[role="dialog"]')`);assert.deepEqual(await counts(),before);
+  await go(chatPath);await wait(`document.body.innerText.includes(${JSON.stringify(chat+' edited')})`);
+  await go(documentPath);await wait(`document.querySelector('[data-testid="input-content"]')?.value===${JSON.stringify(body)}`);
+  passed.push('UI confirmed Replace removes new scratch records and restores originals');
+  await go('/workspace/settings');
+  await evaluate(`(()=>{const label=[...document.querySelectorAll('label')].find(x=>x.textContent.trim().startsWith('Theme'));const select=label.querySelector('select');select.value='Light';select.dispatchEvent(new Event('change',{bubbles:true}));})()`);
+  await wait(`document.documentElement.dataset.appearance==='light'`);
+  await fs.writeFile(`${dir}/light.png`,Buffer.from((await call('Page.captureScreenshot',{format:'png'})).data,'base64'));
+  await go('/workspace');await call('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});await delay(200);
+  await click('[aria-label="Open navigation"]');await wait(`document.querySelector('aside[role="dialog"]')`);
+  assert(await evaluate(`document.querySelector('aside').contains(document.activeElement)`));
+  await call('Input.dispatchKeyEvent',{type:'keyDown',key:'Escape',code:'Escape'});
+  await call('Input.dispatchKeyEvent',{type:'keyUp',key:'Escape',code:'Escape'});
+  await wait(`document.querySelector('aside').inert===true`);
+  assert(await evaluate(`document.activeElement.getAttribute('aria-label')==='Open navigation'`));
+  assert(await evaluate(`document.documentElement.scrollWidth<=innerWidth && document.querySelector('[data-testid="input-message"]').getBoundingClientRect().bottom<=innerHeight`));
+  await fs.writeFile(`${dir}/mobile.png`,Buffer.from((await call('Page.captureScreenshot',{format:'png'})).data,'base64'));
+  passed.push('Light theme, mobile drawer focus/Escape/inert, no overflow and visible composer');
+  assert.deepEqual(uploads,[]);assert.deepEqual(errors,[]);
+  console.log(JSON.stringify({passed,counts:before,privateUploads:uploads.length,browserErrors:errors,screenshots:[`${dir}/light.png`,`${dir}/mobile.png`]},null,2));
+} catch(error) {
+  console.error(JSON.stringify({failed:error.message,passed,errors},null,2));
+  process.exitCode=1;
+} finally {
+  socket?.close();processHandle.kill('SIGTERM');
+}

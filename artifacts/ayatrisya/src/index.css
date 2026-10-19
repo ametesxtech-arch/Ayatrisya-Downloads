@@ -56,3 +56,95 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
 .reveal{animation:rise .55s both cubic-bezier(.2,.7,.2,1)}
 @keyframes rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+html[data-appearance="light"]{background:#e9e8ee}
+html[data-motion="reduced"] *,html[data-motion="reduced"] *:before,html[data-motion="reduced"] *:after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
+.safe-b{padding-bottom:max(env(safe-area-inset-bottom),.75rem)}
+.safe-t{padding-top:env(safe-area-inset-top)}
+@keyframes orbit{to{transform:rotate(360deg)}}
+@keyframes glowpulse{0%,100%{opacity:.5}50%{opacity:1}}
+.skip-link{position:absolute;left:-999px;top:8px;z-index:200;background:#7c6ceb;color:#fff;padding:8px 12px;border-radius:8px}
+.skip-link:focus{left:8px}
+
+:root[data-appearance="light"]{--background:230 24% 96%;--foreground:228 24% 14%;--card:0 0% 100%;--muted-foreground:226 12% 38%;--border:226 18% 82%;--input:226 18% 78%}
+html[data-appearance="light"] body{background:#f2f2f7;color:#1b1d2a}
+html[data-appearance="light"] [class*="bg-[#101116]"]{background-color:#f2f2f7}
+html[data-appearance="light"] [class*="bg-[#12141a]"]{background-color:#e9e9f1}
+html[data-appearance="light"] [class*="bg-[#15171e]"],html[data-appearance="light"] [class*="bg-[#14161c]"]{background-color:#ffffff}
+html[data-appearance="light"] [class*="bg-[#171920]"],html[data-appearance="light"] [class*="bg-[#20232c]"]{background-color:#ffffff}
+html[data-appearance="light"] [class*="bg-[#22242c]"]{background-color:#dedfea}
+html[data-appearance="light"] [class*="bg-white/["]{background-color:rgba(40,40,90,.06)}
+html[data-appearance="light"] [class*="border-white/"]{border-color:rgba(40,40,90,.16)}
+html[data-appearance="light"] [class*="divide-white/"]>*+*{border-color:rgba(40,40,90,.12)}
+html[data-appearance="light"] [class*="hover:bg-white/"]:hover{background-color:rgba(40,40,90,.08)}
+html[data-appearance="light"] .text-white,html[data-appearance="light"] .text-slate-100{color:#161826}
+html[data-appearance="light"] .text-slate-200{color:#1f2233}
+html[data-appearance="light"] .text-slate-300{color:#2b2f45}
+html[data-appearance="light"] .text-slate-400{color:#444962}
+html[data-appearance="light"] .text-slate-500{color:#575d77}
+html[data-appearance="light"] .text-slate-600,html[data-appearance="light"] .text-slate-700{color:#6a7089}
+html[data-appearance="light"] .text-violet-100,html[data-appearance="light"] .text-violet-200,html[data-appearance="light"] .text-violet-300{color:#5b45c9}
+html[data-appearance="light"] .text-amber-100\/90,html[data-appearance="light"] .text-amber-200,html[data-appearance="light"] .text-amber-200\/80{color:#7a4a05}
+html[data-appearance="light"] .text-rose-200,html[data-appearance="light"] .text-rose-300{color:#a3223a}
+html[data-appearance="light"] .text-teal-200,html[data-appearance="light"] .text-teal-300{color:#0f6b60}
+html[data-appearance="light"] .text-blue-300{color:#2456b5}
+html[data-appearance="light"] .bg-violet-500,html[data-appearance="light"] .bg-rose-600,html[data-appearance="light"] .bg-rose-500{color:#fff}
+html[data-appearance="light"] .bg-violet-500 *,html[data-appearance="light"] .bg-rose-600 *{color:inherit}
+html[data-appearance="light"] .prose-invert{--tw-prose-body:#2b2f45;--tw-prose-headings:#161826;--tw-prose-bold:#161826;--tw-prose-links:#5b45c9;--tw-prose-code:#161826;--tw-prose-quotes:#2b2f45;--tw-prose-bullets:#575d77;--tw-prose-counters:#575d77;--tw-prose-pre-bg:#ebebf3;--tw-prose-pre-code:#161826;--tw-prose-hr:#c9cbdb}
+html[data-appearance="light"] .app-noise{background:#f2f2f7}
+html[data-appearance="light"] input,html[data-appearance="light"] textarea,html[data-appearance="light"] select{color:#161826}
+html[data-appearance="light"] ::placeholder{color:#6a7089}
+/* Motion tokens: transform and opacity only */
+:root{--dur-fast:140ms;--dur-base:240ms;--dur-slow:520ms;--ease-out:cubic-bezier(.2,.7,.2,1);--ease-soft:cubic-bezier(.4,0,.2,1);--z-sidebar:40;--z-menu:70;--z-modal:80;--z-toast:90}
+.emb{display:block}
+.emb-glow{opacity:0}
+.emb-o1,.emb-o2,.emb-ap,.emb-core,.emb-spark{transform-box:view-box;transform-origin:32px 32px}
+.emb-intro .emb-pt{animation:emb-converge 900ms var(--ease-out) both}
+.emb-intro .emb-ap{animation:emb-scale 900ms var(--ease-out) 500ms both}
+.emb-intro .emb-o1{animation:emb-spin 1500ms var(--ease-out) 700ms both}
+.emb-intro .emb-o2{animation:emb-spin 1500ms var(--ease-out) 850ms both}
+.emb-intro .emb-core{animation:emb-scale 700ms var(--ease-out) 1300ms both}
+.emb-intro .emb-spark{animation:emb-scale 600ms var(--ease-out) 1700ms both}
+.emb-intro .emb-glow{animation:emb-glow 1400ms var(--ease-soft) 1500ms both}
+.emb-subtle .emb-o1{animation:emb-nudge 1400ms var(--ease-out) both}
+.emb-subtle .emb-o2{animation:emb-nudge 1400ms var(--ease-out) 100ms both reverse}
+.emb-loading .emb-glow{opacity:.5}
+.emb-loop .emb-o1{animation:emb-spin-loop 6s linear infinite}
+.emb-loop .emb-o2{animation:emb-spin-loop 9s linear infinite reverse}
+@keyframes emb-converge{from{transform:translate(var(--x),var(--y));opacity:0}30%{opacity:1}to{transform:translate(0,0);opacity:0}}
+@keyframes emb-scale{from{transform:scale(.2);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes emb-spin{from{transform:rotate(-70deg);opacity:0}to{opacity:1}}
+@keyframes emb-glow{0%{opacity:0}50%{opacity:1}100%{opacity:.35}}
+@keyframes emb-nudge{0%{transform:rotate(0)}50%{transform:rotate(14deg)}100%{transform:rotate(0)}}
+@keyframes emb-spin-loop{to{transform:rotate(360deg)}}
+.wm-reveal{animation:wm-in 800ms var(--ease-out) 1900ms both}
+@keyframes wm-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+html[data-hidden] .emb-loop *,html[data-hidden] .emb *{animation-play-state:paused!important}
+html[data-intensity="none"] .emb *,html[data-intensity="none"] .wm-reveal{animation:none!important;opacity:1}
+html[data-intensity="none"] .emb-glow{opacity:0}
+html[data-intensity="none"] .emb-pt{display:none}
+html[data-intensity="subtle"] .emb-glow{display:none}
+@media(prefers-reduced-motion:reduce){.emb *,.wm-reveal{animation:none!important;opacity:1}.emb-pt,.emb-glow{display:none}}
+.pend-dot{width:6px;height:6px;border-radius:9999px;background:#a99cff;animation:pend 1s ease-in-out infinite}
+@keyframes pend{0%,100%{opacity:.25;transform:translateY(0)}50%{opacity:1;transform:translateY(-3px)}}
+html[data-hidden] .pend-dot{animation-play-state:paused}
+@media(prefers-reduced-motion:reduce){.pend-dot{animation:none}}
+
+/* Route entrance, staggered lists, tooltips, control transitions */
+.route-in{animation:route-in var(--dur-slow) var(--ease-out) both}
+@keyframes route-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.stagger>*{animation:rise var(--dur-slow) var(--ease-out) both}
+.stagger>*:nth-child(2){animation-delay:40ms}.stagger>*:nth-child(3){animation-delay:80ms}.stagger>*:nth-child(4){animation-delay:120ms}.stagger>*:nth-child(5){animation-delay:160ms}.stagger>*:nth-child(6){animation-delay:200ms}.stagger>*:nth-child(n+7){animation-delay:240ms}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+[data-tip]{position:relative}
+[data-tip]::after{content:attr(data-tip);position:absolute;top:100%;left:50%;margin-top:6px;padding:4px 8px;border-radius:6px;background:#23262f;color:#e7e8ee;font-size:11px;line-height:1.3;white-space:nowrap;border:1px solid rgba(255,255,255,.08);opacity:0;transform:translate(-50%,4px);transition:opacity var(--dur-fast) var(--ease-out) 350ms,transform var(--dur-fast) var(--ease-out) 350ms;pointer-events:none;z-index:var(--z-menu)}
+[data-tip]:hover::after,[data-tip]:focus-visible::after{opacity:1;transform:translate(-50%,0)}
+[data-tip][aria-expanded="true"]::after{opacity:0}
+button,a,select,input[type=checkbox]{transition:background-color var(--dur-fast) var(--ease-soft),color var(--dur-fast) var(--ease-soft),border-color var(--dur-fast) var(--ease-soft),opacity var(--dur-fast) var(--ease-soft),transform var(--dur-fast) var(--ease-out)}
+button:not(:disabled):active{transform:scale(.97)}
+[role=menu]{animation:menu-in var(--dur-fast) var(--ease-out) both;transform-origin:top right}
+@keyframes menu-in{from{opacity:0;transform:scale(.97) translateY(-4px)}to{opacity:1;transform:none}}
+[role=dialog]{animation:menu-in var(--dur-base) var(--ease-out) both}
+html[data-intensity="none"] .route-in,html[data-intensity="none"] .stagger>*,html[data-intensity="none"] [role=menu],html[data-intensity="none"] [role=dialog]{animation:none}
+html[data-intensity="subtle"] .stagger>*{animation-delay:0ms!important}
+html[data-motion="reduced"] .route-in,html[data-motion="reduced"] .stagger>*,html[data-motion="reduced"] [role=menu],html[data-motion="reduced"] [role=dialog]{animation:none!important}
+@media(prefers-reduced-motion:reduce){.route-in,.stagger>*,[role=menu],[role=dialog]{animation:none!important}[data-tip]::after{transition:none}}

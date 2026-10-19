@@ -1,226 +1,44 @@
 import { useState } from 'react';
-import { Link } from 'wouter';
-import { ArrowRight, Check, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Button, Eyebrow, Notice, Panel } from '@/components/Primitives';
-import { cx } from '@/lib/cx';
-import { session } from '@/lib/session';
-import { Mark, Brand } from '@/components/Brand';
+import { Link, useLocation } from 'wouter';
+import { ArrowRight } from 'lucide-react';
+import { Button, Notice, inputCls } from '@/components/Primitives';
+import { Brand } from '@/components/Brand';
+import { useCaps, usePrefs } from '@/hooks/use-prefs';
+import type { ChatMode, ModelId, Preferences } from '@/storage/types';
 
+const steps = ['Welcome', 'Appearance', 'Defaults', 'Privacy'];
 export function Onboarding() {
-  const [step, setStep] = useState(0),
-    [usage, setUsage] = useState('All of the above'),
-    [appearance, setAppearance] = useState('Dark');
-  const steps = ['Welcome', 'Your work', 'Appearance', 'Privacy', 'Ready'];
-  return (
-    <main className="app-noise min-h-[100dvh] bg-[#101116] px-5 py-7">
-      <header className="mx-auto flex max-w-4xl items-center justify-between">
-        <Link href="/">
-          <Brand />
-        </Link>
-        <Link
-          href="/workspace"
-          className="text-xs text-slate-500 hover:text-slate-200"
-        >
-          Skip setup <ArrowRight className="ml-1 inline" size={13} />
-        </Link>
-      </header>
-      <div className="mx-auto mt-10 max-w-[670px]">
-        <div className="mb-10 flex items-center gap-2">
-          {steps.map((s, i) => (
-            <div key={s} className="flex flex-1 items-center gap-2">
-              <span
-                className={cx(
-                  'grid size-7 shrink-0 place-items-center rounded-full border text-[10px] font-semibold',
-                  i <= step
-                    ? 'border-violet-300/30 bg-violet-300/10 text-violet-100'
-                    : 'border-white/10 text-slate-600',
-                )}
-              >
-                {i < step ? <Check size={13} /> : i + 1}
-              </span>
-              <span
-                className={cx(
-                  'hidden text-[10px] sm:block',
-                  i === step ? 'text-slate-200' : 'text-slate-600',
-                )}
-              >
-                {s}
-              </span>
-              {i < steps.length - 1 && (
-                <span className="h-px flex-1 bg-white/[.08]" />
-              )}
-            </div>
-          ))}
-        </div>
-        <Panel className="min-h-[430px] p-7 sm:p-10">
-          {step === 0 && (
-            <>
-              <Eyebrow>Welcome to Ayatrisya</Eyebrow>
-              <h1 className="display max-w-lg text-4xl font-semibold leading-tight tracking-[-.06em]">
-                A workspace for the way you think.
-              </h1>
-              <p className="mt-4 max-w-md text-sm leading-7 text-slate-400">
-                Bring conversations, research, creative work and project plans
-                into one considered space. This preview works locally for the
-                session.
-              </p>
-              <div className="mt-9 rounded-xl border border-white/[.07] bg-[#101116] p-5">
-                <div className="flex items-center gap-3">
-                  <Mark />
-                  <div>
-                    <div className="font-semibold">
-                      Your workspace, your pace
-                    </div>
-                    <div className="mt-1 text-xs text-slate-500">
-                      No setup required to explore.
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
-          {step === 1 && (
-            <>
-              <Eyebrow>Make it yours</Eyebrow>
-              <h1 className="display text-3xl font-semibold tracking-[-.05em]">
-                What will you work on?
-              </h1>
-              <p className="mt-2 text-sm text-slate-500">
-                Choose a starting point. You can change this later.
-              </p>
-              <div className="mt-7 grid gap-2 sm:grid-cols-2">
-                {[
-                  'General assistant',
-                  'Coding and development',
-                  'Research and learning',
-                  'Creative work',
-                  'All of the above',
-                ].map((x) => (
-                  <button
-                    key={x}
-                    onClick={() => setUsage(x)}
-                    className={cx(
-                      'flex min-h-12 items-center justify-between rounded-lg border px-4 text-left text-sm',
-                      usage === x
-                        ? 'border-violet-300/35 bg-violet-300/[.07] text-white'
-                        : 'border-white/[.08] text-slate-400 hover:bg-white/[.04]',
-                    )}
-                  >
-                    {x}
-                    {usage === x && (
-                      <Check size={15} className="text-violet-200" />
-                    )}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-          {step === 2 && (
-            <>
-              <Eyebrow>Appearance</Eyebrow>
-              <h1 className="display text-3xl font-semibold tracking-[-.05em]">
-                Set the atmosphere.
-              </h1>
-              <p className="mt-2 text-sm text-slate-500">
-                Your selection applies to this open preview session.
-              </p>
-              <div className="mt-7 grid gap-3 sm:grid-cols-3">
-                {['Dark', 'Light', 'Follow system'].map((x) => (
-                  <button
-                    key={x}
-                    onClick={() => {
-                      setAppearance(x);
-                      session.appearance = x;
-                    }}
-                    className={cx(
-                      'rounded-xl border p-4 text-left',
-                      appearance === x
-                        ? 'border-violet-300/35 bg-violet-300/[.06]'
-                        : 'border-white/[.08] hover:bg-white/[.03]',
-                    )}
-                  >
-                    <div
-                      className={cx(
-                        'mb-4 h-16 rounded-md border',
-                        x === 'Light'
-                          ? 'border-slate-300 bg-slate-200'
-                          : 'border-white/10 bg-[#101116]',
-                      )}
-                    >
-                      <div className="m-2 h-2 w-1/3 rounded bg-violet-400/50" />
-                    </div>
-                    <span className="text-xs font-medium">{x}</span>
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-          {step === 3 && (
-            <>
-              <Eyebrow>Privacy, plainly</Eyebrow>
-              <h1 className="display text-3xl font-semibold tracking-[-.05em]">
-                A direction, not a guarantee.
-              </h1>
-              <p className="mt-3 max-w-lg text-sm leading-7 text-slate-400">
-                Ayatrisya is being designed around local-first storage. That
-                storage is not implemented in this preview. Desktop coding and
-                optional Drive support are future work.
-              </p>
-              <div className="mt-6 space-y-3">
-                <Notice>
-                  Nothing you type here is sent to an AI service. Demo
-                  conversations exist only in page state and disappear when you
-                  leave.
-                </Notice>
-                <Notice>
-                  Do not put sensitive personal or business information into
-                  this preview.
-                </Notice>
-              </div>
-            </>
-          )}
-          {step === 4 && (
-            <>
-              <div className="grid size-12 place-items-center rounded-xl border border-violet-300/15 bg-violet-300/[.07] text-violet-200">
-                <Check size={22} />
-              </div>
-              <h1 className="display mt-6 text-3xl font-semibold tracking-[-.05em]">
-                Your workspace is ready.
-              </h1>
-              <p className="mt-3 text-sm text-slate-400">
-                Starting point: {usage}. Appearance: {appearance}. These choices
-                are not saved beyond this session.
-              </p>
-              <div className="mt-7 rounded-lg border border-white/[.07] p-4 text-xs text-slate-500">
-                You can explore chat, projects, research, documents and the
-                desktop preview from the workspace navigation.
-              </div>
-            </>
-          )}
-          <div className="mt-10 flex items-center justify-between">
-            <Button
-              variant="quiet"
-              onClick={() => setStep(Math.max(0, step - 1))}
-              disabled={step === 0}
-            >
-              <ChevronLeft size={15} />
-              Back
-            </Button>
-            {step < 4 ? (
-              <Button onClick={() => setStep(step + 1)}>
-                Continue <ChevronRight size={15} />
-              </Button>
-            ) : (
-              <Link
-                href="/workspace"
-                className="inline-flex h-10 items-center gap-2 rounded-lg bg-violet-500 px-4 font-semibold text-white"
-              >
-                Enter workspace <ArrowRight size={15} />
-              </Link>
-            )}
-          </div>
-        </Panel>
+  const [, setPath] = useLocation();
+  const { prefs, save, loaded } = usePrefs();
+  const { caps } = useCaps();
+  const [step, setStep] = useState(0), [name, setName] = useState<string | null>(null), [theme, setTheme] = useState<Preferences['theme'] | null>(null), [mode, setMode] = useState<ChatMode | null>(null), [model, setModel] = useState<ModelId | null>(null), [busy, setBusy] = useState(false);
+  const v = { name: name ?? prefs.displayName, theme: theme ?? prefs.theme, mode: mode ?? prefs.mode, model: model ?? prefs.model };
+  async function finish(skip = false) {
+    setBusy(true);
+    const saved = await save(skip ? { onboardingComplete: true } : { displayName: v.name.trim(), theme: v.theme, mode: v.mode, model: v.model, onboardingComplete: true });
+    if (saved) setPath('/workspace'); else setBusy(false);
+  }
+  const ready = (id: ModelId) => caps.find((c) => c.id === id)?.available;
+  return <main className="app-noise min-h-[100dvh] bg-[#101116] px-5 py-7">
+    <header className="mx-auto flex max-w-4xl items-center justify-between"><Link href="/" aria-label="Ayatrisya home"><Brand /></Link><button onClick={() => void finish(true)} disabled={busy || !loaded} className="text-xs text-slate-400 hover:text-white">Skip setup <ArrowRight className="ml-1 inline" size={13} /></button></header>
+    <div className="mx-auto mt-10 max-w-[620px]">
+      <ol className="mb-8 flex gap-2" aria-label="Progress">{steps.map((s, i) => <li key={s} aria-current={i === step ? 'step' : undefined} className={`h-1 flex-1 rounded-full ${i <= step ? 'bg-violet-400' : 'bg-white/10'}`}><span className="sr-only">{s}</span></li>)}</ol>
+      <p className="mb-2 text-[11px] uppercase tracking-[.16em] text-violet-300">Step {step + 1} of {steps.length}</p>
+      {step === 0 && <section><h1 className="display text-4xl font-semibold tracking-[-.05em]">A private place to think.</h1><p className="mt-3 text-sm leading-6 text-slate-400">What should we call you? This is optional and stays in this browser.</p>
+        <label className="mt-6 block text-xs font-medium text-slate-300">Display name<input value={v.name} onChange={(e) => setName(e.target.value)} className={`${inputCls} mt-2`} autoComplete="given-name" data-testid="input-name" /></label></section>}
+      {step === 1 && <section><h1 className="display text-3xl font-semibold tracking-[-.05em]">Appearance and language</h1>
+        <fieldset className="mt-6"><legend className="text-xs font-medium text-slate-300">Theme</legend><div className="mt-2 grid gap-2 sm:grid-cols-3">{(['Dark', 'Light', 'Follow system'] as const).map((t) => <label key={t} className={`cursor-pointer rounded-lg border p-3 text-sm ${v.theme === t ? 'border-violet-400/50 bg-violet-400/10' : 'border-white/10'}`}><input type="radio" name="theme" className="mr-2 accent-violet-500" checked={v.theme === t} onChange={() => { setTheme(t); void save({ theme: t }); }} />{t}</label>)}</div></fieldset>
+        <p className="mt-4 text-xs text-slate-500">Interface language: English (the only one available).</p></section>}
+      {step === 2 && <section><h1 className="display text-3xl font-semibold tracking-[-.05em]">Chat defaults</h1>
+        <label className="mt-6 block text-xs font-medium text-slate-300">Chat mode<select value={v.mode} onChange={(e) => setMode(e.target.value as ChatMode)} className={`${inputCls} mt-2`}><option>Normal</option><option>Savage</option><option>Joke</option></select></label>
+        <label className="mt-4 block text-xs font-medium text-slate-300">Preferred model<select value={v.model} onChange={(e) => setModel(e.target.value as ModelId)} className={`${inputCls} mt-2`}><option value="v1-fast">V1 Fast{ready('v1-fast') ? '' : ' (unavailable)'}</option><option value="v2-best">V2 Best Result{ready('v2-best') ? '' : ' (unavailable)'}</option></select></label>
+        <div className="mt-4"><Notice>Storage: everything is saved locally in this browser. Google Drive backup is optional, manual, and available from Storage when configured.</Notice></div></section>}
+      {step === 3 && <section><h1 className="display text-3xl font-semibold tracking-[-.05em]">How your data is handled</h1>
+        <ul className="mt-5 list-disc space-y-2 pl-5 text-sm leading-6 text-slate-400"><li>Conversations and project files are stored locally by default.</li><li>Browser storage has limits and can be cleared by you or the browser. Export backups.</li><li>If a model server is configured, text you send must reach that server to be processed. You are asked first.</li><li>Attachments are never sent to a model. Nothing is uploaded silently and private content is not used for training.</li></ul></section>}
+      <div className="mt-10 flex justify-between">
+        <Button variant="quiet" disabled={step === 0} onClick={() => setStep(step - 1)}>Back</Button>
+        {step < 3 ? <Button onClick={() => setStep(step + 1)}>Continue</Button> : <Button onClick={() => void finish()} disabled={busy || !loaded} data-testid="button-finish">{busy ? 'Saving…' : 'Open my workspace'}</Button>}
       </div>
-    </main>
-  );
+    </div>
+  </main>;
 }

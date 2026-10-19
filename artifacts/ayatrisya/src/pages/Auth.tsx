@@ -1,203 +1,69 @@
-import { useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
-import { ArrowRight, Check, Globe2 } from 'lucide-react';
-import { Button, Eyebrow, Notice } from '@/components/Primitives';
+import { ArrowRight, Check } from 'lucide-react';
+import { Button, Eyebrow, Notice, inputCls } from '@/components/Primitives';
 import { Brand } from '@/components/Brand';
+import { useAuth } from '@/integrations/firebase/AuthProvider';
+import { usePrefs } from '@/hooks/use-prefs';
+import { errMsg } from '@/lib/format';
 
 export function AuthPage() {
   const [path, setPath] = useLocation();
-  const isCreate = path === '/auth/create-account',
-    isReset = path === '/auth/reset-password',
-    isCheck = path === '/auth/email-check';
-  const [email, setEmail] = useState(''),
-    [password, setPassword] = useState(''),
-    [error, setError] = useState(''),
-    [busy, setBusy] = useState(false),
-    [notice, setNotice] = useState('');
-  function submit(e: FormEvent) {
-    e.preventDefault();
-    setError('');
-    if (!email.includes('@')) {
-      setError('Enter a valid email address.');
-      return;
+  const auth = useAuth();
+  const { prefs, loaded } = usePrefs();
+  const isCreate = path === '/auth/create-account', isReset = path === '/auth/reset-password', isCheck = path === '/auth/email-check';
+  const [email, setEmail] = useState(''), [password, setPassword] = useState(''), [confirm, setConfirm] = useState(''), [error, setError] = useState(''), [busy, setBusy] = useState(false), [notice, setNotice] = useState('');
+  useEffect(() => { setError(''); setNotice(''); }, [path]);
+  useEffect(() => {
+    if (auth.user && !isCheck && loaded) {
+      if (!auth.user.emailVerified && isCreate) return;
+      setPath(prefs.onboardingComplete ? '/workspace' : '/onboarding', { replace: true });
     }
-    if (!isReset && password.length < 8) {
-      setError('Password must be at least 8 characters.');
-      return;
-    }
+  }, [auth.user, isCheck, isCreate, loaded, prefs.onboardingComplete, setPath]);
+  async function submit(e: FormEvent) {
+    e.preventDefault(); setError(''); setNotice('');
+    if (!/^\S+@\S+\.\S+$/.test(email)) return setError('Enter a valid email address.');
+    if (!isReset && password.length < 8) return setError('Password must be at least 8 characters.');
+    if (isCreate && password !== confirm) return setError('The passwords do not match.');
     setBusy(true);
-    window.setTimeout(() => {
-      setBusy(false);
-      if (isReset) {
-        setNotice('Password reset is not connected yet. No email was sent.');
-      } else setPath('/auth/email-check');
-    }, 700);
+    try {
+      if (isReset) { await auth.resetPassword(email); setNotice('If an account exists for that address, a reset email has been requested. Check your inbox.'); }
+      else if (isCreate) { await auth.register(email, password); setPath('/auth/email-check'); }
+      else await auth.signIn(email, password);
+    } catch (er) { setError(errMsg(er, 'Authentication failed.')); } finally { setBusy(false); }
   }
-  if (isCheck)
-    return (
-      <AuthFrame>
-        <div className="mx-auto grid size-14 place-items-center rounded-2xl border border-violet-300/15 bg-violet-300/[.07] text-violet-200">
-          <Check size={24} />
-        </div>
-        <h1 className="display mt-6 text-3xl font-semibold tracking-[-.05em]">
-          Check your inbox
-        </h1>
-        <p className="mt-3 text-sm leading-6 text-slate-400">
-          This is a preview state. Account email verification is not connected,
-          and no message was sent.
-        </p>
-        <Link
-          href="/workspace"
-          className="mt-7 inline-flex h-11 items-center rounded-lg bg-violet-500 px-5 font-semibold text-white"
-        >
-          Continue as guest
-        </Link>
-        <button
-          onClick={() => setPath('/auth/sign-in')}
-          className="mt-4 block w-full text-xs text-slate-500 hover:text-white"
-        >
-          Back to sign in
-        </button>
-      </AuthFrame>
-    );
-  return (
-    <AuthFrame>
-      <Link href="/" aria-label="Ayatrisya home">
-        <Brand />
-      </Link>
-      <div className="mt-9">
-        <Eyebrow>
-          {isReset
-            ? 'Account recovery'
-            : isCreate
-              ? 'A considered beginning'
-              : 'Welcome back'}
-        </Eyebrow>
-        <h1 className="display text-3xl font-semibold tracking-[-.055em]">
-          {isReset
-            ? 'Reset your password'
-            : isCreate
-              ? 'Create your account'
-              : 'Sign in to Ayatrisya'}
-        </h1>
-        <p className="mt-2 text-sm text-slate-500">
-          {isReset
-            ? 'Enter your email to request a reset link.'
-            : isCreate
-              ? 'Your workspace is ready when you are.'
-              : 'Continue to your workspace.'}
-        </p>
-      </div>
-      <div className="mt-7">
-        <Button
-          variant="outline"
-          className="w-full"
-          onClick={() =>
-            setNotice(
-              'Google authentication is not connected in this UI preview.',
-            )
-          }
-        >
-          <Globe2 size={16} /> Continue with Google
-        </Button>
-        <div className="my-5 flex items-center gap-3 text-[10px] uppercase tracking-widest text-slate-600">
-          <span className="h-px flex-1 bg-white/[.08]" />
-          or email
-          <span className="h-px flex-1 bg-white/[.08]" />
-        </div>
-      </div>
-      <form onSubmit={submit} className="space-y-4">
-        <label className="block text-xs font-medium text-slate-300">
-          Email address
-          <input
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            type="email"
-            autoComplete="email"
-            className="mt-2 h-11 w-full rounded-lg border border-white/10 bg-[#101116] px-3 text-sm text-white placeholder:text-slate-600"
-            placeholder="you@example.com"
-            data-testid="input-email"
-          />
-        </label>
-        {!isReset && (
-          <label className="block text-xs font-medium text-slate-300">
-            Password
-            <input
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              type="password"
-              autoComplete={isCreate ? 'new-password' : 'current-password'}
-              className="mt-2 h-11 w-full rounded-lg border border-white/10 bg-[#101116] px-3 text-sm text-white placeholder:text-slate-600"
-              placeholder="At least 8 characters"
-              data-testid="input-password"
-            />
-          </label>
-        )}
-        {error && (
-          <div
-            role="alert"
-            className="rounded-md border border-rose-400/15 bg-rose-400/[.06] p-3 text-xs text-rose-200"
-          >
-            {error}
-          </div>
-        )}
-        {notice && <Notice>{notice}</Notice>}
-        <Button type="submit" className="w-full" disabled={busy}>
-          {busy
-            ? 'Preparing preview…'
-            : isReset
-              ? 'Request reset link'
-              : isCreate
-                ? 'Create account'
-                : 'Sign in'}{' '}
-          {!busy && <ArrowRight size={15} />}
-        </Button>
-      </form>
-      {!isCreate && !isReset && (
-        <button
-          onClick={() => setPath('/auth/reset-password')}
-          className="mt-4 block w-full text-right text-xs text-slate-500 hover:text-violet-200"
-        >
-          Forgot password?
-        </button>
-      )}
-      <div className="my-6 border-t border-white/[.07] pt-5 text-center text-xs text-slate-500">
-        {isCreate ? 'Already have an account?' : 'New to Ayatrisya?'}{' '}
-        <button
-          onClick={() =>
-            setPath(isCreate ? '/auth/sign-in' : '/auth/create-account')
-          }
-          className="font-semibold text-slate-200 hover:text-violet-200"
-        >
-          {isCreate ? 'Sign in' : 'Create an account'}
-        </button>
-      </div>
-      <Link
-        href="/workspace"
-        className="flex h-11 items-center justify-center gap-2 rounded-lg border border-white/[.08] text-xs font-semibold text-slate-300 hover:bg-white/[.04]"
-      >
-        Explore as guest <ArrowRight size={14} />
-      </Link>
-      <p className="mt-5 text-center text-[10px] leading-5 text-slate-600">
-        Authentication is not connected. No account, session, or email will be
-        created.
-      </p>
-    </AuthFrame>
-  );
+  async function google() { setError(''); setBusy(true); try { await auth.googleSignIn(); } catch (er) { setError(errMsg(er)); } finally { setBusy(false); } }
+  if (isCheck) return <AuthFrame>
+    <h1 className="display text-2xl font-semibold tracking-[-.04em]">Verify your email</h1>
+    {auth.user ? <><p className="mt-3 text-sm leading-6 text-slate-400">Verification is for <b>{auth.user.email}</b>. Status: {auth.user.emailVerified ? 'verified' : 'not yet verified'}.</p>
+      {error && <p role="alert" className="mt-3 text-xs text-rose-300">{error}</p>}{notice && <div className="mt-3"><Notice>{notice}</Notice></div>}
+      <div className="mt-5 flex flex-wrap gap-2">{!auth.user.emailVerified && <><Button variant="outline" onClick={async () => { try { await auth.sendVerification(); setNotice('Verification email requested.'); } catch (er) { setError(errMsg(er)); } }}>Send again</Button><Button onClick={async () => { try { await auth.refreshUser(); } catch (er) { setError(errMsg(er)); } }}>I have verified</Button></>}<Button variant={auth.user.emailVerified ? 'solid' : 'quiet'} onClick={() => setPath(prefs.onboardingComplete ? '/workspace' : '/onboarding')}>Continue</Button></div></>
+      : <p className="mt-3 text-sm text-slate-400">You are not signed in, so there is nothing to verify. <Link href="/auth/sign-in" className="underline">Sign in</Link>.</p>}
+  </AuthFrame>;
+  return <AuthFrame>
+    <Eyebrow>{isReset ? 'Recovery' : isCreate ? 'Create account' : 'Sign in'}</Eyebrow>
+    <h1 className="display text-2xl font-semibold tracking-[-.04em]">{isReset ? 'Reset your password' : isCreate ? 'Create your account' : 'Welcome back'}</h1>
+    {!auth.loading && !auth.configured && <div className="mt-4"><Notice>Sign-in is not configured for this deployment (no Firebase settings were provided), so accounts cannot be created or used. The guest workspace works fully.</Notice></div>}
+    {!isReset && <button type="button" onClick={google} disabled={busy || !auth.configured} className="mt-5 flex h-11 w-full items-center justify-center rounded-lg border border-white/10 text-sm font-semibold hover:bg-white/[.05] disabled:opacity-45">Continue with Google</button>}
+    <form onSubmit={submit} className="mt-5 space-y-4" noValidate>
+      <label className="block text-xs font-medium text-slate-300">Email<input value={email} onChange={(e) => setEmail(e.target.value)} type="email" autoComplete="email" className={`${inputCls} mt-2`} data-testid="input-email" /></label>
+      {!isReset && <label className="block text-xs font-medium text-slate-300">Password<input value={password} onChange={(e) => setPassword(e.target.value)} type="password" autoComplete={isCreate ? 'new-password' : 'current-password'} className={`${inputCls} mt-2`} placeholder="At least 8 characters" data-testid="input-password" /></label>}
+      {isCreate && <label className="block text-xs font-medium text-slate-300">Confirm password<input value={confirm} onChange={(e) => setConfirm(e.target.value)} type="password" autoComplete="new-password" className={`${inputCls} mt-2`} data-testid="input-confirm" /></label>}
+      {error && <div role="alert" className="rounded-md border border-rose-400/20 bg-rose-400/[.06] p-3 text-xs text-rose-200">{error}</div>}
+      {notice && <Notice>{notice}</Notice>}
+      <Button type="submit" className="w-full" disabled={busy || !auth.configured}>{busy ? 'Working…' : isReset ? 'Send reset email' : isCreate ? 'Create account' : 'Sign in'}{!busy && <ArrowRight size={15} />}</Button>
+    </form>
+    {!isCreate && !isReset && <button onClick={() => setPath('/auth/reset-password')} className="mt-4 block w-full text-right text-xs text-slate-400 hover:text-violet-200">Forgot password?</button>}
+    <div className="my-6 border-t border-white/[.07] pt-5 text-center text-xs text-slate-400">{isCreate ? 'Already have an account?' : 'New to Ayatrisya?'}{' '}<button onClick={() => setPath(isCreate ? '/auth/sign-in' : '/auth/create-account')} className="font-semibold text-slate-100 hover:text-violet-200">{isCreate ? 'Sign in' : 'Create an account'}</button></div>
+    <Link href="/intro" className="flex h-11 items-center justify-center gap-2 rounded-lg border border-white/[.08] text-xs font-semibold text-slate-200 hover:bg-white/[.04]">Continue as guest <ArrowRight size={14} /></Link>
+    <p className="mt-4 text-center text-[11px] leading-5 text-slate-500"><Check size={11} className="mr-1 inline" />Guest content is saved only in this browser and can be lost if you clear browser data. It is not uploaded or moved when you sign in; you can copy it into an account later.</p>
+    <p className="mt-3 text-center text-[11px] text-slate-500">By continuing you accept the terms and privacy policy of this deployment. Your content stays on your device.</p>
+  </AuthFrame>;
 }
 
 export function AuthFrame({ children }: { children: ReactNode }) {
-  return (
-    <main className="app-noise flex min-h-[100dvh] items-center justify-center bg-[radial-gradient(ellipse_at_50%_12%,rgba(94,79,179,.13),transparent_38%),#101116] p-5">
-      <div className="w-full max-w-[430px] rounded-2xl border border-white/[.075] bg-[#15171e]/95 p-7 shadow-2xl sm:p-9">
-        {children}
-      </div>
-      <Link
-        href="/"
-        className="absolute left-6 top-6 text-xs text-slate-500 hover:text-slate-200"
-      >
-        ← Back to Ayatrisya
-      </Link>
-    </main>
-  );
+  return <main className="app-noise flex min-h-[100dvh] items-center justify-center bg-[radial-gradient(ellipse_at_50%_12%,rgba(94,79,179,.13),transparent_38%),#101116] p-5">
+    <Link href="/" className="absolute left-6 top-6 text-xs text-slate-400 hover:text-slate-100"><span className="sr-only">Back to </span>Ayatrisya home</Link>
+    <div className="w-full max-w-[430px] rounded-2xl border border-white/[.075] bg-[#15171e]/95 p-6 shadow-2xl sm:p-9"><div className="mb-6"><Brand compact /></div>{children}</div>
+  </main>;
 }

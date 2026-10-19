@@ -1,0 +1,816 @@
+AYATRISYA — FULL PRODUCT COMPLETION DIRECTIVE
+
+Build the Real Application, Not a Mockup | Ametesx
+
+Act as a principal software engineer, product designer, frontend architect, storage engineer, animation specialist, and QA engineer.
+
+Your task is to transform the existing Ayatrisya project into a complete, polished, fully functional application.
+
+Everything must be genuinely functional except AI inference, AI-generated content, and AI model training, which are being developed separately in Google Antigravity. Build the integration interfaces for those future models, but never fake AI functionality.
+
+Do not stop at planning. Inspect the repository, preserve working code, implement the features, run the application, test each workflow, repair errors, and deliver a verified result.
+
+⸻
+
+1. NON-NEGOTIABLE RULES
+
+* Product name: Ayatrisya.
+* Parent brand: Ametesx.
+* Create an original animated Ayatrisya logo; do not use a generic AI icon as the final brand identity.
+* Make every implemented button, menu, dialog, setting, navigation item, and CRUD operation work.
+* Do not leave decorative buttons that do nothing.
+* Do not use hardcoded sample records as if they were real user data.
+* Do not simulate successful authentication, file uploads, Drive sync, exports, or persistence.
+* Do not call third-party AI inference APIs.
+* Do not generate fake AI responses. AI features must display a clear unavailable/setup state until connected to the actual Ayatrisya model backend.
+* Do not claim a feature works unless it has been implemented and tested.
+* Preserve existing functionality wherever possible.
+* Use secure environment configuration and never expose private credentials.
+* Keep the application responsive, accessible, and performant.
+* Do not stop after creating files. Run the build, test workflows, fix errors, and verify the finished application.
+
+2. FIRST: AUDIT THE EXISTING PROJECT
+
+Before editing:
+
+1. Inspect the framework, package manager, routes, existing components, authentication, storage, styling, and integrations.
+2. Identify existing functionality that works.
+3. Identify incomplete, broken, duplicated, or fake features.
+4. Preserve working features and reuse good components.
+5. Create a prioritized implementation checklist.
+6. Implement incrementally, keeping the project runnable after major changes.
+
+Use the existing stack if it is sound. Do not rewrite the entire application unnecessarily.
+
+3. CREATE AN ORIGINAL AYATRISYA ANIMATED LOGO
+
+Design a distinctive, custom Ayatrisya logo and wordmark.
+
+Brand concept
+
+Create an abstract, elegant emblem inspired by:
+
+* A celestial core.
+* A geometric aperture or portal.
+* Interlocking orbital paths.
+* A subtle spark representing creation and intelligence.
+
+The logo must be original, recognizable at small sizes, and suitable for a premium technology brand.
+
+Do not claim the symbol has a historical or Sanskrit meaning that has not been verified.
+
+Required logo assets
+
+Create:
+
+* A clean SVG emblem.
+* A full Ayatrisya wordmark.
+* A compact icon-only version.
+* A favicon.
+* A loading/animated version.
+* A monochrome version.
+* Light and dark background variants.
+
+Prefer editable SVG artwork with reusable paths and gradients over raster-only branding.
+
+Place assets in a consistent location, such as public/brand/.
+
+Logo animation
+
+Create a polished animation sequence:
+
+1. Small points of light converge toward a central geometric form.
+2. The emblem assembles through smooth geometric movement.
+3. Subtle orbital paths rotate into alignment.
+4. The emblem illuminates with a restrained violet-indigo glow.
+5. The Ayatrisya wordmark appears with an elegant reveal.
+6. The animation settles into a calm, recognizable logo.
+
+The final logo must remain crisp and stationary after the intro finishes.
+
+Use CSS or a suitable lightweight animation library. Avoid unnecessary heavy video backgrounds.
+
+Create separate animations for:
+
+* First-visit splash screen.
+* Small sidebar logo.
+* Loading indicator.
+* Subtle idle state, if enabled.
+* App icon or favicon where practical.
+
+The sidebar logo must not repeatedly play the full intro. Use a compact, lightweight animation.
+
+Add:
+
+* Skip intro.
+* Reduced-motion support.
+* A preference to minimize repeated animations.
+* No sound by default.
+* No animation that blocks navigation or causes long loading.
+
+The logo must look good on mobile, desktop, and high-density displays.
+
+4. MAKE THE WHOLE UI MORE ANIMATED
+
+Create a cinematic, premium dark interface with midnight charcoal surfaces, violet-indigo accents, restrained cyan highlights, fine borders, layered depth, and elegant glassmorphism.
+
+Animations should make the application feel alive without slowing down real work.
+
+Implement:
+
+Page transitions
+
+* Smooth route transitions.
+* Fade-and-slide entrances.
+* Staggered content reveals where appropriate.
+* Elegant modal transitions.
+* Smooth sidebar expansion and collapse.
+
+Interactive controls
+
+* Button hover and pressed states.
+* Animated dropdown menus.
+* Smooth tooltips.
+* Subtle icon transitions.
+* Animated toggles.
+* Clear focus indicators.
+* Loading skeletons for real asynchronous operations.
+
+Chat
+
+* Smooth message appearance.
+* Animated typing indicator only while an actual response is pending.
+* Streaming text animation only when real streaming output arrives.
+* Composer expansion.
+* Attachment preview transitions.
+* Smooth scroll-to-bottom control.
+* Animated copy confirmation.
+* Message action menu transitions.
+
+Projects and tools
+
+* Card hover depth.
+* Smooth grid/list layout changes.
+* Animated filtering and sorting where practical.
+* Progress indicators based on real operations.
+* File upload progress based on actual bytes or API progress.
+* Sync indicators based on real sync states.
+
+Notifications and dialogs
+
+* Toast enter/exit animations.
+* Confirmation dialog transitions.
+* Accessible focus management.
+* Error and success states with clear messages.
+
+Performance rules
+
+* Prefer transform and opacity animations.
+* Avoid continuous GPU-heavy effects.
+* Pause unnecessary animations when the page is hidden.
+* Respect prefers-reduced-motion.
+* Do not use animation as a substitute for functionality.
+* Avoid excessive glow, particles, blur, and parallax.
+* Keep mobile interactions fast.
+
+5. AUTHENTICATION MUST BE REAL
+
+Implement Firebase Authentication using the existing project’s Firebase configuration.
+
+Support:
+
+* Google sign-in.
+* Email/password sign-in.
+* Account registration.
+* Password confirmation.
+* Forgot-password flow.
+* Email verification.
+* Sign out.
+* Auth loading state.
+* Invalid credential errors.
+* Network failure handling.
+* Duplicate account handling.
+* Session restoration after refresh.
+
+Never display a successful login before Firebase confirms it.
+
+Use environment variables for public Firebase configuration where appropriate. Never place service-account credentials or private server keys in frontend code.
+
+If Firebase credentials are missing, show a clearly labelled setup state and document the exact configuration required.
+
+Guest mode
+
+Implement a real guest mode that uses local storage and does not pretend to create a Firebase account.
+
+Guest content must be retained locally where the browser permits.
+
+When a guest signs in, offer a tested method to import or merge local content into the authenticated user’s local workspace. Never silently erase guest data.
+
+6. BUILD A COMPLETE MAIN WORKSPACE
+
+Implement the entire workspace with a responsive sidebar, top navigation, central content area, and contextual panels.
+
+Sidebar
+
+Include:
+
+* New Chat.
+* Search.
+* Chat history.
+* Projects.
+* Tools.
+* Library.
+* Documents.
+* Settings.
+* Storage and sync.
+* Account.
+
+Support:
+
+* Expand/collapse.
+* Mobile drawer.
+* Active states.
+* Context menus.
+* Rename and delete actions.
+* Search and sorting.
+* Keyboard navigation.
+
+All lists must use actual stored data.
+
+Top navigation
+
+Include:
+
+* Current page title.
+* V1 Fast model selector.
+* V2 Best Result model selector.
+* Normal, Savage, and Joke modes.
+* Connection status.
+* User profile menu.
+* Context-specific actions.
+
+Until real Ayatrisya model endpoints are available, show accurate model availability indicators. Never redirect to external AI services.
+
+Search
+
+Implement actual search over local conversations, projects, documents, and library metadata.
+
+Support:
+
+* Search-as-you-type with a short debounce.
+* Clear search.
+* Keyboard navigation.
+* Empty results state.
+* Result type filters.
+* Open result.
+* Rename or delete result where permitted.
+
+Do not display hardcoded search results.
+
+7. CHAT MANAGEMENT — ALL ACTIONS MUST WORK
+
+The AI response itself is excluded until the actual model is connected, but conversation management must be fully functional.
+
+Implement:
+
+* Create new conversation.
+* Rename conversation.
+* Delete conversation.
+* Delete multiple selected conversations.
+* Search conversations.
+* Pin and unpin conversations.
+* Archive and restore conversations.
+* Duplicate a conversation where practical.
+* Export conversation.
+* Copy individual messages.
+* Copy code blocks.
+* Edit a user message and resubmit when model integration is available.
+* Regenerate an assistant response when model integration is available.
+* Delete an individual message with clear confirmation when appropriate.
+* Clear conversation.
+* Sort by newest, oldest, and title.
+* Recover gracefully from interrupted writes.
+
+Use stable IDs, timestamps, and transactional persistence.
+
+When deleting a conversation, ask for confirmation and explain whether associated attachments will also be deleted.
+
+Do not offer regeneration as if it works when the AI model is unavailable. Show a clear disabled/setup state.
+
+8. LOCAL-FIRST STORAGE — FULLY FUNCTIONAL
+
+Implement IndexedDB as the main browser persistence layer.
+
+Store:
+
+* Conversations.
+* Messages.
+* Projects.
+* Project metadata.
+* User preferences.
+* User-created notes.
+* Supported attachment blobs.
+* Document content.
+* Presentation project data.
+* Library metadata.
+* Archive and pin state.
+* Sync queue and metadata.
+
+Use versioned schemas and safe migrations.
+
+Requirements:
+
+* Data survives refreshes.
+* Transactions protect related changes.
+* Search and pagination support larger histories.
+* Failed writes display errors.
+* Storage quota failures are handled.
+* Export and import work.
+* Destructive actions require confirmation.
+* Local data can be cleared intentionally.
+* User data is not silently uploaded.
+
+Do not store large files as base64 strings in ordinary conversation records when a separate Blob store is appropriate.
+
+Storage dashboard
+
+Display real values where available:
+
+* Estimated usage.
+* Estimated quota.
+* Number of conversations.
+* Number of projects.
+* Number of locally stored files.
+* Pending sync operations.
+* Drive connection status.
+* Last confirmed sync time.
+
+Use browser storage APIs when available. Do not promise a guaranteed 4 GB quota.
+
+If a value cannot be measured, display “Unavailable” rather than inventing a number.
+
+9. FULL CRUD FOR EVERY APPROPRIATE RESOURCE
+
+Implement complete Create, Read, Update, and Delete operations.
+
+Conversations
+
+* Create, open, rename, pin, archive, restore, export, and delete.
+
+Projects
+
+* Create project.
+* Rename project.
+* Edit description.
+* Change icon or color.
+* Add and remove tags.
+* Pin project.
+* Archive and restore.
+* Duplicate project metadata and supported content.
+* Delete project with confirmation.
+* Search and sort.
+* Export project.
+
+Notes and documents
+
+* Create.
+* Open.
+* Edit.
+* Rename.
+* Save.
+* Duplicate.
+* Move to a project.
+* Export.
+* Delete.
+
+Library
+
+* Import supported files.
+* Rename.
+* Preview supported formats.
+* Download or export.
+* Move between supported organizational structures.
+* Remove from a project.
+* Delete locally stored content.
+* Search and filter.
+* Display file size and source when known.
+
+Attachments
+
+* Add.
+* Preview.
+* Remove before submission.
+* Download if locally available.
+* Delete stored copies with clear confirmation.
+* Show when an attachment is only a remote reference rather than a local file.
+
+Every destructive action must update the actual storage repository and the UI. Do not just hide the item from the screen.
+
+10. PROJECTS DASHBOARD
+
+Create a polished project dashboard with:
+
+* Grid and list views.
+* Create-project dialog.
+* Search and filters.
+* Sorting.
+* Recent activity based on actual timestamps.
+* Project status.
+* Tags.
+* Local/Drive storage indicator.
+* Project details.
+* Context menus.
+* Rename and delete.
+* Archive and restore.
+* Export.
+
+A project should contain real metadata and supported content references, not just a decorative card.
+
+Implement project-level persistence and safe relationship handling.
+
+If a project is deleted, ask whether its files should be retained in the library or deleted as well. Respect the user’s choice.
+
+11. LIBRARY AND FILE MANAGEMENT
+
+Create a functional library with:
+
+* File picker.
+* Drag-and-drop import where supported.
+* Type filters.
+* Search.
+* Sorting by name, date, or size when known.
+* File preview for supported formats.
+* Rename and delete.
+* Download/export.
+* Project association.
+* Storage location indicator.
+* Error and unsupported-format handling.
+
+Validate file types and sizes. Do not trust the extension alone.
+
+Use browser capabilities only where supported. Do not claim the app can read arbitrary PC folders without user permission.
+
+12. TOOL WORKSPACES — REAL UI, HONEST AI STATUS
+
+Create distinct tool pages for each product feature.
+
+Image Studio
+
+* Prompt editor.
+* Aspect-ratio selection.
+* Supported dimension selection.
+* Output history.
+* Save and export.
+* Model availability state.
+
+3D Studio
+
+* Prompt editor.
+* Supported format selector.
+* Real 3D viewer integration when an actual model is available.
+* Orbit, zoom, and reset controls.
+* Export actual generated files when available.
+
+Music Studio
+
+* Prompt editor.
+* Playback controls for actual audio files.
+* Supported generation options.
+* Save and export.
+* Real generation status.
+
+Voice Studio
+
+* Request microphone permission.
+* Record and stop.
+* Upload audio.
+* Playback recording.
+* Transcribe through the future Ayatrisya STT endpoint.
+* Generate speech through the future Ayatrisya TTS endpoint.
+* Copy transcript.
+* Download audio.
+* Clear privacy controls.
+
+Documents and Presentations
+
+* Create and edit real local documents.
+* Rename and delete.
+* Save and reopen.
+* Manage presentation slide data.
+* Export supported formats using a real implementation.
+* Use templates that create editable content, not static fake previews.
+
+Coding Workspace
+
+* Project overview.
+* File metadata and safe text-file editing where supported.
+* Coding task creation.
+* Task rename and deletion.
+* Export task specification.
+* Desktop-app connection status.
+* Ayatrisya Desktop download link when a genuine release exists.
+
+Do not pretend browser access equals unrestricted local filesystem access.
+
+AI exclusion rule
+
+The UI, persistence, settings, tool organization, file management, and export workflows should work independently of the AI model.
+
+Until a real model is connected:
+
+* Show “Model not connected” or the appropriate accurate status.
+* Allow users to create projects and save content.
+* Do not fabricate AI-generated images, audio, 3D models, code, or answers.
+* Keep integration code modular so the real models can be connected later without redesigning the application.
+
+13. GOOGLE DRIVE — REAL OPTIONAL SYNC
+
+Build actual Google Drive OAuth and file synchronization after local storage is stable.
+
+Requirements:
+
+* User-authorized Google sign-in and Drive access.
+* Narrowest viable permissions.
+* Folder creation through real API calls.
+* Store actual Drive file IDs.
+* Upload and download authorized files.
+* Detect modifications.
+* Maintain a persistent sync queue.
+* Retry transient failures.
+* Display progress and errors.
+* Detect conflicting versions.
+* Offer conflict resolution.
+* Pause and resume sync.
+* Manual sync button.
+* Last successful sync timestamp.
+* Avoid duplicate folders and files.
+* Never claim success before the API confirms it.
+
+Use drive.file scope if it meets the implemented workflow. Do not request full Drive access without a justified need.
+
+Do not store OAuth tokens in plain application records or logs. Use a secure supported token-handling approach and follow Google’s OAuth requirements.
+
+If OAuth setup is incomplete, show a real setup state and provide instructions. Do not fake Drive connection or create pretend remote files.
+
+The user’s browser data and Google Drive data are different storage locations. Clearly show which content has actually synchronized.
+
+14. SETTINGS — MAKE EVERY CONTROL FUNCTIONAL
+
+Appearance
+
+* Dark/light mode.
+* Sidebar preference.
+* Reduced motion.
+* Animation intensity if implemented.
+* Accent color if implemented.
+* Persist preferences.
+
+Chat
+
+* Default model selection.
+* Default chat mode.
+* Enter-to-send preference.
+* History display options.
+
+Privacy
+
+* Local-first explanation.
+* Data export.
+* Delete selected data.
+* Clear all local data with explicit confirmation.
+* Drive sync preferences.
+* Explanation of remote model processing.
+* No automatic private-data training.
+
+Storage
+
+* Actual storage estimates.
+* Export/import.
+* Drive connection.
+* Sync queue.
+* Last sync.
+* Conflict resolution.
+
+Account
+
+* Profile information.
+* Sign-in state.
+* Email verification state.
+* Sign out.
+* Supported account management actions.
+
+Do not create switches that merely animate without changing application behavior.
+
+15. GLOBAL COMMANDS, CONTEXT MENUS, AND SHORTCUTS
+
+Implement useful productivity features:
+
+* Ctrl/Cmd + K: global search or command palette.
+* Ctrl/Cmd + N: new chat where appropriate.
+* Ctrl/Cmd + Shift + N: new project if not conflicting with platform behavior.
+* Escape: close dialogs and menus when safe.
+* Ctrl/Cmd + ,: open settings if appropriate.
+
+Create a command palette with actions such as:
+
+* New chat.
+* New project.
+* Search.
+* Open library.
+* Open settings.
+* Toggle sidebar.
+* Toggle theme.
+* Export data.
+
+Add contextual menus to conversations, projects, notes, and files.
+
+Only show actions that are actually available for the selected resource.
+
+16. NOTIFICATIONS, UNDO, AND ERROR HANDLING
+
+Implement a reusable notification system.
+
+Use success messages only after successful operations.
+
+Show clear errors for:
+
+* Failed storage writes.
+* Failed exports.
+* Invalid imports.
+* Authentication failures.
+* Drive connection failures.
+* Upload failures.
+* Unsupported files.
+* Model unavailability.
+
+Where feasible, support undo for reversible local actions such as archive, rename, and moving items. Do not pretend a permanently deleted remote file can be restored unless the underlying service supports it.
+
+For bulk deletion, show the number and type of items affected.
+
+17. DESIGN SYSTEM AND RESPONSIVENESS
+
+Create consistent design tokens for:
+
+* Colors.
+* Typography.
+* Spacing.
+* Border radii.
+* Shadows.
+* Motion duration.
+* Easing.
+* Focus rings.
+* Z-index layers.
+
+Use a unified component library for:
+
+* Buttons.
+* Inputs.
+* Selects.
+* Dialogs.
+* Menus.
+* Tooltips.
+* Cards.
+* Toasts.
+* Empty states.
+* Loading indicators.
+* Confirmations.
+
+Desktop:
+
+* Persistent sidebar.
+* Full workspace.
+* Contextual panels.
+
+Tablet:
+
+* Adaptive navigation.
+* Flexible layouts.
+
+Mobile:
+
+* Slide-out sidebar.
+* Touch-friendly controls.
+* Bottom-anchored chat composer.
+* Responsive dialogs.
+* Safe-area support.
+* No horizontal overflow.
+
+Support keyboard navigation, screen readers, visible focus, and reduced motion.
+
+18. PERFORMANCE, SECURITY, AND DATA PROTECTION
+
+Implement:
+
+* Lazy-loaded routes where appropriate.
+* Efficient rendering of long histories.
+* IndexedDB query optimization.
+* Safe Markdown rendering.
+* Sanitization of untrusted HTML.
+* File type and size validation.
+* Secure environment configuration.
+* Error boundaries.
+* No secrets in frontend bundles.
+* No private content in logs.
+* Safe handling of imported backup files.
+* Confirmation before destructive actions.
+* No automatic execution of generated or uploaded code.
+
+Do not add complex backend infrastructure solely to store user conversations. Local-first storage is the default.
+
+Firebase Authentication may establish identity, but user content must remain local unless the user deliberately authorizes an appropriate user-owned storage or processing operation.
+
+19. TEST THE REAL APPLICATION
+
+Write and run tests for:
+
+* Authentication state handling.
+* Guest mode.
+* IndexedDB CRUD.
+* Refresh persistence.
+* Rename.
+* Delete.
+* Archive and restore.
+* Search and sorting.
+* Bulk actions.
+* Project relationship handling.
+* Backup export/import.
+* Invalid backup rejection.
+* Storage quota failure.
+* Theme persistence.
+* Reduced motion.
+* File validation.
+* Google Drive sync queue.
+* Drive conflict handling.
+* Model unavailable states.
+* Keyboard shortcuts.
+* Responsive navigation.
+
+Use mocks only for isolated unit tests. Distinguish mocked tests from live integrations.
+
+Perform live Firebase and Google Drive tests only when the necessary valid configuration is available.
+
+Run:
+
+* Production build.
+* TypeScript checks.
+* Linting.
+* Automated tests.
+* Browser-level workflows when tooling is available.
+
+Fix all blocking errors and verify that the application launches correctly.
+
+20. FINAL EXECUTION PLAN
+
+Work in this order:
+
+Phase 1: Audit the repository and repair existing defects.
+
+Phase 2: Create the Ayatrisya logo assets and animated design system.
+
+Phase 3: Implement the complete responsive application shell and transitions.
+
+Phase 4: Finish all real local storage, CRUD operations, search, sorting, archive, and deletion.
+
+Phase 5: Complete Firebase authentication and guest-mode migration.
+
+Phase 6: Complete projects, library, documents, presentations, and coding-task management.
+
+Phase 7: Implement real backup/restore and Google Drive synchronization.
+
+Phase 8: Finish the image, 3D, music, voice, and AI workspaces with accurate availability states.
+
+Phase 9: Add settings, command palette, shortcuts, notifications, accessibility, and polish.
+
+Phase 10: Run tests, repair defects, and verify the production build.
+
+Keep the project runnable after each phase. Do not replace a broken feature with a static mockup.
+
+21. FINAL ACCEPTANCE CHECKLIST
+
+Before reporting completion, verify that:
+
+* The animated Ayatrisya logo exists as real project assets.
+* Splash animation can be skipped.
+* Reduced motion works.
+* All navigation works.
+* Authentication works when configured.
+* Guest mode persists local content.
+* Conversations can be created, renamed, pinned, archived, restored, exported, and deleted.
+* Projects can be created, renamed, edited, archived, duplicated where supported, exported, and deleted.
+* Notes and supported documents can be created, edited, saved, reopened, renamed, exported, and deleted.
+* The library supports real file operations.
+* Search and sorting return real records.
+* IndexedDB persists data after refresh.
+* Backup export/import works.
+* Drive operations use real API results.
+* Settings persist and affect behavior.
+* AI screens do not fabricate model results.
+* All implemented controls have working actions.
+* Responsive layouts and accessibility are checked.
+* Build and automated tests pass, or remaining failures are documented.
+
+FINAL INSTRUCTION
+
+Begin with the existing repository audit. Then implement the complete product in phases. Do not merely generate a beautiful interface—make the underlying actions, persistence, authentication, and integrations genuinely work.
+
+When finished, provide a concise but evidence-based report showing what works, what was tested, which live integrations were verified, what remains incomplete, and the exact steps needed to connect the separately developed Ayatrisya AI models.

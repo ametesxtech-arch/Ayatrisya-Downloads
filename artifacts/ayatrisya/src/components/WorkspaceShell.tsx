@@ -1,492 +1,211 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
 import {
-  CircleHelp,
-  Code2,
-  Command,
-  FileText,
-  FolderKanban,
-  Image,
-  Library,
-  Menu,
-  MessageSquare,
-  MoreHorizontal,
-  PanelLeftClose,
-  PanelLeftOpen,
-  Plus,
-  Presentation,
-  Search,
-  Settings,
-  Sparkles,
-  X,
+  Box, Code2, Command as CommandIcon, FileText, History as HistoryIcon, Pin, UserRound, FolderKanban, HardDrive, Image, Library, Menu, MessageSquare, Mic, Music2,
+  PanelLeftClose, PanelLeftOpen, Plus, Presentation, Search, Settings, StickyNote, X,
 } from 'lucide-react';
-import { Button, IconButton, Modal } from '@/components/Primitives';
-import { recentChats, tools } from '@/data/fixtures';
+import { Button, IconButton } from '@/components/Primitives';
+import { Palette, type Command } from '@/components/Palette';
+import { ActionMenu, useContextMenu, type MenuItem } from '@/components/Menus';
+import { useConvActions } from '@/hooks/use-conv-actions';
+import { pushNotice } from '@/lib/notify';
+import { exportBackup, downloadBlob } from '@/storage/backup';
+import { tools } from '@/data/nav';
+import { confirmDiscard } from '@/lib/dirty';
+import { errMsg } from '@/lib/format';
 import { cx } from '@/lib/cx';
-import { session } from '@/lib/session';
 import { Brand } from '@/components/Brand';
-import { Toast } from '@/components/Toast';
+import { NoticeHost } from '@/components/Toast';
 import { FeaturePage } from '@/pages/workspace/FeaturePage';
+import { useCaps, usePrefs } from '@/hooks/use-prefs';
+import { useLocalQuery } from '@/storage/hooks';
+import { repository } from '@/storage/repository';
+import { useAuth } from '@/integrations/firebase/AuthProvider';
+import type { ChatMode, ModelId } from '@/storage/types';
+
+const modelNames: Record<ModelId, string> = { 'v1-fast': 'V1 Fast', 'v2-best': 'V2 Best Result' };
 
 export function Workspace() {
-  const [path, setPath] = useLocation(),
-    [collapsed, setCollapsed] = useState(false),
-    [mobileOpen, setMobileOpen] = useState(false),
-    [dialog, setDialog] = useState(''),
-    [toast, setToast] = useState(''),
-    [mode, setMode] = useState('Normal'),
-    [model, setModel] = useState('Seed · experimental'),
-    [theme, setThemeState] = useState(session.appearance);
-  const [search, setSearch] = useState('');
-  const title = useMemo(
-    () =>
-      tools.find((t) => t.href === path)?.name ??
-      (path.startsWith('/workspace/chat')
-        ? 'Conversation'
-        : path.startsWith('/workspace/projects/')
-          ? 'Fieldnotes'
-          : path.startsWith('/workspace/documents/')
-            ? 'Product principles'
-            : path.includes('settings')
-              ? 'Settings'
-              : path.includes('account')
-                ? 'Account'
-                : 'Workspace'),
-    [path],
-  );
+  const [path, setPath] = useLocation();
+  const { prefs, save } = usePrefs();
+  const { caps } = useCaps();
+  const { user, signOut } = useAuth();
+  const collapsed = prefs.sidebarCollapsed;
+  const [mobileOpen, setMobileOpen] = useState(false), [dialog, setDialog] = useState(''), [chatSearch, setChatSearch] = useState(''), [chatPage, setChatPage] = useState(0);
+  const menuBtn = useRef<HTMLButtonElement>(null), closeBtn = useRef<HTMLButtonElement>(null);
+  const convs = useLocalQuery(() => repository.listConversations({ limit: 31, offset: chatPage * 30, search: chatSearch || undefined }), [chatSearch, chatPage]);
+  const stats = useLocalQuery(() => repository.stats(), []);
+  const chatId = path.startsWith('/workspace/chat/') ? path.split('/')[3] : null;
+  const current = useLocalQuery(() => (chatId ? repository.getConversation(chatId) : Promise.resolve(undefined)), [chatId]);
+  const title = chatId ? (current.data?.title ?? 'Conversation') : (tools.find((t) => t.href === path)?.name ?? (path.startsWith('/workspace/projects/') ? 'Project' : path.startsWith('/workspace/documents/') ? 'Document' : path.includes('account') ? 'Account' : 'Workspace'));
+
+  const pageRef = useRef<HTMLDivElement>(null);
+  useEffect(() => { const el = pageRef.current; if (!el) return; el.classList.remove('route-in'); void el.offsetWidth; el.classList.add('route-in'); }, [path]);
+  const gotoRef = useRef<(h: string) => void>(() => undefined);
+  const newChatRef = useRef<() => Promise<void>>(async () => undefined);
   useEffect(() => {
     function key(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        setDialog('launcher');
-      }
-      if (e.key === 'Escape') {
-        setDialog('');
-        setMobileOpen(false);
-      }
+      const mod = e.metaKey || e.ctrlKey;
+      const t = e.target as HTMLElement | null;
+      const editing = !!t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable);
+      const modal = !!document.querySelector('[role="dialog"][aria-modal="true"]');
+      if (e.key === 'Escape') setMobileOpen(false);
+      if (!mod) return;
+      const k = e.key.toLowerCase();
+      if (k === 'k') { e.preventDefault(); setDialog('palette'); return; }
+      if (editing || modal) return;
+      if (k === 'n' && e.shiftKey) { e.preventDefault(); gotoRef.current('/workspace/projects?new=1'); }
+      else if (k === 'n') { e.preventDefault(); void newChatRef.current(); }
+      else if (e.key === ',') { e.preventDefault(); gotoRef.current('/workspace/settings'); }
     }
     window.addEventListener('keydown', key);
     return () => window.removeEventListener('keydown', key);
   }, []);
+  const asideRef = useRef<HTMLElement>(null), mainRef = useRef<HTMLDivElement>(null), wasOpen = useRef(false);
+  const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 767px)').matches);
+  const [creating, setCreating] = useState(false);
   useEffect(() => {
-    document.documentElement.dataset.appearance =
-      theme === 'Light' ? 'light' : 'dark';
-    return () => {
-      delete document.documentElement.dataset.appearance;
-    };
-  }, [theme]);
-  const notify = (message: string) => {
-    setToast(message);
-    window.setTimeout(() => setToast(''), 3600);
-  };
-  const goto = (href: string) => {
-    setPath(href);
-    setDialog('');
-    setMobileOpen(false);
-  };
+    const mq = window.matchMedia('(max-width: 767px)');
+    const f = () => setIsMobile(mq.matches);
+    mq.addEventListener('change', f);
+    return () => mq.removeEventListener('change', f);
+  }, []);
+  useEffect(() => {
+    const hide = isMobile && !mobileOpen;
+    (asideRef.current as (HTMLElement & { inert: boolean }) | null)!.inert = hide;
+    (mainRef.current as (HTMLElement & { inert: boolean }) | null)!.inert = isMobile && mobileOpen;
+    if (mobileOpen) { wasOpen.current = true; closeBtn.current?.focus(); }
+    else if (wasOpen.current) { wasOpen.current = false; menuBtn.current?.focus(); }
+  }, [mobileOpen, isMobile]);
+  function trap(e: React.KeyboardEvent) {
+    if (!(isMobile && mobileOpen) || e.key !== 'Tab') return;
+    const f = Array.from(asideRef.current!.querySelectorAll<HTMLElement>('a[href],button:not([disabled]),input,select,textarea')).filter((x) => x.offsetParent !== null);
+    if (!f.length) return;
+    const first = f[0], last = f[f.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  }
+  async function newChat() {
+    if (creating || !confirmDiscard()) return;
+    setCreating(true);
+    try { const c = await repository.createConversation(); setChatPage(0); setPath(`/workspace/chat/${c.id}`); setMobileOpen(false); setDialog(''); }
+    catch (e) { notify(`Could not create a conversation: ${errMsg(e)}`); } finally { setCreating(false); }
+  }
+  const notify = (m: string) => pushNotice(m);
+  const goto = (href: string) => { if (!confirmDiscard()) return; setPath(href); setDialog(''); setMobileOpen(false); };
+  gotoRef.current = goto;
+  newChatRef.current = newChat;
+  const acts = useConvActions({ notify, goto, onDeleted: (ids) => { if (chatId && ids.includes(chatId)) setPath('/workspace'); } });
+  const ctx = useContextMenu();
+  const toggleTheme = () => save({ theme: prefs.theme === 'Light' ? 'Dark' : 'Light' });
+  const commands: Command[] = [
+    { id: 'chat', label: 'New chat', hint: 'Ctrl N', run: () => void newChat() },
+    { id: 'project', label: 'New project', hint: 'Ctrl Shift N', run: () => goto('/workspace/projects?new=1') },
+    { id: 'history', label: 'Open conversation history', run: () => goto('/workspace/history') },
+    { id: 'library', label: 'Open library', run: () => goto('/workspace/library') },
+    { id: 'settings', label: 'Open settings', hint: 'Ctrl ,', run: () => goto('/workspace/settings') },
+    { id: 'storage', label: 'Open storage and backup', run: () => goto('/workspace/storage') },
+    { id: 'sidebar', label: collapsed ? 'Expand sidebar' : 'Collapse sidebar', run: () => void save({ sidebarCollapsed: !collapsed }) },
+    { id: 'theme', label: prefs.theme === 'Light' ? 'Switch to dark theme' : 'Switch to light theme', run: () => void toggleTheme() },
+    { id: 'export', label: 'Export full backup (JSON)', run: () => { exportBackup().then((b) => { downloadBlob(b, `ayatrisya-backup-${new Date().toISOString().slice(0, 10)}.json`); notify('Backup downloaded. It is unencrypted and contains private data.'); }, (e) => notify(errMsg(e))); } },
+  ];
+  const profileItems: MenuItem[] = [
+    { label: 'Account', onSelect: () => goto('/workspace/account') },
+    { label: 'Settings', onSelect: () => goto('/workspace/settings') },
+    { label: 'Storage and backup', onSelect: () => goto('/workspace/storage') },
+    { label: prefs.theme === 'Light' ? 'Dark theme' : 'Light theme', onSelect: () => void toggleTheme() },
+    ...(user ? [{ label: 'Sign out', danger: true, onSelect: () => { signOut().then(() => notify('Signed out. The guest workspace is shown.'), (e) => notify(errMsg(e))); } }] : []),
+  ];
+  const capFor = (id: ModelId) => caps.find((c) => c.id === id);
+  const anyReady = caps.some((c) => c.available);
+  const L = (href: string, active: boolean, icon: ReactNode, label: string) => <SideLink href={href} active={active} icon={icon} label={label} collapsed={collapsed} onSelect={() => setMobileOpen(false)} />;
+  const initials = (user?.displayName || prefs.displayName || user?.email || 'G').slice(0, 2).toUpperCase();
+  const h = (t: string) => !collapsed && <div className="mb-2 mt-6 px-2 text-[10px] font-bold uppercase tracking-[.17em] text-slate-500">{t}</div>;
   return (
-    <div className="app-noise flex min-h-[100dvh] overflow-hidden bg-[#101116] text-slate-100">
-      {mobileOpen && (
-        <button
-          aria-label="Close navigation overlay"
-          onClick={() => setMobileOpen(false)}
-          className="fixed inset-0 z-30 bg-black/60 md:hidden"
-        />
-      )}
-      <aside
-        className={cx(
-          'fixed inset-y-0 left-0 z-40 flex w-[260px] flex-col border-r border-white/[.065] bg-[#12141a] transition-transform duration-200 md:relative md:translate-x-0',
-          mobileOpen ? 'translate-x-0' : '-translate-x-full',
-          collapsed && 'md:w-[72px]',
-        )}
-      >
+    <div className="app-noise flex h-[100dvh] min-h-0 overflow-hidden bg-[#101116] text-slate-100">
+      <a href="#main" className="skip-link">Skip to content</a>
+      {mobileOpen && <button aria-label="Close navigation overlay" tabIndex={-1} onClick={() => setMobileOpen(false)} className="fixed inset-0 z-30 bg-black/60 md:hidden" />}
+      <aside ref={asideRef} onKeyDown={trap} onClickCapture={(e) => { if ((e.target as HTMLElement).closest('a[href]') && !confirmDiscard()) { e.preventDefault(); e.stopPropagation(); } }} role={isMobile && mobileOpen ? 'dialog' : undefined} aria-modal={isMobile && mobileOpen ? true : undefined} aria-label="Workspace navigation" className={cx('safe-t fixed inset-y-0 left-0 z-40 flex w-[270px] flex-col border-r border-white/[.065] bg-[#12141a] transition-transform duration-200 md:relative md:translate-x-0', mobileOpen ? 'translate-x-0' : '-translate-x-full', collapsed && 'md:w-[72px]')}>
         <div className="flex h-[66px] items-center justify-between px-4">
-          <Link href="/workspace" onClick={() => setMobileOpen(false)}>
-            <Brand compact />
-          </Link>
-          <IconButton
-            label="Close navigation"
-            className="md:hidden"
-            onClick={() => setMobileOpen(false)}
-          >
-            <X size={16} />
-          </IconButton>
-          <IconButton
-            label={collapsed ? 'Expand navigation' : 'Collapse navigation'}
-            className="hidden md:grid"
-            onClick={() => setCollapsed(!collapsed)}
-          >
-            {collapsed ? (
-              <PanelLeftOpen size={16} />
-            ) : (
-              <PanelLeftClose size={16} />
-            )}
-          </IconButton>
+          <Link href="/workspace" onClick={() => setMobileOpen(false)} aria-label="Ayatrisya home"><Brand compact /></Link>
+          <button ref={closeBtn} aria-label="Close navigation" className="grid size-9 place-items-center rounded-lg text-slate-400 hover:bg-white/[.07] md:hidden" onClick={() => setMobileOpen(false)}><X size={16} /></button>
+          <IconButton label={collapsed ? 'Expand navigation' : 'Collapse navigation'} className="hidden md:grid" onClick={() => save({ sidebarCollapsed: !collapsed })}>{collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}</IconButton>
         </div>
         <div className="px-3">
-          <Button
-            className="w-full justify-start"
-            onClick={() => goto('/workspace')}
-          >
-            <Plus size={16} />
-            {!collapsed && 'New chat'}
-            {!collapsed && (
-              <span className="ml-auto text-[10px] text-violet-100/60">
-                ⌘ I
-              </span>
-            )}
-          </Button>
-          <button
-            onClick={() => setDialog('launcher')}
-            className={cx(
-              'mt-2 flex h-10 w-full items-center gap-3 rounded-lg px-3 text-xs text-slate-400 hover:bg-white/[.05] hover:text-white',
-              collapsed && 'justify-center px-0',
-            )}
-          >
-            <Search size={16} />
-            {!collapsed && (
-              <>
-                Search workspace
-                <span className="ml-auto rounded border border-white/[.08] px-1.5 py-0.5 text-[9px]">
-                  ⌘ K
-                </span>
-              </>
-            )}
+          <Button className="w-full justify-start" onClick={() => void newChat()} disabled={creating} data-testid="button-new-chat"><Plus size={16} />{!collapsed && 'New chat'}</Button>
+          <button onClick={() => setDialog('palette')} aria-label="Search workspace" className={cx('mt-2 flex h-10 w-full items-center gap-3 rounded-lg px-3 text-xs text-slate-400 hover:bg-white/[.05] hover:text-white', collapsed && 'justify-center px-0')}>
+            <Search size={16} />{!collapsed && <>Search workspace<span className="ml-auto rounded border border-white/[.08] px-1.5 py-0.5 text-[9px]">Ctrl K</span></>}
           </button>
         </div>
-        <div className="mt-7 flex-1 overflow-y-auto px-3">
-          {!collapsed && (
-            <div className="mb-2 px-2 text-[9px] font-bold uppercase tracking-[.17em] text-slate-600">
-              Workspace
-            </div>
-          )}
-          <SideLink
-            href="/workspace"
-            active={path === '/workspace' || path.startsWith('/workspace/chat')}
-            icon={<MessageSquare size={15} />}
-            label="Chat"
-            collapsed={collapsed}
-            onSelect={() => setMobileOpen(false)}
-          />
-          <SideLink
-            href="/workspace/research"
-            active={path === '/workspace/research'}
-            icon={<Search size={15} />}
-            label="Research"
-            collapsed={collapsed}
-            onSelect={() => setMobileOpen(false)}
-          />
-          <SideLink
-            href="/workspace/coding"
-            active={path.startsWith('/workspace/coding')}
-            icon={<Code2 size={15} />}
-            label="Coding"
-            collapsed={collapsed}
-            onSelect={() => setMobileOpen(false)}
-          />
-          <SideLink
-            href="/workspace/images"
-            active={path === '/workspace/images'}
-            icon={<Image size={15} />}
-            label="Image studio"
-            collapsed={collapsed}
-            onSelect={() => setMobileOpen(false)}
-          />
-          <SideLink
-            href="/workspace/documents"
-            active={path.startsWith('/workspace/documents')}
-            icon={<FileText size={15} />}
-            label="Documents"
-            collapsed={collapsed}
-            onSelect={() => setMobileOpen(false)}
-          />
-          <SideLink
-            href="/workspace/presentations"
-            active={path === '/workspace/presentations'}
-            icon={<Presentation size={15} />}
-            label="Presentations"
-            collapsed={collapsed}
-            onSelect={() => setMobileOpen(false)}
-          />
-          <div className="mb-2 mt-7 px-2 text-[9px] font-bold uppercase tracking-[.17em] text-slate-600">
-            {!collapsed ? 'Organize' : ''}
-          </div>
-          <SideLink
-            href="/workspace/projects"
-            active={path.startsWith('/workspace/projects')}
-            icon={<FolderKanban size={15} />}
-            label="Projects"
-            collapsed={collapsed}
-            onSelect={() => setMobileOpen(false)}
-          />
-          <SideLink
-            href="/workspace/library"
-            active={path === '/workspace/library'}
-            icon={<Library size={15} />}
-            label="Library"
-            collapsed={collapsed}
-            onSelect={() => setMobileOpen(false)}
-          />
-          {!collapsed && (
-            <>
-              <div className="mb-2 mt-7 px-2 text-[9px] font-bold uppercase tracking-[.17em] text-slate-600">
-                Recent chats
-              </div>
-              {recentChats.map((chat, i) => (
-                <button
-                  key={chat}
-                  onClick={() => goto(`/workspace/chat/${i + 1}`)}
-                  className="w-full truncate rounded-md px-2 py-2 text-left text-[11px] text-slate-500 hover:bg-white/[.04] hover:text-slate-200"
-                >
-                  {chat}
-                </button>
-              ))}
-              <div className="mb-2 mt-6 px-2 text-[9px] font-bold uppercase tracking-[.17em] text-slate-600">
-                Pinned
-              </div>
-              <button
-                onClick={() =>
-                  notify('No pinned items in this fresh demo session.')
-                }
-                className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-[11px] text-slate-600 hover:text-slate-300"
-              >
-                <Sparkles size={13} />
-                No pinned items
-              </button>
-            </>
-          )}
-        </div>
-        <div className="border-t border-white/[.06] p-3">
-          <button
-            onClick={() => goto('/workspace/account')}
-            className={cx(
-              'flex w-full items-center gap-2 rounded-lg p-2 text-left hover:bg-white/[.05]',
-              collapsed && 'justify-center',
-            )}
-          >
-            <span className="grid size-8 shrink-0 place-items-center rounded-full border border-white/10 bg-[#22242c] text-[10px] font-semibold text-slate-300">
-              AM
-            </span>
-            {!collapsed && (
-              <>
-                <span className="min-w-0 flex-1">
-                  <span className="block text-xs font-medium">
-                    Guest workspace
-                  </span>
-                  <span className="block text-[10px] text-slate-600">
-                    Session-only demo
-                  </span>
-                </span>
-                <MoreHorizontal size={15} className="text-slate-500" />
-              </>
-            )}
-          </button>
-          {!collapsed && (
-            <div className="mt-1 flex gap-1">
-              <button
-                onClick={() => goto('/workspace/settings')}
-                className="flex flex-1 items-center gap-2 rounded-md px-2 py-2 text-[11px] text-slate-500 hover:bg-white/[.05] hover:text-slate-200"
-              >
-                <Settings size={14} />
-                Settings
-              </button>
-              <button
-                onClick={() => notify('Help resources are coming later.')}
-                aria-label="Help"
-                className="rounded-md px-2 text-slate-500 hover:bg-white/[.05]"
-              >
-                <CircleHelp size={15} />
-              </button>
-            </div>
-          )}
+        <nav className="mt-3 flex-1 overflow-y-auto px-3 pb-3">
+          {h('Create')}
+          {L('/workspace', path === '/workspace' || path.startsWith('/workspace/chat'), <MessageSquare size={15} />, 'Chat')}
+          {L('/workspace/research', path === '/workspace/research', <StickyNote size={15} />, 'Research notes')}
+          {L('/workspace/documents', path.startsWith('/workspace/documents'), <FileText size={15} />, 'Documents')}
+          {L('/workspace/presentations', path === '/workspace/presentations', <Presentation size={15} />, 'Presentations')}
+          {L('/workspace/coding', path.startsWith('/workspace/coding'), <Code2 size={15} />, 'Coding')}
+          {h('Studios')}
+          {L('/workspace/images', path === '/workspace/images', <Image size={15} />, 'Image studio')}
+          {L('/workspace/3d', path === '/workspace/3d', <Box size={15} />, '3D studio')}
+          {L('/workspace/music', path === '/workspace/music', <Music2 size={15} />, 'Music studio')}
+          {L('/workspace/voice', path === '/workspace/voice', <Mic size={15} />, 'Voice studio')}
+          {h('Organise')}
+          {L('/workspace/projects', path.startsWith('/workspace/projects'), <FolderKanban size={15} />, 'Projects')}
+          {L('/workspace/library', path === '/workspace/library', <Library size={15} />, 'Library')}
+          {!collapsed && <>
+            <div className="mb-2 mt-6 px-2 text-[10px] font-bold uppercase tracking-[.17em] text-slate-500">Recent chats</div>
+            <label className="sr-only" htmlFor="chat-search">Search conversations</label>
+            <input id="chat-search" value={chatSearch} onChange={(e) => { setChatSearch(e.target.value); setChatPage(0); }} placeholder="Search conversations" className="mb-1 h-8 w-full rounded-md border border-white/[.07] bg-transparent px-2 text-[11px] text-slate-300 placeholder:text-slate-500" />
+            {convs.loading && !convs.data && <div className="space-y-1 px-1 pt-1"><div className="h-6 animate-pulse rounded bg-white/[.05]" /><div className="h-6 animate-pulse rounded bg-white/[.05]" /></div>}
+            {convs.error && <button onClick={convs.refresh} className="px-2 py-2 text-left text-[11px] text-rose-300">Could not load chats. Retry</button>}
+            {convs.data?.length === 0 && <p className="px-2 py-2 text-[11px] leading-5 text-slate-500">{chatPage ? 'No more conversations on this page.' : chatSearch ? 'No conversations match.' : 'No conversations yet. Start one and it is saved here, in this browser.'}</p>}
+            {convs.data?.slice(0,30).map((c) => <Link key={c.id} href={`/workspace/chat/${c.id}`} onContextMenu={ctx.open(acts.items(c))} onClick={() => setMobileOpen(false)} aria-current={chatId === c.id ? 'page' : undefined} className={cx('block truncate rounded-md px-2 py-2 text-[12px] hover:bg-white/[.04] hover:text-slate-100', chatId === c.id ? 'bg-white/[.06] text-slate-100' : 'text-slate-400')}>{c.pinned && <Pin size={10} className="mr-1 inline text-violet-300" aria-label="Pinned" />}{c.title}</Link>)}
+            <Link href="/workspace/history" onClick={() => setMobileOpen(false)} className="mt-1 flex items-center gap-2 px-2 py-2 text-[11px] text-slate-400 hover:text-slate-100"><HistoryIcon size={12} />All conversations</Link>
+            {(chatPage > 0 || (convs.data?.length ?? 0) > 30) && <div className="flex items-center justify-between gap-1 px-2 py-2 text-[11px] text-slate-400"><button disabled={!chatPage} onClick={() => setChatPage(p => Math.max(0,p-1))} className="disabled:opacity-40">Newer</button><span>Page {chatPage+1}</span><button disabled={(convs.data?.length ?? 0) <= 30} onClick={() => setChatPage(p => p+1)} className="disabled:opacity-40">Older</button></div>}
+          </>}
+        </nav>
+        <div className="safe-b border-t border-white/[.06] p-3">
+          <Link href="/workspace/storage" onClick={() => setMobileOpen(false)} className={cx('mb-1 flex items-center gap-2 rounded-md px-2 py-2 text-[11px] text-slate-400 hover:bg-white/[.05] hover:text-slate-100', collapsed && 'justify-center')} title="Storage and backup">
+            <HardDrive size={14} />{!collapsed && <span className="truncate">Local only{stats.data ? ` · ${stats.data.conversations} chats, ${stats.data.projects} projects` : ''}</span>}
+          </Link>
+          <Link href="/workspace/account" onClick={() => setMobileOpen(false)} className={cx('flex items-center gap-2 rounded-lg p-2 hover:bg-white/[.05]', collapsed && 'justify-center')} aria-label="Account">
+            <span className="grid size-8 shrink-0 place-items-center rounded-full border border-white/10 bg-[#22242c] text-[10px] font-semibold text-slate-300">{initials}</span>
+            {!collapsed && <span className="min-w-0 flex-1"><span className="block truncate text-xs font-medium">{user ? user.displayName || user.email : prefs.displayName || 'Guest workspace'}</span><span className="block truncate text-[10px] text-slate-500">{user ? (user.emailVerified ? 'Signed in, verified' : 'Signed in, unverified') : 'Stored in this browser'}</span></span>}
+          </Link>
+          <Link href="/workspace/settings" onClick={() => setMobileOpen(false)} className={cx('mt-1 flex items-center gap-2 rounded-md px-2 py-2 text-[11px] text-slate-400 hover:bg-white/[.05] hover:text-slate-100', collapsed && 'justify-center')} title="Settings"><Settings size={14} />{!collapsed && 'Settings'}</Link>
         </div>
       </aside>
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-[66px] shrink-0 items-center justify-between border-b border-white/[.06] px-3 sm:px-6">
+      <div ref={mainRef} className="flex min-w-0 flex-1 flex-col">
+        <header className="safe-t flex min-h-[66px] shrink-0 items-center justify-between gap-2 border-b border-white/[.06] px-3 sm:px-6">
           <div className="flex min-w-0 items-center gap-2">
-            <IconButton
-              label="Open navigation"
-              className="md:hidden"
-              onClick={() => setMobileOpen(true)}
-            >
-              <Menu size={17} />
-            </IconButton>
-            <span className="truncate text-[13px] font-medium text-slate-300">
-              {title}
-            </span>
-            {path.includes('/chat/') && (
-              <span className="hidden text-[10px] text-slate-600 sm:inline">
-                · Demo conversation
-              </span>
-            )}
+            <button ref={menuBtn} aria-label="Open navigation" className="grid size-9 place-items-center rounded-lg text-slate-400 hover:bg-white/[.07] md:hidden" onClick={() => setMobileOpen(true)}><Menu size={17} /></button>
+            <h1 className="truncate text-[13px] font-medium text-slate-200">{title}</h1>
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2">
-            <select
-              aria-label="Model selection"
-              value={model}
-              onChange={(e) => {
-                setModel(e.target.value);
-                notify(
-                  'Model choice is a UI label only; no model is connected.',
-                );
-              }}
-              className="max-w-[133px] rounded-md border border-white/[.08] bg-[#171920] px-2 py-2 text-[10px] text-slate-300 sm:max-w-none sm:px-3"
-            >
-              <option>Seed · experimental</option>
-              <option>Core · planned</option>
-              <option>Auto · planned routing</option>
+            <select aria-label="Model" value={prefs.model} onChange={(e) => { const m = e.target.value as ModelId; void save({ model: m }); const c = capFor(m); if (!c?.available) notify(`${modelNames[m]} is not available: ${c?.reason ?? 'no model connection is configured.'}`); }} className="max-w-[118px] rounded-md border border-white/[.08] bg-[#171920] px-2 py-2 text-[11px] text-slate-200 sm:max-w-none sm:px-3">
+              {(Object.keys(modelNames) as ModelId[]).map((m) => <option key={m} value={m}>{modelNames[m]}{capFor(m)?.available ? '' : ' (unavailable)'}</option>)}
             </select>
-            <select
-              aria-label="Mode selection"
-              value={mode}
-              onChange={(e) => setMode(e.target.value)}
-              className="max-w-[90px] rounded-md border border-white/[.08] bg-[#171920] px-2 py-2 text-[10px] text-slate-300 sm:max-w-none sm:px-3"
-            >
-              <option>Normal</option>
-              <option>Focus</option>
-              <option>Creative</option>
+            <select aria-label="Chat mode" value={prefs.mode} onChange={(e) => void save({ mode: e.target.value as ChatMode })} className="max-w-[84px] rounded-md border border-white/[.08] bg-[#171920] px-2 py-2 text-[11px] text-slate-200 sm:max-w-none sm:px-3">
+              <option>Normal</option><option>Savage</option><option>Joke</option>
             </select>
-            <span className="hidden rounded-md border border-white/[.07] px-2 py-1.5 text-[9px] text-slate-600 lg:block">
-              {mode === 'Focus'
-                ? 'Quiet canvas'
-                : mode === 'Creative'
-                  ? 'Open canvas'
-                  : 'Ready'}
-            </span>
-            <IconButton
-              label="Open tools"
-              onClick={() => setDialog('launcher')}
-              className="hidden sm:grid"
-            >
-              <Command size={16} />
-            </IconButton>
+            <span role="status" className={cx('hidden rounded-md border px-2 py-1.5 text-[10px] lg:block', anyReady ? 'border-teal-300/20 text-teal-200' : 'border-white/[.08] text-slate-400')}>{anyReady ? 'Model connection reported ready' : 'No model connected'}</span>
+            <IconButton label="Search and commands (Ctrl K)" onClick={() => setDialog('palette')} className="hidden sm:grid"><CommandIcon size={16} /></IconButton>
+            <ActionMenu label="Profile menu" items={profileItems}><UserRound size={16} /></ActionMenu>
           </div>
         </header>
-        <main className="min-h-0 flex-1 overflow-y-auto">
-          <FeaturePage
-            path={path}
-            goto={goto}
-            notify={notify}
-            theme={theme}
-            setTheme={(value) => {
-              session.appearance = value;
-              setThemeState(value);
-            }}
-          />
-        </main>
+        <main id="main" tabIndex={-1} className="min-h-0 flex-1 overflow-y-auto focus:outline-none"><div ref={pageRef} className="min-h-full"><FeaturePage path={path} goto={goto} notify={notify} /></div></main>
       </div>
-      {dialog === 'launcher' && (
-        <Modal title="Go to" onClose={() => setDialog('')}>
-          <label className="block">
-            <span className="sr-only">Search workspace tools</span>
-            <input
-              autoFocus
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search tools and pages…"
-              className="h-11 w-full rounded-lg border border-white/10 bg-[#101116] px-3 text-sm text-white placeholder:text-slate-600"
-            />
-          </label>
-          <div className="mt-3 max-h-[55vh] space-y-1 overflow-auto">
-            {tools
-              .filter((t) =>
-                (t.name + t.detail)
-                  .toLowerCase()
-                  .includes(search.toLowerCase()),
-              )
-              .map((t, i) => (
-                <button
-                  key={t.name}
-                  onClick={() => goto(t.href)}
-                  className="flex w-full items-center gap-3 rounded-lg p-3 text-left hover:bg-white/[.06]"
-                >
-                  <span className="grid size-8 place-items-center rounded-lg bg-violet-300/[.06] text-violet-200">
-                    <ToolIcon name={t.name} />
-                  </span>
-                  <span className="flex-1">
-                    <span className="block text-xs font-semibold">
-                      {t.name}
-                    </span>
-                    <span className="text-[10px] text-slate-500">
-                      {t.detail}
-                    </span>
-                  </span>
-                  <span className="text-[9px] text-slate-700">
-                    {i === 0 ? '↵' : ''}
-                  </span>
-                </button>
-              ))}
-            {!tools.some((t) =>
-              (t.name + t.detail).toLowerCase().includes(search.toLowerCase()),
-            ) && (
-              <p className="p-5 text-center text-xs text-slate-500">
-                No matching workspace tools.
-              </p>
-            )}
-          </div>
-          <div className="mt-3 border-t border-white/[.07] pt-3 text-[10px] text-slate-600">
-            Use <kbd className="rounded border border-white/10 px-1">Esc</kbd>{' '}
-            to close · ⌘ K to open
-          </div>
-        </Modal>
-      )}
-      {toast && <Toast message={toast} close={() => setToast('')} />}
+      {dialog === 'palette' && <Palette commands={commands} goto={goto} notify={notify} onClose={() => setDialog('')} />}
+      {acts.dialogs}{ctx.node}
+      <NoticeHost />
     </div>
   );
 }
 
-export function SideLink({
-  href,
-  active,
-  icon,
-  label,
-  collapsed,
-  onSelect,
-}: {
-  href: string;
-  active: boolean;
-  icon: ReactNode;
-  label: string;
-  collapsed: boolean;
-  onSelect: () => void;
-}) {
+export function SideLink({ href, active, icon, label, collapsed, onSelect }: { href: string; active: boolean; icon: ReactNode; label: string; collapsed: boolean; onSelect: () => void }) {
   return (
-    <Link
-      href={href}
-      onClick={onSelect}
-      title={collapsed ? label : undefined}
-      className={cx(
-        'my-0.5 flex min-h-9 items-center gap-3 rounded-lg px-2.5 text-[11px] transition',
-        active
-          ? 'bg-violet-300/[.09] text-violet-100'
-          : 'text-slate-500 hover:bg-white/[.04] hover:text-slate-200',
-        collapsed && 'justify-center px-0',
-      )}
-    >
-      {icon}
-      {!collapsed && label}
+    <Link href={href} onClick={onSelect} title={collapsed ? label : undefined} aria-label={collapsed ? label : undefined} aria-current={active ? 'page' : undefined} className={cx('my-0.5 flex min-h-10 items-center gap-3 rounded-lg px-2.5 text-[12px] transition', active ? 'bg-violet-300/[.1] text-violet-100' : 'text-slate-400 hover:bg-white/[.04] hover:text-slate-100', collapsed && 'justify-center px-0')}>
+      {icon}{!collapsed && label}
     </Link>
   );
-}
-
-export function ToolIcon({ name }: { name: string }) {
-  const className = 'size-4';
-  switch (name) {
-    case 'Chat':
-      return <MessageSquare className={className} />;
-    case 'Research':
-      return <Search className={className} />;
-    case 'Coding':
-      return <Code2 className={className} />;
-    case 'Image studio':
-      return <Image className={className} />;
-    case 'Documents':
-      return <FileText className={className} />;
-    case 'Presentations':
-      return <Presentation className={className} />;
-    case 'Projects':
-      return <FolderKanban className={className} />;
-    default:
-      return <Library className={className} />;
-  }
 }

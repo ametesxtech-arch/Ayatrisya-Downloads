@@ -1,14 +1,19 @@
-import { type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
 import { Route, Switch, useLocation, Router as WouterRouter } from 'wouter';
-import { Workspace } from '@/components/WorkspaceShell';
+import { AuthProvider } from '@/integrations/firebase/AuthProvider';
+import { usePrefs } from '@/hooks/use-prefs';
+import { Emblem } from '@/components/Brand';
 import { Landing } from '@/pages/Landing';
-import { AuthPage } from '@/pages/Auth';
-import { Onboarding } from '@/pages/Onboarding';
+
+const Workspace = lazy(() => import('@/components/WorkspaceShell').then((m) => ({ default: m.Workspace })));
+const AuthPage = lazy(() => import('@/pages/Auth').then((m) => ({ default: m.AuthPage })));
+const Onboarding = lazy(() => import('@/pages/Onboarding').then((m) => ({ default: m.Onboarding })));
+const Intro = lazy(() => import('@/pages/Intro').then((m) => ({ default: m.Intro })));
 
 const queryClient = new QueryClient();
 
@@ -17,46 +22,59 @@ function RoutedBoundary({ children }: { children: ReactNode }) {
   return <ErrorBoundary resetKey={location}>{children}</ErrorBoundary>;
 }
 
+function PrefsEffects() {
+  const { prefs } = usePrefs();
+  useEffect(() => {
+    const root = document.documentElement;
+    const mq = window.matchMedia('(prefers-color-scheme: light)');
+    const apply = () => { root.dataset.appearance = prefs.theme === 'Light' || (prefs.theme === 'Follow system' && mq.matches) ? 'light' : 'dark'; };
+    apply();
+    mq.addEventListener('change', apply);
+    return () => mq.removeEventListener('change', apply);
+  }, [prefs.theme]);
+  useEffect(() => { if (prefs.reducedMotion) document.documentElement.dataset.motion = 'reduced'; else delete document.documentElement.dataset.motion; }, [prefs.reducedMotion]);
+  useEffect(() => { document.documentElement.dataset.intensity = prefs.animationIntensity ?? 'full'; }, [prefs.animationIntensity]);
+  useEffect(() => {
+    const f = () => { if (document.hidden) document.documentElement.dataset.hidden = ''; else delete document.documentElement.dataset.hidden; };
+    document.addEventListener('visibilitychange', f);
+    return () => document.removeEventListener('visibilitychange', f);
+  }, []);
+  return null;
+}
+
 function Router() {
   return (
     <RoutedBoundary>
-      <Switch>
-        <Route path="/" component={Landing} />
-        <Route path="/auth/sign-in" component={AuthPage} />
-        <Route path="/auth/create-account" component={AuthPage} />
-        <Route path="/auth/reset-password" component={AuthPage} />
-        <Route path="/auth/email-check" component={AuthPage} />
-        <Route path="/onboarding" component={Onboarding} />
-        <Route path="/workspace" component={Workspace} />
-        <Route path="/workspace/chat/:id" component={Workspace} />
-        <Route path="/workspace/research" component={Workspace} />
-        <Route path="/workspace/coding" component={Workspace} />
-        <Route path="/workspace/coding/desktop-preview" component={Workspace} />
-        <Route path="/workspace/images" component={Workspace} />
-        <Route path="/workspace/documents" component={Workspace} />
-        <Route path="/workspace/documents/:id" component={Workspace} />
-        <Route path="/workspace/presentations" component={Workspace} />
-        <Route path="/workspace/projects" component={Workspace} />
-        <Route path="/workspace/projects/:id" component={Workspace} />
-        <Route path="/workspace/library" component={Workspace} />
-        <Route path="/workspace/settings" component={Workspace} />
-        <Route path="/workspace/account" component={Workspace} />
-        <Route component={NotFound} />
-      </Switch>
+      <Suspense fallback={<div className="grid min-h-[100dvh] place-items-center text-xs text-slate-500" role="status"><span className="grid place-items-center gap-3"><Emblem size={44} mode="loading" /><span>Loading Ayatrisya</span></span></div>}>
+        <Switch>
+          <Route path="/" component={Landing} />
+          <Route path="/intro" component={Intro} />
+          <Route path="/auth/sign-in" component={AuthPage} />
+          <Route path="/auth/create-account" component={AuthPage} />
+          <Route path="/auth/reset-password" component={AuthPage} />
+          <Route path="/auth/email-check" component={AuthPage} />
+          <Route path="/onboarding" component={Onboarding} />
+          <Route path={/^\/workspace(?:\/.*)?$/} component={Workspace} />
+          <Route component={NotFound} />
+        </Switch>
+      </Suspense>
     </RoutedBoundary>
   );
 }
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
-          <Router />
-        </WouterRouter>
-        <Toaster />
-      </TooltipProvider>
-    </QueryClientProvider>
+    <AuthProvider>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <PrefsEffects />
+          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
+            <Router />
+          </WouterRouter>
+          <Toaster />
+        </TooltipProvider>
+      </QueryClientProvider>
+    </AuthProvider>
   );
 }
 
