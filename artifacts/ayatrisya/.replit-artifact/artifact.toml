@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Ayatrisya"
+description = "A cinematic, privacy-conscious AI workspace and creative productivity interface by Ametesx, combining assistant conversations, coding, research, documents, visual creation, projects, library, and settings. This first phase is a UI prototype only; AI inference, storage, OAuth, and cloud services are intentionally not implemented."
+version = "1.0.0"
+id = "artifacts/ayatrisya"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 25517
+
+[services.development]
+run = "pnpm --filter @workspace/ayatrisya run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/ayatrisya", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/ayatrisya/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25517"
+BASE_PATH = "/"
