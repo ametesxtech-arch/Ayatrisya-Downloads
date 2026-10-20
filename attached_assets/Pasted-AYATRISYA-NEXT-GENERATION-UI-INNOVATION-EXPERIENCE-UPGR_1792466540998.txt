@@ -1,0 +1,480 @@
+AYATRISYA — NEXT-GENERATION UI INNOVATION & EXPERIENCE UPGRADE
+
+Ametesx | Premium AI Workspace | UI Evolution Phase
+
+Act as a world-class product designer, creative director, motion designer, interaction engineer, and frontend architect.
+
+Your task is to evolve the existing Ayatrisya application into a distinctive, cinematic, interactive, premium AI workspace with excellent usability.
+
+Do not rebuild the application blindly. First inspect the current UI, identify what already works, and propose the strongest improvements. Then implement the improvements directly in the existing project, preserving authentication, local storage, project management, and integrations.
+
+The goal is not to add random effects. Every new interaction should make Ayatrisya more beautiful, useful, discoverable, or efficient.
+
+1. CREATIVE DIRECTION
+
+Develop a distinctive visual identity for Ayatrisya.
+
+Combine:
+
+* Cinematic futuristic atmosphere.
+* Refined dark surfaces.
+* Deep violet and indigo accents.
+* Restrained cyan lighting.
+* Subtle glass and layered depth.
+* Elegant geometric branding.
+* High-quality motion.
+* Dense but readable productivity interfaces.
+* Beautiful typography and consistent spacing.
+
+Use inspiration from premium creative software, modern developer tools, sophisticated desktop applications, and cinematic science-fiction interfaces. Do not copy another product’s exact design.
+
+Avoid:
+
+* Excessive neon.
+* Generic AI gradients.
+* Too many floating cards.
+* Unnecessary 3D effects.
+* Overloaded dashboards.
+* Huge decorative text.
+* Animations that slow down work.
+* Fake AI-generated content.
+
+2. CREATE A SIGNATURE AYATRISYA EXPERIENCE
+
+Design a signature interaction that users immediately associate with Ayatrisya.
+
+Explore these concepts and implement the strongest practical combination:
+
+A. Animated celestial logo
+
+Create an original geometric emblem that assembles from light particles, aligns into a symbol, and reveals the Ayatrisya wordmark.
+
+Use:
+
+* Smooth SVG path animation.
+* Controlled glow.
+* Orbital motion.
+* Subtle light trails.
+* Elegant completion state.
+
+Provide a compact logo for the sidebar, a splash version, a favicon, and a loading version. The intro must be skippable and must respect reduced-motion preferences.
+
+B. Living workspace background
+
+Add a subtle ambient background with slow, restrained gradients or soft light fields.
+
+The background should react gently to major interface transitions, not continuously distract the user. Disable expensive effects on low-powered devices when appropriate.
+
+C. Workspace transitions
+
+Use smooth, purposeful transitions when:
+
+* Opening a project.
+* Switching tools.
+* Expanding the sidebar.
+* Opening the library.
+* Switching between chat modes.
+* Opening settings.
+* Entering a document or coding workspace.
+
+Use consistent durations and easing curves.
+
+3. REDESIGN THE HOME EXPERIENCE
+
+Create a useful, personalized dashboard instead of an empty generic welcome screen.
+
+Include:
+
+* Animated Ayatrisya emblem.
+* A welcoming heading.
+* A prominent quick-action composer.
+* New Chat.
+* New Project.
+* Open Library.
+* Create Document.
+* Open Image Studio.
+* Open Voice Studio.
+* Open Coding Workspace.
+* Recent projects.
+* Recent conversations.
+* Pinned items.
+* Recently opened files.
+* Storage and synchronization status.
+
+Only display real stored items. If the user has no content, show beautiful empty states with useful creation actions.
+
+Allow the user to customize the dashboard:
+
+* Reorder supported widgets.
+* Hide or show sections.
+* Change between compact and spacious layouts.
+* Persist layout preferences.
+
+Do not invent recent activity or usage statistics.
+
+4. ADVANCED COMMAND CENTER
+
+Create a command palette accessible using Ctrl/Cmd + K.
+
+It should search and execute real application actions.
+
+Possible actions:
+
+* Start a new chat.
+* Create a project.
+* Search conversations.
+* Open a project.
+* Open the library.
+* Create a document.
+* Open Image Studio.
+* Open Voice Studio.
+* Open settings.
+* Toggle theme.
+* Toggle sidebar.
+* Export data.
+* Open storage settings.
+
+Include:
+
+* Keyboard navigation.
+* Search-as-you-type.
+* Category labels.
+* Shortcut hints.
+* Recent commands.
+* Empty results state.
+* Escape to close.
+
+Only show actions that genuinely work. Do not expose unavailable AI generation as a working command.
+
+5. MAKE CHAT FEEL LIKE A PREMIUM WORKSPACE
+
+Enhance the chat interface with:
+
+* A refined, expandable composer.
+* Animated attachment previews.
+* Clear file-type icons.
+* Drag-and-drop support where appropriate.
+* Smooth message appearance.
+* Excellent Markdown and code formatting.
+* Code-block language labels.
+* Copy-code controls.
+* Message selection where useful.
+* Context menus.
+* Conversation pinning and archiving.
+* Rename and delete actions.
+* Export controls.
+* Search within a conversation.
+* Adjustable content width.
+* Compact and comfortable reading modes.
+* A floating scroll-to-bottom control.
+* A clear connection indicator.
+
+Create a contextual message action menu with only valid actions.
+
+When the real model is not connected, display an elegant setup state. Never simulate an AI answer to demonstrate the animation.
+
+6. ADD INTERACTIVE WORKSPACE MODES
+
+Create optional layout modes that users can switch between.
+
+Focus Mode
+
+* Hide unnecessary navigation.
+* Expand the central workspace.
+* Reduce background effects.
+* Keep the composer and essential actions visible.
+
+Studio Mode
+
+* Provide larger content previews.
+* Show contextual controls.
+* Use wider canvases for documents, images, 3D, and presentations.
+
+Developer Mode
+
+* Show project metadata.
+* Display integration health.
+* Provide safe technical diagnostics.
+* Display model connection status.
+* Show actual storage and sync information.
+
+Compact Mode
+
+* Reduce spacing.
+* Fit more conversations and projects on screen.
+* Preserve readability and touch accessibility.
+
+Persist the selected mode and ensure it works on mobile as well as desktop.
+
+7. BUILD A BETTER PROJECT EXPLORER
+
+Improve project management with:
+
+* Beautiful grid and list views.
+* Search and filters.
+* Sorting by name, date, and supported metadata.
+* Custom project icons.
+* Optional accent colors.
+* Tags.
+* Pinned projects.
+* Archive and restore.
+* Rename and delete.
+* Duplicate supported project data.
+* Project activity based on actual events.
+* Recent files.
+* Storage location indicators.
+
+Add a project quick-preview panel with real metadata and available actions.
+
+Make project organization fast using context menus and keyboard navigation.
+
+Do not show fake file counts, activity, or storage status.
+
+8. MAKE THE LIBRARY FEEL LIKE A DIGITAL WORKSPACE
+
+Create an advanced library experience with:
+
+* Grid/list switching.
+* File-type filters.
+* Search.
+* Sorting.
+* Project filters.
+* Recent items.
+* Pinned items.
+* File previews where supported.
+* Rename.
+* Move.
+* Export.
+* Download.
+* Delete.
+* Selection and bulk actions.
+* Clear local-versus-Drive indicators.
+
+Add drag-and-drop organization only where the underlying data operations are implemented.
+
+For bulk actions, show how many items will be affected and request confirmation before destructive operations.
+
+9. UPGRADE EVERY TOOL’S UI
+
+Give each tool its own identity while maintaining the common Ayatrisya design system.
+
+Image Studio
+
+* Large preview canvas.
+* Prompt area.
+* Aspect-ratio controls.
+* Settings panel.
+* Generation history.
+* Fullscreen preview for actual images.
+* Save and export actions.
+
+3D Studio
+
+* Large viewer area.
+* Orbit, zoom, and reset controls.
+* Supported-format selector.
+* File information panel.
+* Export actual files.
+* Show an empty state until a real 3D asset is available.
+
+Music Studio
+
+* Elegant audio player.
+* Waveform visualization derived from actual audio data.
+* Play, pause, seek, and volume controls.
+* Playlist or project organization where implemented.
+* Save and download actions.
+
+Voice Studio
+
+* Animated waveform driven by actual microphone or audio data.
+* Record and stop.
+* Audio playback.
+* Transcript editor.
+* Copy transcript.
+* TTS audio playback.
+* Download audio.
+* Explicit microphone permission and privacy controls.
+
+Documents and Presentations
+
+* Clean editor layout.
+* Document outline.
+* Slide navigator.
+* Reorder slides.
+* Duplicate slides.
+* Rename and delete.
+* Save status based on actual persistence.
+* Export formats only when supported.
+
+Coding Workspace
+
+* File tree for authorized project content.
+* Clear editing states.
+* Search files.
+* Rename and delete supported files.
+* Project overview.
+* Task management.
+* Desktop connection status.
+* Safe file access.
+
+Keep actual model generation disabled until the corresponding Ayatrisya model integration is available.
+
+10. ANIMATION QUALITY SYSTEM
+
+Build a reusable motion system rather than styling each component independently.
+
+Define:
+
+* Fast interaction duration.
+* Standard transition duration.
+* Page transition duration.
+* Consistent easing curves.
+* Spring-like motion only where appropriate.
+* Enter and exit transitions.
+* Loading and progress states.
+
+Add microinteractions to:
+
+* Buttons.
+* Toggles.
+* Menus.
+* Tabs.
+* Cards.
+* Tooltips.
+* Dialogs.
+* Notifications.
+* Navigation items.
+* Search results.
+
+Use subtle motion to communicate state changes.
+
+Do not animate every element all the time. Provide reduced-motion support and disable expensive background effects on mobile or low-performance devices.
+
+11. ADVANCED INTERACTION IDEAS
+
+Evaluate and implement the most useful of these ideas:
+
+* A customizable command center.
+* A collapsible contextual inspector.
+* Keyboard shortcut discovery.
+* Undo notifications for reversible actions.
+* Recently used tools.
+* Pinned actions.
+* A global search overlay.
+* Split-view reading and editing.
+* Resizable panels where practical.
+* Multi-select for library and project items.
+* Quick previews on hover or tap.
+* Breadcrumb navigation.
+* Recent work switcher.
+* Persistent editor tabs where useful.
+* Fullscreen preview.
+* Context-aware empty states.
+* Real upload and sync progress.
+* A subtle status center for connection errors and pending operations.
+
+Do not add every idea automatically. Prioritize features that fit the product and remain maintainable.
+
+12. SETTINGS AND PERSONALIZATION
+
+Add real preferences for:
+
+* Theme.
+* Accent color.
+* Animation intensity.
+* Reduced motion.
+* Compact/spacious layout.
+* Sidebar behavior.
+* Default workspace mode.
+* Dashboard widgets.
+* Chat width.
+* Keyboard shortcuts.
+* Default chat mode.
+* Available model preference.
+* Storage and synchronization.
+
+Every preference must persist and affect the actual UI.
+
+If a preference cannot be supported reliably, omit it rather than creating an inert control.
+
+13. RESPONSIVE DESIGN
+
+Desktop:
+
+* Spacious multi-panel workspace.
+* Persistent sidebar.
+* Contextual inspector.
+* Keyboard-first productivity.
+
+Tablet:
+
+* Adaptive navigation.
+* Flexible panel widths.
+* Touch-friendly controls.
+
+Mobile:
+
+* Compact navigation drawer.
+* Bottom composer.
+* Fullscreen previews.
+* Touch-friendly context menus.
+* No horizontal overflow.
+* Safe-area support.
+* Reduced visual effects where necessary.
+
+Keep the product useful on smaller screens instead of simply shrinking the desktop interface.
+
+14. REALITY AND DATA INTEGRITY RULES
+
+The UI can become more advanced without pretending the AI is finished.
+
+* No fake AI responses.
+* No fake generated images, music, or 3D assets.
+* No fake project data.
+* No fake synchronization.
+* No fake usage metrics.
+* No false loading progress.
+* No fabricated file previews.
+* No controls without actions.
+* No external AI inference APIs.
+
+Use local storage for real user-created content. Use the real Firebase and Google Drive integrations when configured. Display unavailable states honestly when credentials or backend capabilities are missing.
+
+15. PERFORMANCE AND ACCESSIBILITY
+
+* Lazy-load large tool workspaces.
+* Optimize SVG assets.
+* Avoid unnecessary component rerenders.
+* Virtualize very long lists when needed.
+* Avoid heavy continuous animation.
+* Use semantic HTML.
+* Support keyboard navigation.
+* Maintain visible focus.
+* Ensure adequate contrast.
+* Respect reduced motion.
+* Keep dialogs accessible.
+* Test on touch devices.
+
+16. IMPLEMENTATION PROCESS
+
+1. Audit the current interface and working features.
+2. Identify the five highest-impact UI improvements.
+3. Create the logo and reusable motion system.
+4. Implement the dashboard and command palette.
+5. Improve chat, projects, and library.
+6. Upgrade the individual tool workspaces.
+7. Add personalization and advanced interactions.
+8. Verify mobile, tablet, and desktop layouts.
+9. Run tests and fix all regressions.
+10. Report the exact changes and verified functionality.
+
+Keep the application runnable throughout the work. Do not remove functioning features to make room for animations.
+
+FINAL DIRECTIVE
+
+Make Ayatrisya feel like a premium, original AI operating environment with its own recognizable identity and exceptional interactions.
+
+Prioritize usability, polish, originality, and actual functionality over decorative complexity.
+
+Inspect the current project, implement the strongest ideas directly, test them, and provide a concise evidence-based completion report.
