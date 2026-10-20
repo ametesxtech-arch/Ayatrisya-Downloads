@@ -52,28 +52,43 @@ before release.
 
 ### Windows
 
-On Windows:
+Build on Windows with:
 
 ```powershell
 pnpm --filter @workspace/ayatrisya run desktop:package:windows
 ```
 
-This builds an NSIS installer. Linux cross-builds may require Wine and are not
-the supported release path. Code-signing credentials are not included; sign
-the installer before broad distribution.
+This builds an x64 NSIS installer. A Windows-native build is the supported
+release path. The attempted Linux cross-build failed while running the NSIS
+installer under Wine to extract its uninstaller; do not distribute that partial
+output. Code-signing credentials are not included; sign the installer before
+broad distribution.
 
 ### macOS
 
-On macOS:
+Build on macOS with:
 
 ```sh
 pnpm --filter @workspace/ayatrisya run desktop:package:mac
 ```
 
 The script creates the `.icns` from the shared app icon using Apple's `sips`
-and `iconutil`, then builds a `.dmg`. Code signing and Apple notarization need
-the publisher's Apple Developer credentials and must be completed before
-distribution outside a development environment.
+and `iconutil`, then builds a universal `.dmg` for Intel and Apple Silicon.
+Code signing and Apple notarization need the publisher's Apple Developer
+credentials and must be completed before broad distribution.
+
+### Native CI builds
+
+`.github/workflows/desktop-installers.yml` builds Linux, Windows, and universal
+macOS installers on their native GitHub-hosted runners. Run it manually with
+`workflow_dispatch` or push a `desktop-v*` tag. The installers are uploaded as
+workflow artifacts for 30 days; the workflow does not publish a public release.
+
+For website downloads, configure HTTPS URLs for
+`VITE_DESKTOP_DOWNLOAD_LINUX_URL`, `VITE_DESKTOP_DOWNLOAD_WINDOWS_URL`, and
+`VITE_DESKTOP_DOWNLOAD_MAC_URL`. `VITE_DESKTOP_DOWNLOAD_URL` can point to a
+general release page. Unsigned Windows and macOS installers may show operating
+system security warnings.
 
 ## Authentication and Drive
 

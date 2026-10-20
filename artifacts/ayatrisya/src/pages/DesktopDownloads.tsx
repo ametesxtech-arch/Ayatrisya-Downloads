@@ -1,21 +1,39 @@
 import { ArrowLeft, Download, HardDriveDownload } from 'lucide-react';
 import { Link } from 'wouter';
 
-const configuredDownload = (import.meta.env.VITE_DESKTOP_DOWNLOAD_URL as string | undefined)?.trim();
-const downloadUrl = configuredDownload?.startsWith('https://') ? configuredDownload : undefined;
+const env = import.meta.env as unknown as {
+  VITE_DESKTOP_DOWNLOAD_URL?: string;
+  VITE_DESKTOP_DOWNLOAD_LINUX_URL?: string;
+  VITE_DESKTOP_DOWNLOAD_WINDOWS_URL?: string;
+  VITE_DESKTOP_DOWNLOAD_MAC_URL?: string;
+};
 
+function secureHttpsUrl(value?: string) {
+  if (!value?.trim()) return undefined;
+  try {
+    const url = new URL(value.trim());
+    return url.protocol === 'https:' ? url.toString() : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+const releasePageUrl = secureHttpsUrl(env.VITE_DESKTOP_DOWNLOAD_URL);
 const platforms = [
   {
     name: 'Linux',
-    status: 'AppImage built for testing; public download not hosted',
+    status: 'x64 AppImage built; unsigned',
+    downloadUrl: secureHttpsUrl(env.VITE_DESKTOP_DOWNLOAD_LINUX_URL),
   },
   {
     name: 'Windows',
-    status: 'Installer build needs verification on Windows',
+    status: 'Native Windows build required; cross-build failed under Wine',
+    downloadUrl: secureHttpsUrl(env.VITE_DESKTOP_DOWNLOAD_WINDOWS_URL),
   },
   {
     name: 'macOS',
-    status: 'DMG build needs verification on macOS',
+    status: 'Native macOS build required; signing and notarization are not configured',
+    downloadUrl: secureHttpsUrl(env.VITE_DESKTOP_DOWNLOAD_MAC_URL),
   },
 ];
 
@@ -38,18 +56,19 @@ export function DesktopDownloadsPage() {
             The desktop app can open folders you choose and run commands only after you approve them. The web app stays browser-only.
           </p>
 
-          {downloadUrl ? (
+          {releasePageUrl ? (
             <a
-              href={downloadUrl}
+              href={releasePageUrl}
+              target="_blank"
               rel="noopener noreferrer"
               className="mt-7 inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-violet-500 px-5 text-sm font-semibold text-white transition-colors hover:bg-violet-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300"
             >
               <Download size={16} />
-              Download Ayatrisya Desktop
+              Open Ayatrisya releases
             </a>
           ) : (
             <div role="status" className="mt-7 rounded-xl border border-amber-200/15 bg-amber-200/[.06] p-4 text-sm text-amber-100/90">
-              Public installer downloads are not linked yet. This page will offer the installer when a public HTTPS release URL is configured.
+              Public release and installer links are not configured yet.
             </div>
           )}
         </section>
@@ -58,14 +77,27 @@ export function DesktopDownloadsPage() {
           <h2 id="platform-status" className="text-sm font-semibold text-slate-200">Installer status</h2>
           <ul className="mt-4 divide-y divide-white/[.06]">
             {platforms.map((platform) => (
-              <li key={platform.name} className="flex flex-col gap-1 py-3 sm:flex-row sm:items-center sm:justify-between">
-                <span className="text-sm font-medium">{platform.name}</span>
-                <span className="text-xs leading-5 text-slate-400">{platform.status}</span>
+              <li key={platform.name} className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <span className="text-sm font-medium">{platform.name}</span>
+                  <p className="mt-1 text-xs leading-5 text-slate-400">{platform.status}</p>
+                </div>
+                {platform.downloadUrl ? (
+                  <a
+                    href={platform.downloadUrl}
+                    className="inline-flex min-h-9 shrink-0 items-center justify-center gap-2 self-start rounded-lg border border-violet-300/20 bg-violet-400/10 px-3 text-xs font-semibold text-violet-100 transition-colors hover:bg-violet-400/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 sm:self-auto"
+                  >
+                    <Download size={14} />
+                    Download
+                  </a>
+                ) : (
+                  <span className="shrink-0 text-xs text-slate-500">Not hosted</span>
+                )}
               </li>
             ))}
           </ul>
           <p className="mt-4 text-xs leading-5 text-slate-500">
-            A hosted download link is required for visitors to download an installer. Build instructions remain in the project documentation.
+            Each installer needs its own public HTTPS download URL. Build instructions are in the project documentation.
           </p>
         </section>
 

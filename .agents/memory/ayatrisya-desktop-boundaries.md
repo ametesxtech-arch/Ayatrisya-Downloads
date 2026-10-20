@@ -9,4 +9,8 @@ The existing Google Drive backup covers Ayatrisya workspace records, not content
 
 **Why:** The user requested a cross-platform desktop app alongside the existing web app, user-authorized local folders, a permission-controlled terminal, optional user-controlled Drive sync, and no unrestricted renderer access. The initial terminal scope is one confirmed command at a time; persistent terminal sessions and selected-folder Drive sync were not delivered.
 
-**How to apply:** Preserve the browser/desktop capability boundary. Never silently broaden folder access or sync scope. Treat Windows and macOS installers as unverified until built and tested on their target platforms; the Linux AppImage was the only package built and smoke-tested in this environment.
+Native installers need native operating-system runners. In the Replit Linux environment, the Linux AppImage builds, but Wine fails during the NSIS uninstaller-extraction stage; any partial Windows output is not distributable. A macOS DMG must be built on macOS.
+
+**Why:** Replit's Linux host cannot run the Windows NSIS packaging step reliably and does not provide Apple's macOS packaging tools.
+
+**How to apply:** Preserve the browser/desktop capability boundary. Never silently broaden folder access or sync scope. Use native Windows and macOS runners before calling those installers complete or tested; keep signing, notarization, and public hosting status explicit.

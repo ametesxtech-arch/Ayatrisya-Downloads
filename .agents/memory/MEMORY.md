@@ -1,3 +1,3 @@
 - [Ayatrisya account access](ayatrisya-account-access.md) — Firebase email/password, Google, GitHub, plus limited browser-local guest access.
 - [Browser data verification](browser-data-verification.md) — keep local lifecycle checks in one isolated browser profile; separate screenshots cannot prove persistence.
-- [Ayatrisya desktop boundaries](ayatrisya-desktop-boundaries.md) — web stays browser-only; desktop folder and command access remain consent-gated, with Drive and platform gaps explicit.
+- [Ayatrisya desktop boundaries](ayatrisya-desktop-boundaries.md) — browser stays sandboxed; local capabilities require consent; Windows/macOS installers need native runners.

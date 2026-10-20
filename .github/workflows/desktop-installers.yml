@@ -1,0 +1,56 @@
+name: Build Ayatrisya desktop installers
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "desktop-v*"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }} installer
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: linux
+            artifact: generated-artifacts/ayatrisya-desktop/*.AppImage
+          - os: windows-latest
+            target: windows
+            artifact: generated-artifacts/ayatrisya-desktop/*.exe
+          - os: macos-latest
+            target: mac
+            artifact: generated-artifacts/ayatrisya-desktop/*.dmg
+    steps:
+      - uses: actions/checkout@v4
+
+      # Keep this in sync with the pnpm version used by the workspace.
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.26.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Run desktop security checks
+        run: pnpm --filter @workspace/ayatrisya run test:desktop:security
+
+      - name: Build installer on native operating system
+        run: pnpm --filter @workspace/ayatrisya run desktop:package:${{ matrix.target }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Ayatrisya-${{ matrix.target }}
+          path: ${{ matrix.artifact }}
+          if-no-files-found: error
+          retention-days: 30

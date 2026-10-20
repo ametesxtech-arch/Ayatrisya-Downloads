@@ -8,7 +8,7 @@ const target = process.argv[2];
 const targets = {
   linux: ['--linux', 'AppImage'],
   windows: ['--win', 'nsis'],
-  mac: ['--mac', 'dmg'],
+  mac: ['--mac', 'dmg', '--universal'],
 };
 if (!targets[target]) throw new Error('Choose a desktop build target: linux, windows, or mac.');
 if (target === 'mac' && process.platform !== 'darwin') {
