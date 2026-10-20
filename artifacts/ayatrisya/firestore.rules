@@ -1,0 +1,35 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId}/privateSettings/personalization {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.data.keys().hasOnly([
+          "schemaVersion",
+          "wallpaper",
+          "personalization",
+          "updatedAt"
+        ])
+        && request.resource.data.schemaVersion == 1
+        && request.resource.data.wallpaper is string
+        && request.resource.data.wallpaper.matches("^(none|preset-([0-9]|[1-6][0-9]))$")
+        && request.resource.data.personalization is map
+        && request.resource.data.personalization.keys().hasOnly([
+          "enabled",
+          "useMemory",
+          "memorySummary",
+          "instructions",
+          "avoid",
+          "tone",
+          "length",
+          "format",
+          "examples",
+          "clarifying",
+          "technicality"
+        ])
+        && request.resource.data.updatedAt is string;
+    }
+  }
+}

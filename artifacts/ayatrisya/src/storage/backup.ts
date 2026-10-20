@@ -19,13 +19,17 @@ const prefsSchema = z.object({
   recentCommands:z.array(z.string().max(200)).max(20).default([]),
   wallpaper:z.string().regex(/^(none|custom|preset-(?:[0-9]|[1-6][0-9]))$/).default("none"),
   customWallpaperData:z.string().max(1500000).default(""),
+  syncAcrossDevices:z.boolean().default(false),
   personalization:z.object({
     enabled:z.boolean().default(true),useMemory:z.boolean().default(true),memorySummary:z.string().max(6000).default(""),
     instructions:z.string().max(2000).default(""),avoid:z.string().max(1000).default(""),
     tone:z.enum(["balanced","friendly","professional","direct","creative"]).default("balanced"),
     length:z.enum(["concise","balanced","detailed"]).default("balanced"),
     format:z.enum(["automatic","paragraphs","bullets","steps"]).default("automatic"),
-  }).default({enabled:true,useMemory:true,memorySummary:"",instructions:"",avoid:"",tone:"balanced",length:"balanced",format:"automatic"}),
+    examples:z.enum(["when-useful","often","rarely"]).default("when-useful"),
+    clarifying:z.enum(["when-needed","assume","ask-first"]).default("when-needed"),
+    technicality:z.enum(["accessible","balanced","technical"]).default("balanced"),
+  }).default({enabled:true,useMemory:true,memorySummary:"",instructions:"",avoid:"",tone:"balanced",length:"balanced",format:"automatic",examples:"when-useful",clarifying:"when-needed",technicality:"balanced"}),
 }).strict();
 const backupSchema = z.object({
   format: z.literal("ayatrisya-backup"), version: z.union([z.literal(1),z.literal(2)]), exportedAt: z.string().datetime(),

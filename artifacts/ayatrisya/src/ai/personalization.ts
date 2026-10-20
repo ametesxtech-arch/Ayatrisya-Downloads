@@ -21,6 +21,21 @@ const formats: Record<PersonalizationPreferences["format"], string> = {
   bullets: "Prefer concise bullet lists when practical.",
   steps: "Use numbered steps for explanations and procedures when practical.",
 };
+const examples: Record<PersonalizationPreferences["examples"], string> = {
+  "when-useful": "Include examples when they make the answer clearer.",
+  often: "Use concrete examples when they help explain an idea.",
+  rarely: "Keep examples brief and include them only when requested or essential.",
+};
+const clarification: Record<PersonalizationPreferences["clarifying"], string> = {
+  "when-needed": "Ask a clarifying question when missing details materially affect the answer; otherwise make a reasonable assumption.",
+  assume: "Make reasonable assumptions and state them briefly instead of asking follow-up questions.",
+  "ask-first": "Ask a brief clarifying question before proceeding when the request has meaningful ambiguity.",
+};
+const technicality: Record<PersonalizationPreferences["technicality"], string> = {
+  accessible: "Explain technical concepts in accessible language and define specialized terms.",
+  balanced: "Use technical language at a level appropriate to the request.",
+  technical: "Use precise technical language and include implementation details when relevant.",
+};
 
 export function applyPersonalization(messages: ModelMessage[], settings: PersonalizationPreferences): ModelMessage[] {
   if (!settings.enabled || messages.length === 0) return messages;
@@ -29,6 +44,9 @@ export function applyPersonalization(messages: ModelMessage[], settings: Persona
     tones[settings.tone],
     lengths[settings.length],
     formats[settings.format],
+    examples[settings.examples],
+    clarification[settings.clarifying],
+    technicality[settings.technicality],
     settings.instructions.trim() ? `Additional preferences: ${settings.instructions.trim()}` : "",
     settings.avoid.trim() ? `Avoid where practical: ${settings.avoid.trim()}` : "",
     settings.useMemory && settings.memorySummary.trim()

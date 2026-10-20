@@ -5,6 +5,9 @@ export type ItemKind = "note" | "document" | "presentation" | "file" | "task" | 
 export type PersonalizationTone = "balanced" | "friendly" | "professional" | "direct" | "creative";
 export type PersonalizationLength = "concise" | "balanced" | "detailed";
 export type PersonalizationFormat = "automatic" | "paragraphs" | "bullets" | "steps";
+export type PersonalizationExamples = "when-useful" | "often" | "rarely";
+export type PersonalizationClarifying = "when-needed" | "assume" | "ask-first";
+export type PersonalizationTechnicality = "accessible" | "balanced" | "technical";
 export interface PersonalizationPreferences {
   enabled: boolean;
   useMemory: boolean;
@@ -14,6 +17,9 @@ export interface PersonalizationPreferences {
   tone: PersonalizationTone;
   length: PersonalizationLength;
   format: PersonalizationFormat;
+  examples: PersonalizationExamples;
+  clarifying: PersonalizationClarifying;
+  technicality: PersonalizationTechnicality;
 }
 export interface BaseRecord {
   id: string;
@@ -79,6 +85,7 @@ export interface Preferences {
   recentCommands: string[];
   wallpaper: string;
   customWallpaperData: string;
+  syncAcrossDevices: boolean;
   personalization: PersonalizationPreferences;
 }
 export const defaultPreferences: Preferences = {
@@ -86,8 +93,8 @@ export const defaultPreferences: Preferences = {
   onboardingComplete: false, displayName: "", language: "English", mode: "Normal", model: "v1-fast",
   enterToSend:true,historySort:"newest",historyPinnedFirst:true,animationIntensity:"full",logoIdle:false,projectView:"grid",
   workspaceMode:"standard",homeDensity:"comfortable",homeSections:{projects:true,conversations:true,items:true},recentCommands:[],
-  wallpaper:"none",customWallpaperData:"",
-  personalization:{enabled:true,useMemory:true,memorySummary:"",instructions:"",avoid:"",tone:"balanced",length:"balanced",format:"automatic"},
+  wallpaper:"none",customWallpaperData:"",syncAcrossDevices:false,
+  personalization:{enabled:true,useMemory:true,memorySummary:"",instructions:"",avoid:"",tone:"balanced",length:"balanced",format:"automatic",examples:"when-useful",clarifying:"when-needed",technicality:"balanced"},
 };
 export interface ListOptions { search?: string; offset?: number; limit?: number }
 export interface ItemOptions extends ListOptions {

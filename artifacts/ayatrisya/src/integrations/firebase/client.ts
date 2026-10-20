@@ -1,4 +1,4 @@
-import { initializeApp, getApps } from "firebase/app";
+import { initializeApp, getApps, type FirebaseApp } from "firebase/app";
 import { getAuth, type Auth } from "firebase/auth";
 
 export const firebaseConfig = {
@@ -9,9 +9,13 @@ export const firebaseConfig = {
 };
 export const firebaseConfigured = Object.values(firebaseConfig).every(v => typeof v === "string" && v.trim().length > 0);
 let auth: Auth | undefined;
+export function firebaseApp(): FirebaseApp {
+  if (!firebaseConfigured) throw new Error("Firebase is not configured for this app.");
+  return getApps().find(app=>app.name==="ayatrisya") ?? initializeApp(firebaseConfig,"ayatrisya");
+}
 export function firebaseAuth(): Auth {
   if (!firebaseConfigured) throw new Error("Firebase Authentication is not configured. Sign in or create an account to continue.");
-  auth ??= getAuth(getApps().find(app=>app.name==="ayatrisya") ?? initializeApp(firebaseConfig,"ayatrisya"));
+  auth ??= getAuth(firebaseApp());
   return auth;
 }
 export function authError(error: unknown): string {

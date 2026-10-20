@@ -11,6 +11,7 @@ import { Emblem } from '@/components/Brand';
 import { Landing } from '@/pages/Landing';
 import { DesktopDownloadsPage } from '@/pages/DesktopDownloads';
 import { wallpapers } from '@/data/wallpapers';
+import { CloudPreferenceSyncProvider } from '@/integrations/firebase/CloudPreferenceSync';
 
 const Workspace = lazy(() => import('@/components/WorkspaceShell').then((m) => ({ default: m.Workspace })));
 const AuthPage = lazy(() => import('@/pages/Auth').then((m) => ({ default: m.AuthPage })));
@@ -117,11 +118,13 @@ function App() {
     <AuthProvider>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
-          <PrefsEffects />
-          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
-            <Router />
-          </WouterRouter>
-          <Toaster />
+          <CloudPreferenceSyncProvider>
+            <PrefsEffects />
+            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
+              <Router />
+            </WouterRouter>
+            <Toaster />
+          </CloudPreferenceSyncProvider>
         </TooltipProvider>
       </QueryClientProvider>
     </AuthProvider>
