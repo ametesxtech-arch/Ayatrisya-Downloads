@@ -20,6 +20,14 @@ export interface DesktopCommandResult {
   timedOut: boolean;
 }
 
+export type LocalModelPath = "/health" | "/capabilities" | "/chat";
+export type LocalModelMethod = "GET" | "POST";
+export interface LocalModelResponse {
+  status: number;
+  contentType: string;
+  body: unknown;
+}
+
 export interface AyatrisyaDesktopApi {
   readonly isDesktop: true;
   listProjects(): Promise<DesktopProject[]>;
@@ -30,6 +38,10 @@ export interface AyatrisyaDesktopApi {
   createFile(projectId: string, relativePath: string): Promise<void>;
   writeFile(projectId: string, relativePath: string, content: string): Promise<void>;
   runCommand(projectId: string, command: string): Promise<DesktopCommandResult>;
+  getLocalModelEndpoint(): Promise<string>;
+  setLocalModelEndpoint(endpoint: string): Promise<string>;
+  requestLocalModel(path: LocalModelPath, method: LocalModelMethod, body: unknown, requestId: string): Promise<LocalModelResponse>;
+  cancelLocalModelRequest(requestId: string): Promise<void>;
 }
 
 declare global {

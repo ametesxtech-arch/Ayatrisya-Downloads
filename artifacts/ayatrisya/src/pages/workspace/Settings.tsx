@@ -11,6 +11,7 @@ import { downloadBlob, exportBackup, inspectBackup, restoreBackup } from '@/stor
 import { driveSync } from '@/integrations/google-drive/sync';
 import { errMsg, formatBytes } from '@/lib/format';
 import type { ChatMode, ModelId, Preferences } from '@/storage/types';
+import { modelClient } from '@/ai/client';
 
 type Section = 'appearance' | 'personalization' | 'models' | 'privacy' | 'storage';
 const sections: Array<[Section, string]> = [['appearance', 'Appearance'], ['personalization', 'Personalization'], ['models', 'Models'], ['privacy', 'Privacy'], ['storage', 'Storage and backup']];
@@ -65,6 +66,7 @@ function Models() {
   const { caps, loading, error, refresh } = useCaps();
   const [demoOpen, setDemoOpen] = useState(false);
   return <>
+    <DesktopLocalModel onRefresh={refresh} />
     <Card title="Defaults">
       <label className="block py-3 text-xs font-medium text-slate-400">Default model<select value={prefs.model} onChange={(e) => void save({ model: e.target.value as ModelId })} className={`${inputCls} mt-1.5 max-w-xs`}><option value="v1-fast">V1 Fast</option><option value="v2-best">V2 Best Result</option></select></label>
       <label className="block py-3 text-xs font-medium text-slate-400">Default chat mode<select value={prefs.mode} onChange={(e) => void save({ mode: e.target.value as ChatMode })} className={`${inputCls} mt-1.5 max-w-xs`}><option>Normal</option><option>Savage</option><option>Joke</option></select><span className="mt-1 block text-[11px] text-slate-500">Mode is passed to the model as configuration. It does not change anything without a connected model.</span></label>
@@ -74,7 +76,7 @@ function Models() {
       {error && <LoadError message={error} retry={refresh} />}
       {caps.map((c) => <div key={c.id} className="py-3 text-sm" data-testid={`capability-${c.id}`}><div className="flex items-center justify-between"><b>{c.label}</b><span className={`text-xs ${c.available ? 'text-teal-300' : 'text-amber-300'}`}>{c.available ? 'Reported available' : 'Unavailable'}</span></div><p className="mt-1 text-xs text-slate-500">{c.reason}{c.available ? ` Streaming: ${c.streaming ? 'yes' : 'no'}. Modalities: ${c.modalities.join(', ') || 'text'}.` : ''}</p></div>)}
       {!loading && caps.length === 0 && !error && <p className="py-3 text-sm text-slate-400">No capabilities were reported. No model is connected.</p>}
-      <p className="py-3 text-xs text-slate-500">The model endpoint is configured when the app is built, not in the browser. There is no fallback to any third-party AI service.</p>
+      <p className="py-3 text-xs text-slate-500">The web endpoint is configured when the app is built. Ayatrisya Desktop can use the separate local endpoint above. There is no fallback to a third-party AI service.</p>
     </Card>
     {import.meta.env.DEV && <Card title="Developer-only visual preview">
       <p className="py-3 text-xs text-slate-400">DEMO — NOT REAL AI. This isolated example is not a model response, is never saved to a conversation, and is excluded from production builds.</p>
@@ -82,6 +84,102 @@ function Models() {
       {demoOpen && <div className="mt-3 rounded-xl border border-violet-400/20 bg-violet-400/[.05] p-4 text-sm"><b className="text-violet-300">DEMO — NOT REAL AI</b><p className="mt-2">A connected model’s response would appear here.</p></div>}
     </Card>}
   </>;
+}
+
+function isLoopbackEndpoint(raw: string) {
+  try {
+    const endpoint = new URL(raw);
+    return ["http:", "https:"].includes(endpoint.protocol) &&
+      ["localhost", "127.0.0.1", "[::1]"].includes(endpoint.hostname.toLowerCase()) &&
+      endpoint.pathname === "/" && !endpoint.username && !endpoint.password &&
+      !endpoint.search && !endpoint.hash;
+  } catch {
+    return false;
+  }
+}
+
+function DesktopLocalModel({ onRefresh }: { onRefresh: () => void }) {
+  const desktop = typeof window !== "undefined" ? window.ayatrisyaDesktop : undefined;
+  const envCandidate = import.meta.env.VITE_AYATRISYA_ENDPOINT ?? "";
+  const [endpoint, setEndpoint] = useState("");
+  const [savedEndpoint, setSavedEndpoint] = useState("");
+  const [loading, setLoading] = useState(Boolean(desktop));
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [status, setStatus] = useState("");
+
+  useEffect(() => {
+    if (!desktop) return;
+    let active = true;
+    desktop.getLocalModelEndpoint().then((saved) => {
+      if (!active) return;
+      setSavedEndpoint(saved);
+      setEndpoint(saved || (isLoopbackEndpoint(envCandidate) ? envCandidate : ""));
+    }).catch((cause) => {
+      if (active) setError(errMsg(cause));
+    }).finally(() => {
+      if (active) setLoading(false);
+    });
+    return () => { active = false; };
+  }, [desktop, envCandidate]);
+
+  async function saveEndpoint() {
+    if (!desktop) return;
+    setBusy(true);
+    setError("");
+    setStatus("");
+    try {
+      const saved = await desktop.setLocalModelEndpoint(endpoint.trim());
+      setSavedEndpoint(saved);
+      setEndpoint(saved);
+      const [health, capabilities] = await Promise.all([
+        modelClient.getConnectionHealth(),
+        modelClient.getModelCapabilities(),
+      ]);
+      onRefresh();
+      const available = capabilities.filter((cap) => cap.available).length;
+      setStatus(`${health.message}. ${available} model${available === 1 ? "" : "s"} reported available.`);
+    } catch (cause) {
+      setError(errMsg(cause));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function removeEndpoint() {
+    if (!desktop) return;
+    setBusy(true);
+    setError("");
+    setStatus("");
+    try {
+      await desktop.setLocalModelEndpoint("");
+      setSavedEndpoint("");
+      setEndpoint("");
+      onRefresh();
+      setStatus("Local model endpoint removed from this desktop.");
+    } catch (cause) {
+      setError(errMsg(cause));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return <Card title="Desktop-only local model">
+    {!desktop
+      ? <p className="py-3 text-xs leading-5 text-slate-400">Local model URLs are available only in Ayatrisya Desktop. A browser cannot reach localhost on your computer.</p>
+      : <div className="py-3">
+        <p className="text-xs leading-5 text-slate-400">Connect an Ayatrisya model adapter running on this computer. Only localhost, 127.0.0.1, or [::1] is accepted. The address is saved on this desktop and is not synced. The adapter must provide JSON responses for /health, /capabilities, and non-streaming /chat.</p>
+        <label htmlFor="desktop-local-model-url" className="mt-3 block text-xs font-medium text-slate-400">Local adapter URL</label>
+        <input id="desktop-local-model-url" type="url" value={endpoint} onChange={(event) => setEndpoint(event.target.value)} placeholder="http://127.0.0.1:1234" autoComplete="off" spellCheck={false} className={`${inputCls} mt-1.5 max-w-xl`} disabled={loading || busy} />
+        <p className="mt-1 text-[10px] text-slate-500">{savedEndpoint ? "A local endpoint is saved on this desktop." : "No local endpoint is saved."} This setting does not store API credentials.</p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Button onClick={() => void saveEndpoint()} disabled={loading || busy || !endpoint.trim()}>{busy ? "Checking…" : "Save and test connection"}</Button>
+          {savedEndpoint && <Button variant="outline" onClick={() => void removeEndpoint()} disabled={busy}>Remove local endpoint</Button>}
+        </div>
+        {error && <p className="mt-2 text-xs text-rose-200" role="alert">{error}</p>}
+        {status && <p className="mt-2 text-xs text-teal-200" role="status">{status}</p>}
+      </div>}
+  </Card>;
 }
 
 function Privacy({ goStorage, goto }: { goStorage: () => void; goto: (h: string) => void }) {

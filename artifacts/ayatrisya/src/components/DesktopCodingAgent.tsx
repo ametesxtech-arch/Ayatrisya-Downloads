@@ -216,7 +216,7 @@ export function DesktopCodingAgent({
     </div>
 
     {!capability?.available && <p className="mt-3 rounded-lg border border-amber-300/15 bg-amber-300/[.035] p-2.5 text-[11px] text-amber-100/80" role="status">
-      {capability?.reason || "Checking model availability…"} Configure an Ayatrisya model endpoint before using the AI agent. The local editor remains available.
+      {capability?.reason || "Checking model availability…"} Connect a supported remote model or desktop-local adapter in Settings. The local editor remains available.
     </p>}
 
     <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
@@ -281,7 +281,7 @@ export function DesktopCodingAgent({
     </div>}
 
     {consentOpen && <Modal title="Send selected project code to the model?" onClose={() => setConsentOpen(false)}>
-      <p className="text-sm leading-6 text-slate-400">The following selected files and your task will be sent to Ayatrisya’s configured model endpoint to create a proposal. No files will be changed and no commands will run. Do not continue if the files contain private information.</p>
+      <p className="text-sm leading-6 text-slate-400">The following selected files and your task will be sent to the configured Ayatrisya model endpoint to create a proposal. If you selected a desktop-local adapter, the request stays on this computer. No files will be changed and no commands will run. Do not continue if the files contain private information.</p>
       <ul className="mt-3 max-h-36 space-y-1 overflow-y-auto rounded-lg border border-white/[.07] bg-black/10 p-3 text-xs text-slate-300">
         {prepared.map((file) => <li key={file.path} className="flex justify-between gap-3"><span className="truncate">{file.path}</span><span className="shrink-0 text-slate-500">{new TextEncoder().encode(file.content).byteLength.toLocaleString()} B</span></li>)}
       </ul>

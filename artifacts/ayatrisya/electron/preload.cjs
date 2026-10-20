@@ -17,5 +17,11 @@ contextBridge.exposeInMainWorld(
       ipcRenderer.invoke("desktop:files:write", projectId, relativePath, content),
     runCommand: (projectId, command) =>
       ipcRenderer.invoke("desktop:terminal:run", projectId, command),
+    getLocalModelEndpoint: () => ipcRenderer.invoke("desktop:model-endpoint:get"),
+    setLocalModelEndpoint: (endpoint) => ipcRenderer.invoke("desktop:model-endpoint:set", endpoint),
+    requestLocalModel: (path, method, body, requestId) =>
+      ipcRenderer.invoke("desktop:model-endpoint:request", path, method, body, requestId),
+    cancelLocalModelRequest: (requestId) =>
+      ipcRenderer.invoke("desktop:model-endpoint:cancel", requestId),
   }),
 );

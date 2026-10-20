@@ -12,12 +12,19 @@ const {
   validateCommand,
   validateProjectId,
 } = require("./path-policy.cjs");
+const {
+  validateLocalModelEndpoint,
+  validateLocalModelRequest,
+} = require("./model-endpoint-policy.cjs");
 
 const MAX_TEXT_FILE_BYTES = 1024 * 1024;
 const MAX_TERMINAL_OUTPUT_BYTES = 128 * 1024;
 const TERMINAL_TIMEOUT_MS = 60_000;
 const GRANTS_FILE = "authorized-project-folders.json";
 const SERVER_FILE = "desktop-server.json";
+const LOCAL_MODEL_FILE = "local-model-endpoint.json";
+const LOCAL_MODEL_TIMEOUT_MS = 120_000;
+const LOCAL_MODEL_RESPONSE_BYTES = 2 * 1024 * 1024;
 const MIME_TYPES = {
   ".css": "text/css; charset=utf-8",
   ".html": "text/html; charset=utf-8",
@@ -48,6 +55,7 @@ let mainWindow = null;
 let uiOrigin = null;
 let staticServer = null;
 let projectGrants = [];
+const localModelRequests = new Map();
 
 app.setName("Ayatrisya");
 app.enableSandbox();
@@ -198,6 +206,106 @@ async function saveServerPort(port) {
   await fs.rename(temp, file);
 }
 
+async function getLocalModelEndpoint() {
+  const file = path.join(app.getPath("userData"), LOCAL_MODEL_FILE);
+  try {
+    const value = JSON.parse(await fs.readFile(file, "utf8"));
+    return validateLocalModelEndpoint(value.endpoint);
+  } catch (error) {
+    if (error.code === "ENOENT") return "";
+    throw new Error("The saved local model endpoint is invalid. Update it in Ayatrisya Settings.");
+  }
+}
+
+async function setLocalModelEndpoint(raw) {
+  if (typeof raw !== "string") throw new Error("Enter a local model URL.");
+  const file = path.join(app.getPath("userData"), LOCAL_MODEL_FILE);
+  if (!raw.trim()) {
+    await fs.rm(file, { force: true });
+    return "";
+  }
+  const endpoint = validateLocalModelEndpoint(raw);
+  const directory = app.getPath("userData");
+  const temp = `${file}.tmp`;
+  await fs.mkdir(directory, { recursive: true });
+  await fs.writeFile(temp, JSON.stringify({ endpoint }), { mode: 0o600 });
+  await fs.rename(temp, file);
+  return endpoint;
+}
+
+async function readLocalModelJson(response) {
+  const contentType = response.headers.get("content-type") ?? "";
+  if (!/(?:application|text)\/[^;]*json/i.test(contentType)) {
+    throw new Error("The local model adapter must return JSON.");
+  }
+  if (!response.body) throw new Error("The local model adapter returned an empty response.");
+  const reader = response.body.getReader();
+  const chunks = [];
+  let total = 0;
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > LOCAL_MODEL_RESPONSE_BYTES) {
+      await reader.cancel();
+      throw new Error("The local model response is larger than 2 MB.");
+    }
+    chunks.push(Buffer.from(value));
+  }
+  try {
+    return JSON.parse(Buffer.concat(chunks).toString("utf8"));
+  } catch {
+    throw new Error("The local model adapter returned invalid JSON.");
+  }
+}
+
+async function requestLocalModel(requestPath, method, body, requestId) {
+  if (typeof requestId !== "string" || !/^[0-9a-f-]{36}$/i.test(requestId)) {
+    throw new Error("The local model request is invalid.");
+  }
+  if (localModelRequests.has(requestId)) throw new Error("The local model request is already running.");
+  const request = validateLocalModelRequest(requestPath, method, body);
+  const endpoint = await getLocalModelEndpoint();
+  if (!endpoint) throw new Error("Set a desktop local model endpoint in Settings first.");
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), LOCAL_MODEL_TIMEOUT_MS);
+  localModelRequests.set(requestId, controller);
+  try {
+    const response = await fetch(`${endpoint}${request.path}`, {
+      method: request.method,
+      headers: {
+        Accept: "application/json",
+        ...(request.body ? { "Content-Type": "application/json" } : {}),
+      },
+      ...(request.body ? { body: JSON.stringify(request.body) } : {}),
+      signal: controller.signal,
+      redirect: "error",
+    });
+    if (!response.ok) {
+      throw new Error(response.status === 503
+        ? "The local model is unavailable. Retry when it is ready."
+        : `The local model request failed (${response.status}).`);
+    }
+    const responseBody = await readLocalModelJson(response);
+    return {
+      status: response.status,
+      contentType: "application/json",
+      body: responseBody,
+    };
+  } finally {
+    clearTimeout(timer);
+    localModelRequests.delete(requestId);
+  }
+}
+
+function cancelLocalModelRequest(requestId) {
+  if (typeof requestId !== "string" || !/^[0-9a-f-]{36}$/i.test(requestId)) {
+    throw new Error("The local model request is invalid.");
+  }
+  localModelRequests.get(requestId)?.abort();
+}
+
 async function listProjects() {
   return Promise.all(projectGrants.map(async (project) => {
     let available = false;
@@ -239,6 +347,11 @@ function registerIpc(channel, handler) {
     }
   });
 }
+
+registerIpc("desktop:model-endpoint:get", getLocalModelEndpoint);
+registerIpc("desktop:model-endpoint:set", setLocalModelEndpoint);
+registerIpc("desktop:model-endpoint:request", requestLocalModel);
+registerIpc("desktop:model-endpoint:cancel", cancelLocalModelRequest);
 
 registerIpc("desktop:projects:list", listProjects);
 registerIpc("desktop:projects:choose", async () => {
