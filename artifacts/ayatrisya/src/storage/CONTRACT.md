@@ -18,8 +18,8 @@ Always render loading/error/empty states. Do not ignore rejected mutations.
 
 `import { repository } from '@/storage/repository'`
 
-- `repository.ownerId` (default `"guest"`)
-- `setOwner(ownerId: string): void` (auth provider calls with `firebase:${uid}`, or `guest` on sign-out)
+- `repository.ownerId` (default `"signed-out"`)
+- `setOwner(ownerId: string): void` (auth provider calls with `firebase:${uid}`, or `"signed-out"` when no account is active)
 - `getPreferences(): Promise<Preferences>`
 - `savePreferences(patch: Partial<Preferences>): Promise<Preferences>`
 - `listConversations(options?: ListOptions): Promise<Conversation[]>` newest first; limit default 30
@@ -74,7 +74,7 @@ signIn(email,password), register(email,password), googleSignIn(), resetPassword(
 sendVerification(), refreshUser(), signOut() }`.
 Methods reject on failure. Never display successful authentication if configured=false.
 Guest workspace remains available. Account private details require a real user.
-Guest data isn't auto-uploaded or auto-migrated. Explicit `copyGuestToCurrent` option
+Legacy records under the `"guest"` owner aren't auto-uploaded or auto-migrated. Explicit `copyGuestToCurrent` option
 after sign-in permits preserving guest data. Missing config is a normal unavailable state.
 
 ## Model connection

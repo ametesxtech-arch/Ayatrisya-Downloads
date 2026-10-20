@@ -20,10 +20,10 @@ export function AuthProvider({children}:{children:ReactNode}) {
     repository.setOwner(owner);
   };
   useEffect(() => {
-    if (!firebaseConfigured) { repository.setOwner("guest"); return; }
+    if (!firebaseConfigured) { repository.setOwner("signed-out"); return; }
     try {
       return onAuthStateChanged(firebaseAuth(),next => {
-        switchOwner(next ? `firebase:${next.uid}` : "guest");
+        switchOwner(next ? `firebase:${next.uid}` : "signed-out");
         setUser(next); setLoading(false);
       },failure => { setError(authError(failure)); setLoading(false); });
     } catch (failure) { setError(authError(failure)); setLoading(false); }
@@ -47,7 +47,7 @@ export function AuthProvider({children}:{children:ReactNode}) {
     resetPassword:(email)=>perform(()=>sendPasswordResetEmail(firebaseAuth(),email)),
     sendVerification:()=>perform(async()=>{const current=firebaseAuth().currentUser;if(!current)throw new Error("Sign in first.");await sendEmailVerification(current);}),
     refreshUser:()=>perform(async()=>{const current=firebaseAuth().currentUser;if(current){await reload(current);setUser(Object.assign(Object.create(Object.getPrototypeOf(current)),current));}}),
-    signOut:()=>perform(async()=>{await firebaseSignOut(firebaseAuth());switchOwner("guest");setUser(null);}),
+    signOut:()=>perform(async()=>{await firebaseSignOut(firebaseAuth());switchOwner("signed-out");setUser(null);}),
   };
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }

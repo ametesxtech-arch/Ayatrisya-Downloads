@@ -19,7 +19,7 @@ const timestamp = () => new Date().toISOString();
 const paginate = <T,>(data: T[], options: ListOptions) => data.slice(Math.max(0, options.offset ?? 0), Math.max(0, options.offset ?? 0) + Math.min(500, Math.max(1, options.limit ?? 30)));
 
 export class LocalRepository {
-  ownerId = "guest";
+  ownerId = "signed-out";
   private connection?: Promise<IDBPDatabase>;
   private listeners = new Set<() => void>();
   private channel?: BroadcastChannel;
@@ -226,7 +226,7 @@ export class LocalRepository {
   }
   async copyGuestToCurrent(): Promise<number> {
     const owner = this.ownerId;
-    if (owner === "guest") throw new Error("Sign in before importing guest content.");
+    if (owner === "guest" || owner === "signed-out") throw new Error("Sign in before importing older browser-local content.");
     const db = await this.db(); const tx = db.transaction([...stores],"readwrite");
     const pref = await tx.objectStore("profiles").get([owner,"guest-import"]);
     if (pref) { await tx.done; return 0; }

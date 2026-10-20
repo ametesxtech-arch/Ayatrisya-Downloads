@@ -6,6 +6,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
 import { Route, Switch, useLocation, Router as WouterRouter } from 'wouter';
 import { AuthProvider } from '@/integrations/firebase/AuthProvider';
+import { useAuth } from '@/integrations/firebase/AuthProvider';
 import { usePrefs } from '@/hooks/use-prefs';
 import { Emblem } from '@/components/Brand';
 import { Landing } from '@/pages/Landing';
@@ -13,9 +14,32 @@ import { Landing } from '@/pages/Landing';
 const Workspace = lazy(() => import('@/components/WorkspaceShell').then((m) => ({ default: m.Workspace })));
 const AuthPage = lazy(() => import('@/pages/Auth').then((m) => ({ default: m.AuthPage })));
 const Onboarding = lazy(() => import('@/pages/Onboarding').then((m) => ({ default: m.Onboarding })));
-const Intro = lazy(() => import('@/pages/Intro').then((m) => ({ default: m.Intro })));
 
 const queryClient = new QueryClient();
+
+function RequireAccount({ children }: { children: ReactNode }) {
+  const { user, loading } = useAuth();
+  const [, setPath] = useLocation();
+  useEffect(() => {
+    if (!loading && !user) setPath('/auth/sign-in', { replace: true });
+  }, [loading, user, setPath]);
+  if (loading) return <div className="grid min-h-[100dvh] place-items-center text-xs text-slate-500" role="status">Checking your account…</div>;
+  return user ? children : <div className="grid min-h-[100dvh] place-items-center text-xs text-slate-500" role="status">Opening sign in…</div>;
+}
+
+function ProtectedWorkspace() {
+  return <RequireAccount><Workspace /></RequireAccount>;
+}
+
+function ProtectedOnboarding() {
+  return <RequireAccount><Onboarding /></RequireAccount>;
+}
+
+function LegacyIntroRedirect() {
+  const [, setPath] = useLocation();
+  useEffect(() => { setPath('/auth/create-account', { replace: true }); }, [setPath]);
+  return <div className="grid min-h-[100dvh] place-items-center text-xs text-slate-500" role="status">Opening account setup…</div>;
+}
 
 function RoutedBoundary({ children }: { children: ReactNode }) {
   const [location] = useLocation();
@@ -48,13 +72,13 @@ function Router() {
       <Suspense fallback={<div className="grid min-h-[100dvh] place-items-center text-xs text-slate-500" role="status"><span className="grid place-items-center gap-3"><Emblem size={44} mode="loading" /><span>Loading Ayatrisya</span></span></div>}>
         <Switch>
           <Route path="/" component={Landing} />
-          <Route path="/intro" component={Intro} />
+          <Route path="/intro" component={LegacyIntroRedirect} />
           <Route path="/auth/sign-in" component={AuthPage} />
           <Route path="/auth/create-account" component={AuthPage} />
           <Route path="/auth/reset-password" component={AuthPage} />
           <Route path="/auth/email-check" component={AuthPage} />
-          <Route path="/onboarding" component={Onboarding} />
-          <Route path={/^\/workspace(?:\/.*)?$/} component={Workspace} />
+          <Route path="/onboarding" component={ProtectedOnboarding} />
+          <Route path={/^\/workspace(?:\/.*)?$/} component={ProtectedWorkspace} />
           <Route component={NotFound} />
         </Switch>
       </Suspense>

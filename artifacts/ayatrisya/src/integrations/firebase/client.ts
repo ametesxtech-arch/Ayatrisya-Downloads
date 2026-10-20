@@ -10,7 +10,7 @@ export const firebaseConfig = {
 export const firebaseConfigured = Object.values(firebaseConfig).every(v => typeof v === "string" && v.trim().length > 0);
 let auth: Auth | undefined;
 export function firebaseAuth(): Auth {
-  if (!firebaseConfigured) throw new Error("Firebase authentication is not configured. Continue as guest; your content stays in this browser.");
+  if (!firebaseConfigured) throw new Error("Firebase Authentication is not configured. Sign in or create an account to continue.");
   auth ??= getAuth(getApps().find(app=>app.name==="ayatrisya") ?? initializeApp(firebaseConfig,"ayatrisya"));
   return auth;
 }
@@ -30,5 +30,5 @@ export function authError(error: unknown): string {
     "auth/unauthorized-domain":"This app's domain is not authorized in Firebase Authentication.",
     "auth/operation-not-allowed":"This sign-in method is not enabled in Firebase Authentication.",
   };
-  return messages[code] ?? (firebaseConfigured ? "Authentication could not be completed. Check your configuration or try again." : "Firebase authentication is not configured. Guest mode is available.");
+  return messages[code] ?? (firebaseConfigured ? "Authentication could not be completed. Check your configuration or try again." : "Firebase Authentication is not configured. Ask the deployment administrator to complete setup.");
 }
