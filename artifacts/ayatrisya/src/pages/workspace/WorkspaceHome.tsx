@@ -148,7 +148,7 @@ export function WorkspaceHome({
             </p>
             {!modelAvailable && <p className="mt-2 text-[11px] text-slate-500">AI responses are unavailable right now. Your workspace and saved content remain accessible.</p>}
             <div className="mt-6 flex flex-wrap gap-2">
-              <button type="button" onClick={() => onAction('new-chat')} className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-violet-300 px-4 text-xs font-bold text-[#171523] hover:bg-violet-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-200">
+              <button type="button" data-testid="button-new-chat" onClick={() => onAction('new-chat')} className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-violet-300 px-4 text-xs font-bold text-[#171523] hover:bg-violet-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-200">
                 <Plus size={15} /> New conversation <span className="ml-1 hidden border-l border-black/15 pl-2 font-mono text-[9px] opacity-65 sm:inline">⌘ N</span>
               </button>
               <button type="button" onClick={() => onAction('new-project')} className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-white/[.1] bg-white/[.025] px-4 text-xs font-semibold text-slate-200 hover:bg-white/[.07] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-300">
@@ -189,7 +189,7 @@ export function WorkspaceHome({
         ) : error ? (
           <div className="rounded-xl border border-white/[.07] bg-[#14161d]/65 p-5 text-xs text-slate-500">Saved sections will appear here after the local workspace becomes available.</div>
         ) : (
-          <div className={`grid gap-6 ${compact ? 'lg:grid-cols-[1.05fr_.95fr]' : 'lg:grid-cols-[1.05fr_.95fr]'}`}>
+          <div className={`grid ${compact ? 'gap-4 lg:grid-cols-[1.1fr_.9fr]' : 'gap-6 lg:grid-cols-[1.05fr_.95fr]'}`}>
             <div className="space-y-7">
               <section aria-labelledby="section-recent-projects">
                 <SectionHeading title="Recent projects" count={recentProjects.length} open={sections.projects} onToggle={() => onToggleSection('projects')} action={<button type="button" onClick={() => onAction('new-project')} className="inline-flex min-h-8 items-center gap-1.5 rounded-md px-2 text-[11px] text-slate-400 hover:bg-white/[.05] hover:text-slate-200"><Plus size={13} />New</button>} />

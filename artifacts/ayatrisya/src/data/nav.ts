@@ -1,5 +1,6 @@
 export const tools = [
-  { name: 'Chat', href: '/workspace', detail: 'Think through a question' },
+  { name: 'Home', href: '/workspace', detail: 'Pick up where you left off' },
+  { name: 'Chat', href: '/workspace/chat', detail: 'Think through a question' },
   { name: 'Research notes', href: '/workspace/research', detail: 'Collect and organise notes' },
   { name: 'Conversation history', href: '/workspace/history', detail: 'Pin, archive, export, delete' },
   { name: 'Coding', href: '/workspace/coding', detail: 'Tasks and desktop handoff' },

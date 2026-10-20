@@ -1,5 +1,6 @@
 export type ChatMode = "Normal" | "Savage" | "Joke";
 export type ModelId = "v1-fast" | "v2-best";
+export type WorkspaceMode = "standard" | "focus" | "studio" | "developer" | "compact";
 export type ItemKind = "note" | "document" | "presentation" | "file" | "task" | "code";
 export interface BaseRecord {
   id: string;
@@ -59,11 +60,16 @@ export interface Preferences {
   animationIntensity:"full"|"subtle"|"none";
   logoIdle:boolean;
   projectView:"grid"|"list";
+  workspaceMode: WorkspaceMode;
+  homeDensity: "comfortable" | "compact";
+  homeSections: { projects: boolean; conversations: boolean; items: boolean };
+  recentCommands: string[];
 }
 export const defaultPreferences: Preferences = {
   theme: "Dark", sidebarCollapsed: false, reducedMotion: false, skipIntro: false,
   onboardingComplete: false, displayName: "", language: "English", mode: "Normal", model: "v1-fast",
   enterToSend:true,historySort:"newest",historyPinnedFirst:true,animationIntensity:"full",logoIdle:false,projectView:"grid",
+  workspaceMode:"standard",homeDensity:"comfortable",homeSections:{projects:true,conversations:true,items:true},recentCommands:[],
 };
 export interface ListOptions { search?: string; offset?: number; limit?: number }
 export interface ItemOptions extends ListOptions {

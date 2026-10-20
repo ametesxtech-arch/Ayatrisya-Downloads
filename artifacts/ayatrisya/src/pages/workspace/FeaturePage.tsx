@@ -17,7 +17,7 @@ const Account = lazy(() => import('@/pages/workspace/Account').then((m) => ({ de
 export function FeaturePage({ path, goto, notify }: { path: string; goto: (href: string) => void; notify: (m: string) => void }) {
   const seg = path.split('/');
   let body;
-  if (path === '/workspace' || path === '/workspace/' || (path.startsWith('/workspace/chat/') && seg.length === 4)) return <ChatPage path={path} goto={goto} notify={notify} />;
+  if (path === '/workspace/chat' || path === '/workspace/chat/' || (path.startsWith('/workspace/chat/') && seg.length === 4)) return <ChatPage path={path} goto={goto} notify={notify} />;
   if (path === '/workspace/research') body = <Research notify={notify} />;
   else if (path === '/workspace/coding' || path === '/workspace/coding/desktop-preview') body = <Coding notify={notify} />;
   else if (path === '/workspace/images') body = <Studios kind="image" />;
