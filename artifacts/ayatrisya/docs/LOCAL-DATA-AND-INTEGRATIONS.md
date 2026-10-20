@@ -5,9 +5,10 @@
 No cloud content database or backend upload service is used. Conversations,
 projects, notes, documents, presentations, preferences and permitted files are
 stored in IndexedDB in the current browser profile and current site origin.
-Firebase identities have distinct local namespaces. Guest content is retained
-separately; explicit guest import copies it and remaps references without deleting
-the guest originals. Signing in does not upload guest content.
+Firebase identities have distinct local namespaces. New users must sign in; there
+is no anonymous workspace. Records created by older guest-mode versions stay in a
+separate legacy namespace and can be explicitly imported after sign-in. Import
+copies and remaps references without deleting the original records.
 
 Browser quotas vary. The displayed `navigator.storage.estimate()` figures are
 origin-wide estimates, not exact app-content bytes or a promised capacity.
@@ -40,10 +41,11 @@ Firebase web API keys identify a project, not a service-account credential.
 Never put a service-account JSON/private key, client secret, or OAuth token in a
 `VITE_*` variable. Configure appropriate Firebase API-key restrictions.
 
-Without the configuration the app offers a real local guest workspace and clearly
-unavailable sign-in. Real Google/email sign-in, registration, reset emails and
-verification require owner-supplied configuration and live testing. No test here
-proves these production identity flows.
+Without the configuration, workspace and onboarding access are blocked and the
+sign-in screen explains that Firebase setup is required. Email/password account
+creation and sign-in, Google sign-in, reset emails and verification require
+owner-supplied configuration and live testing. No test here proves these
+production identity flows.
 
 ## GitHub and Figma account connections
 

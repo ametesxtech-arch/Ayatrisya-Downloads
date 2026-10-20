@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
-import { ArrowRight, Check } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { Button, Eyebrow, Notice, inputCls } from '@/components/Primitives';
 import { Brand } from '@/components/Brand';
 import { useAuth } from '@/integrations/firebase/AuthProvider';
@@ -43,7 +43,7 @@ export function AuthPage() {
   return <AuthFrame>
     <Eyebrow>{isReset ? 'Recovery' : isCreate ? 'Create account' : 'Sign in'}</Eyebrow>
     <h1 className="display text-2xl font-semibold tracking-[-.04em]">{isReset ? 'Reset your password' : isCreate ? 'Create your account' : 'Welcome back'}</h1>
-    {!auth.loading && !auth.configured && <div className="mt-4"><Notice>Sign-in is not configured for this deployment (no Firebase settings were provided), so accounts cannot be created or used. The guest workspace works fully.</Notice></div>}
+    {!auth.loading && !auth.configured && <div className="mt-4"><Notice>Firebase Authentication is not configured, so sign-in and account creation are unavailable. Ayatrisya requires an account; ask the deployment administrator to complete setup.</Notice></div>}
     {!isReset && <button type="button" onClick={google} disabled={busy || !auth.configured} className="mt-5 flex h-11 w-full items-center justify-center rounded-lg border border-white/10 text-sm font-semibold hover:bg-white/[.05] disabled:opacity-45">Continue with Google</button>}
     <form onSubmit={submit} className="mt-5 space-y-4" noValidate>
       <label className="block text-xs font-medium text-slate-300">Email<input value={email} onChange={(e) => setEmail(e.target.value)} type="email" autoComplete="email" className={`${inputCls} mt-2`} data-testid="input-email" /></label>
@@ -55,9 +55,7 @@ export function AuthPage() {
     </form>
     {!isCreate && !isReset && <button onClick={() => setPath('/auth/reset-password')} className="mt-4 block w-full text-right text-xs text-slate-400 hover:text-violet-200">Forgot password?</button>}
     <div className="my-6 border-t border-white/[.07] pt-5 text-center text-xs text-slate-400">{isCreate ? 'Already have an account?' : 'New to Ayatrisya?'}{' '}<button onClick={() => setPath(isCreate ? '/auth/sign-in' : '/auth/create-account')} className="font-semibold text-slate-100 hover:text-violet-200">{isCreate ? 'Sign in' : 'Create an account'}</button></div>
-    <Link href="/intro" className="flex h-11 items-center justify-center gap-2 rounded-lg border border-white/[.08] text-xs font-semibold text-slate-200 hover:bg-white/[.04]">Continue as guest <ArrowRight size={14} /></Link>
-    <p className="mt-4 text-center text-[11px] leading-5 text-slate-500"><Check size={11} className="mr-1 inline" />Guest content is saved only in this browser and can be lost if you clear browser data. It is not uploaded or moved when you sign in; you can copy it into an account later.</p>
-    <p className="mt-3 text-center text-[11px] text-slate-500">By continuing you accept the terms and privacy policy of this deployment. Your content stays on your device.</p>
+    <p className="mt-6 text-center text-[11px] leading-5 text-slate-500">An account is required to use Ayatrisya. Your saved work stays in this browser unless you choose to use an integration.</p>
   </AuthFrame>;
 }
 

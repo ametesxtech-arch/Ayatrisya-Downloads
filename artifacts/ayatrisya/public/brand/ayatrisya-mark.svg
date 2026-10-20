@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <title>Ayatrisya</title>
+  <desc>Three folded, interwoven planes forming a faceted creative mark.</desc>
+  <defs>
+    <linearGradient id="violet" x1="12" y1="12" x2="49" y2="48" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#AA98F4"/>
+      <stop offset="1" stop-color="#7067D9"/>
+    </linearGradient>
+    <linearGradient id="indigo" x1="46" y1="28" x2="25" y2="54" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7777E5"/>
+      <stop offset="1" stop-color="#4D5BC0"/>
+    </linearGradient>
+    <linearGradient id="lilac" x1="14" y1="22" x2="35" y2="53" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8F84E8"/>
+      <stop offset="1" stop-color="#686BCB"/>
+    </linearGradient>
+  </defs>
+  <path d="M13 11.5h20.8L52 29.7l-9.1 9.1L27.6 23.5H13V11.5Z" fill="url(#violet)"/>
+  <path d="M12 16.3 22 26.4v12.2l12.6 12.6-8.5 8.5L12 45.6V16.3Z" fill="url(#lilac)"/>
+  <path d="M52 29.7v18.1l-17.7 5.1-8.5-8.5 13.1-5.6V29.7H52Z" fill="url(#indigo)"/>
+  <path d="m22 26.4 5.6-2.9 15.3 15.3-4 4.2-13.1 5.6-3.8-3.8V26.4Z" fill="#525FBF"/>
+</svg>

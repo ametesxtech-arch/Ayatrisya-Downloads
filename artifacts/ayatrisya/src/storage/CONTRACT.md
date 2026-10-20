@@ -73,9 +73,9 @@ Wrap App in AuthProvider.
 signIn(email,password), register(email,password), googleSignIn(), resetPassword(email),
 sendVerification(), refreshUser(), signOut() }`.
 Methods reject on failure. Never display successful authentication if configured=false.
-Guest workspace remains available. Account private details require a real user.
-Legacy records under the `"guest"` owner aren't auto-uploaded or auto-migrated. Explicit `copyGuestToCurrent` option
-after sign-in permits preserving guest data. Missing config is a normal unavailable state.
+An authenticated account is required for workspace and onboarding routes. Legacy records under the `"guest"`
+owner aren't auto-uploaded or auto-migrated; the explicit `copyGuestToCurrent` option can preserve those records
+after sign-in. Missing Firebase config blocks access rather than opening an anonymous workspace.
 
 ## Model connection
 

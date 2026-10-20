@@ -88,7 +88,7 @@ describe("complete local data lifecycle",()=>{
     expect(await repo.getConversation(conv.id)).toMatchObject({pinned:false,archived:false});expect((await repo.getPreferences()).enterToSend).toBe(true);
   });
   it("rejects a duplicate transaction atomically if its file bytes are missing",async()=>{
-    const repo=local(),conv=await repo.createConversation("Incomplete"),file=await repo.addFile(textFile(),null,conv.id);
+    const repo=local();repo.setOwner("guest");const conv=await repo.createConversation("Incomplete"),file=await repo.addFile(textFile(),null,conv.id);
     await(await repo.db()).delete("blobs",["guest",file.id]);
     await expect(repo.duplicateConversation(conv.id)).rejects.toThrow("missing");expect(await repo.listConversations()).toHaveLength(1);
   });

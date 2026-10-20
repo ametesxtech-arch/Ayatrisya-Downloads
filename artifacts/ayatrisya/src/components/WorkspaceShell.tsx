@@ -160,7 +160,7 @@ export function Workspace() {
     { label: 'Settings', onSelect: () => goto('/workspace/settings') },
     { label: 'Storage and backup', onSelect: () => goto('/workspace/storage') },
     { label: prefs.theme === 'Light' ? 'Dark theme' : 'Light theme', onSelect: () => void toggleTheme() },
-    ...(user ? [{ label: 'Sign out', danger: true, onSelect: () => { signOut().then(() => notify('Signed out. The guest workspace is shown.'), (e) => notify(errMsg(e))); } }] : []),
+    ...(user ? [{ label: 'Sign out', danger: true, onSelect: () => { signOut().then(() => { notify('Signed out.'); goto('/auth/sign-in'); }, (e) => notify(errMsg(e))); } }] : []),
   ];
   const capFor = (id: ModelId) => caps.find((c) => c.id === id);
   const anyReady = caps.some((c) => c.available);
@@ -217,7 +217,7 @@ export function Workspace() {
           </Link>
           <Link href="/workspace/account" onClick={() => setMobileOpen(false)} className={cx('flex items-center gap-2 rounded-lg p-2 hover:bg-white/[.05]', collapsed && 'justify-center')} aria-label="Account">
             <span className="grid size-8 shrink-0 place-items-center rounded-full border border-white/10 bg-[#22242c] text-[10px] font-semibold text-slate-300">{initials}</span>
-            {!collapsed && <span className="min-w-0 flex-1"><span className="block truncate text-xs font-medium">{user ? user.displayName || user.email : prefs.displayName || 'Guest workspace'}</span><span className="block truncate text-[10px] text-slate-500">{user ? (user.emailVerified ? 'Signed in, verified' : 'Signed in, unverified') : 'Stored in this browser'}</span></span>}
+            {!collapsed && <span className="min-w-0 flex-1"><span className="block truncate text-xs font-medium">{user ? user.displayName || user.email : prefs.displayName || 'Account'}</span><span className="block truncate text-[10px] text-slate-500">{user ? (user.emailVerified ? 'Signed in, verified' : 'Signed in, unverified') : 'Not signed in'}</span></span>}
           </Link>
           <Link href="/workspace/settings" onClick={() => setMobileOpen(false)} className={cx('mt-1 flex items-center gap-2 rounded-md px-2 py-2 text-[11px] text-slate-400 hover:bg-white/[.05] hover:text-slate-100', collapsed && 'justify-center')} title="Settings"><Settings size={14} />{!collapsed && 'Settings'}</Link>
         </div>

@@ -1,0 +1,138 @@
+# AYATRISYA — COMPLETE LOGO REPLACEMENT DIRECTIVE
+
+Modify the existing Ayatrisya application. The current logo is a violet, double-arched doorway with a central keyhole/lock symbol and a small star near the top-right.
+
+**Replace this logo completely. Do not reuse, trace, slightly modify, or incorporate its distinctive arch-and-keyhole design into the new logo.** We want an original identity for Ayatrisya that does not intentionally imitate an existing brand.
+
+## 1. Design a new, original brand mark
+
+Create a distinctive logo specifically for Ayatrisya, an AI workspace developed by Ametesx.
+
+Design direction:
+- Futuristic, intelligent, elegant, and premium.
+- Suitable for a serious AI technology brand.
+- Minimal enough to remain recognizable at 16–32 pixels.
+- Visually distinctive in both dark and light themes.
+- A custom geometric or abstract symbol inspired by intelligence, imagination, knowledge, connected ideas, or computational creativity.
+- Violet and indigo may remain as brand colors, but the actual symbol must be new.
+- Pair it with a carefully styled **Ayatrisya** wordmark when sufficient space is available.
+- Use clean geometry, balanced proportions, and a recognizable silhouette.
+
+Do not use:
+- The existing doorway, arch, or keyhole composition.
+- Generic copied AI logos.
+- Recognizable third-party brand symbols.
+- Random decorative stars as a substitute for a distinctive concept.
+- Emoji as the primary logo.
+- A downloaded logo that cannot be verified as appropriately licensed.
+
+Create the logo as an original SVG using clean vector paths and shapes, or use a suitable original vector asset already in the project if it meets these requirements.
+
+## 2. Audit every occurrence of the old logo
+
+Search the entire repository, including:
+- React components.
+- Shared layout components.
+- Sidebar and top navigation.
+- Splash and loading screens.
+- Login and registration pages.
+- Onboarding.
+- Favicon and browser tab icons.
+- PWA icons and manifest.
+- Open Graph and social-preview assets.
+- Settings and account screens.
+- Empty states and error screens.
+- Email templates if included.
+- Public landing page.
+- Desktop-app assets if included.
+- CSS background images.
+- SVG files and image assets.
+- Documentation and static HTML files used by the application.
+
+Identify every reference to the old logo, including imported files, inline SVGs, duplicated components, CSS backgrounds, and hardcoded image paths.
+
+Do not replace only the visible logo on the homepage while leaving the old symbol elsewhere.
+
+## 3. Create one authoritative logo system
+
+Use a central asset location, following the existing project's conventions. For example:
+
+- `public/branding/ayatrisya-mark.svg`
+- `public/branding/ayatrisya-wordmark.svg`
+- `public/branding/ayatrisya-lockup.svg`
+
+These are suggested names, not mandatory if the repository already has a better asset structure.
+
+Create a reusable logo component with appropriate variants, such as:
+- Icon only.
+- Horizontal wordmark.
+- Compact sidebar.
+- Splash screen.
+- Light-background variant.
+- Dark-background variant.
+
+Every application component must reference the new authoritative assets or reusable logo component rather than embedding separate copies of the old symbol.
+
+Preserve accessibility with suitable alternative text and decorative-image handling.
+
+## 4. Update all brand surfaces
+
+Replace the old logo throughout the application:
+- Main navigation.
+- Collapsed sidebar.
+- Splash screen.
+- Authentication screens.
+- Mobile navigation.
+- Loading screens.
+- Browser favicon.
+- PWA assets and manifest.
+- Landing page.
+- Desktop application, where applicable.
+
+Ensure the logo remains crisp, correctly proportioned, and visually balanced at different sizes.
+
+Do not distort the SVG or add excessive glow that makes it difficult to recognize.
+
+## 5. Clean up old assets safely
+
+After confirming that no active code references the old logo:
+- Remove obsolete logo assets from the active application asset set.
+- Update imports and references.
+- Remove duplicate branding components where appropriate.
+- Update favicon and manifest references.
+- Check build configuration and public asset paths.
+
+Do not delete unrelated files or overwrite user-created assets without checking their usage.
+
+## 6. Verify the result
+
+Run repository-wide searches for the old logo asset names and references.
+
+Build the application and inspect the actual rendered pages:
+- Landing page.
+- Splash screen.
+- Authentication.
+- Main workspace.
+- Expanded and collapsed sidebar.
+- Mobile layout.
+- Light and dark themes.
+- Browser favicon and PWA manifest.
+
+Check for broken images, missing assets, SVG rendering errors, and layout shifts.
+
+If a browser or screenshot tool is available, inspect the rendered application rather than relying only on source-code changes.
+
+Do not claim that the old logo has been removed everywhere unless the repository audit and verification support that claim.
+
+## 7. Final report
+
+Report:
+1. The new logo concept and design rationale.
+2. All logo assets created.
+3. All components and files updated.
+4. Old assets removed or retained, with reasons.
+5. Repository search results.
+6. Build and rendering test results.
+7. Any remaining references or limitations.
+
+**Final requirement:** Ayatrisya must have a cohesive, original visual identity. The old arch-and-keyhole logo must no longer appear anywhere in the active product. Preserve all other application functionality and branding details that are unrelated to the logo.

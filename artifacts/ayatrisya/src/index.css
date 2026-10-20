@@ -95,36 +95,18 @@ html[data-appearance="light"] input,html[data-appearance="light"] textarea,html[
 html[data-appearance="light"] ::placeholder{color:#6a7089}
 /* Motion tokens: transform and opacity only */
 :root{--dur-fast:140ms;--dur-base:240ms;--dur-slow:520ms;--ease-out:cubic-bezier(.2,.7,.2,1);--ease-soft:cubic-bezier(.4,0,.2,1);--z-sidebar:40;--z-menu:70;--z-modal:80;--z-toast:90}
-.emb{display:block}
-.emb-glow{opacity:0}
-.emb-o1,.emb-o2,.emb-ap,.emb-threshold,.emb-core,.emb-spark{transform-box:view-box;transform-origin:32px 32px}
-.emb-intro .emb-pt{animation:emb-converge 900ms var(--ease-out) both}
-.emb-intro .emb-o1{animation:emb-arch 850ms var(--ease-out) 250ms both}
-.emb-intro .emb-o2{animation:emb-arch 850ms var(--ease-out) 400ms both}
-.emb-intro .emb-ap{animation:emb-scale 700ms var(--ease-out) 650ms both}
-.emb-intro .emb-threshold{animation:emb-scale 700ms var(--ease-out) 850ms both}
-.emb-intro .emb-core{animation:emb-scale 650ms var(--ease-out) 1000ms both}
-.emb-intro .emb-spark{animation:emb-scale 600ms var(--ease-out) 1200ms both}
-.emb-intro .emb-glow{animation:emb-glow 1400ms var(--ease-soft) 1500ms both}
-.emb-subtle .emb-o1{animation:emb-nudge 1400ms var(--ease-out) both}
-.emb-subtle .emb-o2{animation:emb-nudge 1400ms var(--ease-out) 100ms both reverse}
-.emb-loading .emb-glow{opacity:.5}
-.emb-loop .emb-o1{animation:emb-breathe 3s var(--ease-soft) infinite}
-.emb-loop .emb-o2{animation:emb-breathe 3s var(--ease-soft) 250ms infinite reverse}
-@keyframes emb-converge{from{transform:translate(var(--x),var(--y));opacity:0}30%{opacity:1}to{transform:translate(0,0);opacity:0}}
-@keyframes emb-scale{from{transform:scale(.2);opacity:0}to{transform:scale(1);opacity:1}}
-@keyframes emb-arch{from{transform:translateY(3px) scale(.94);opacity:0}to{transform:translateY(0) scale(1);opacity:1}}
-@keyframes emb-glow{0%{opacity:0}50%{opacity:1}100%{opacity:.35}}
-@keyframes emb-nudge{0%{transform:rotate(0)}50%{transform:rotate(14deg)}100%{transform:rotate(0)}}
-@keyframes emb-breathe{0%,100%{opacity:.7}50%{opacity:1}}
+.brand-mark{display:block;object-fit:contain}
+.brand-mark-intro{animation:brand-mark-intro 680ms var(--ease-out) both}
+.brand-mark-subtle{animation:brand-mark-nudge 1100ms var(--ease-out) both}
+.brand-mark-loading{animation:brand-mark-breathe 2.8s var(--ease-soft) infinite}
+@keyframes brand-mark-intro{from{transform:translateY(5px) scale(.9);opacity:0}to{transform:translateY(0) scale(1);opacity:1}}
+@keyframes brand-mark-nudge{0%,100%{transform:rotate(0)}50%{transform:rotate(5deg)}}
+@keyframes brand-mark-breathe{0%,100%{transform:scale(.97);opacity:.78}50%{transform:scale(1.03);opacity:1}}
 .wm-reveal{animation:wm-in 800ms var(--ease-out) 1900ms both}
 @keyframes wm-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-html[data-hidden] .emb-loop *,html[data-hidden] .emb *{animation-play-state:paused!important}
-html[data-intensity="none"] .emb *,html[data-intensity="none"] .wm-reveal{animation:none!important;opacity:1}
-html[data-intensity="none"] .emb-glow{opacity:0}
-html[data-intensity="none"] .emb-pt{display:none}
-html[data-intensity="subtle"] .emb-glow{display:none}
-@media(prefers-reduced-motion:reduce){.emb *,.wm-reveal{animation:none!important;opacity:1}.emb-pt,.emb-glow{display:none}}
+html[data-hidden] .brand-mark{animation-play-state:paused!important}
+html[data-intensity="none"] .brand-mark,html[data-intensity="none"] .wm-reveal{animation:none!important;opacity:1}
+@media(prefers-reduced-motion:reduce){.brand-mark,.wm-reveal{animation:none!important;opacity:1}}
 .pend-dot{width:6px;height:6px;border-radius:9999px;background:#a99cff;animation:pend 1s ease-in-out infinite}
 @keyframes pend{0%,100%{opacity:.25;transform:translateY(0)}50%{opacity:1;transform:translateY(-3px)}}
 html[data-hidden] .pend-dot{animation-play-state:paused}

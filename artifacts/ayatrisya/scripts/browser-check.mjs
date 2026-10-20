@@ -45,6 +45,30 @@ try {
   await call('Page.enable');await call('Runtime.enable');await call('Network.enable');
   await call('Page.setDownloadBehavior',{behavior:'allow',downloadPath:dir});
   await call('Emulation.setDeviceMetricsOverride',{width:1440,height:1000,deviceScaleFactor:1,mobile:false});
+  const testEmail=process.env.AYATRISYA_TEST_EMAIL,testPassword=process.env.AYATRISYA_TEST_PASSWORD;
+  if(!testEmail||!testPassword){
+    await call('Page.navigate',{url:'http://127.0.0.1:80/workspace'});
+    await wait(`location.pathname==='/auth/sign-in'`,'workspace account gate');
+    await wait(`document.querySelector('[data-testid="input-email"]')`,'email sign-in form');
+    assert.equal(await evaluate(`document.body.innerText.toLowerCase().includes('guest')`),false,'Sign-in page must not offer guest access');
+    await call('Page.navigate',{url:'http://127.0.0.1:80/auth/create-account'});
+    await wait(`document.querySelector('[data-testid="input-confirm"]')`,'email/password account form');
+    assert(await evaluate(`[...document.querySelectorAll('button')].some(button=>button.textContent.includes('Continue with Google'))`),'Google sign-in button is missing');
+    await call('Page.navigate',{url:'http://127.0.0.1:80/intro'});
+    await wait(`location.pathname==='/auth/create-account'`,'legacy intro route redirect');
+    await call('Page.navigate',{url:'http://127.0.0.1:80/onboarding'});
+    await wait(`location.pathname==='/auth/sign-in'`,'onboarding account gate');
+    assert.deepEqual(uploads,[]);
+    assert.deepEqual(errors,[]);
+    passed.push('Unauthenticated workspace and onboarding routes require an account; email/password and Google options are available with no guest path');
+    console.log(JSON.stringify({passed,authenticatedWorkspaceChecks:'skipped: set AYATRISYA_TEST_EMAIL and AYATRISYA_TEST_PASSWORD in the test environment',privateUploads:uploads.length,browserErrors:errors},null,2));
+  } else {
+  await call('Page.navigate',{url:'http://127.0.0.1:80/auth/sign-in'});
+  await wait(`document.querySelector('[data-testid="input-email"]')`,'test account sign-in form');
+  await input('[data-testid="input-email"]',testEmail);
+  await input('[data-testid="input-password"]',testPassword);
+  await click('button[type="submit"]');
+  await wait(`document.querySelector('[aria-label="Model"]')`,'authenticated workspace sign-in');
   const tag=Date.now().toString(36),chat=`Persistence ${tag}`,project=`Release ${tag}`,documentTitle=`Draft ${tag}`,body=`Saved body ${tag}`;
 await go('/workspace');await wait(`document.body.innerText.toLowerCase().includes('personal workspace')`,'home dashboard');
 await click('[data-testid="button-create-document"]');await wait(`location.pathname.startsWith('/workspace/documents/')`,'direct document creation');
@@ -144,6 +168,7 @@ await go('/workspace');await click('[data-testid="button-new-chat"]');
   passed.push('Light theme, mobile drawer focus/Escape/inert, no overflow and visible composer');
   assert.deepEqual(uploads,[]);assert.deepEqual(errors,[]);
   console.log(JSON.stringify({passed,counts:before,privateUploads:uploads.length,browserErrors:errors,screenshots:[`${dir}/light.png`,`${dir}/mobile.png`]},null,2));
+  }
 } catch(error) {
   console.error(JSON.stringify({failed:error.message,passed,errors},null,2));
   process.exitCode=1;

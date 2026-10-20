@@ -30,10 +30,11 @@ were removed. No application content backend or database was added.
 
 ## 4. Authentication
 **Implemented:** official Firebase SDK email/password registration/sign-in,
-Google sign-in, verification, password recovery and sign-out. Guest mode works
-without configuration. Local Firebase-user and guest namespaces are separated;
-guest data is copied only after explicit confirmation. Switching app identity
-disconnects the optional Drive authorization.
+Google sign-in, verification, password recovery and sign-out. Workspace and
+onboarding require an authenticated account; there is no guest mode. Records
+from older guest-mode versions remain separate and can be copied into an account
+only after explicit confirmation. Missing Firebase configuration blocks access.
+Switching app identity disconnects the optional Drive authorization.
 
 **Unit-tested:** safe configuration/error boundaries and repository owner isolation.
 **Live integration-tested:** no; Firebase configuration was not supplied.

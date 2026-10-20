@@ -29,7 +29,7 @@ export function ChatPage({ path, goto, notify }: { path: string; goto: (h: strin
   const { prefs } = usePrefs();
   const studioWidth = prefs.workspaceMode === 'studio';
   const { caps } = useCaps();
-  const uid = useAuth().user?.uid ?? 'guest';
+  const uid = useAuth().user?.uid ?? 'signed-out';
   const savingRef = useRef(false), runningRef = useRef(false);
   const [saving, setSaving] = useState(false);
   const cap = caps.find((c) => c.id === prefs.model);

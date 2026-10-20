@@ -1,1 +1,2 @@
+- [Ayatrisya account access](ayatrisya-account-access.md) — require Firebase email/password or Google sign-in; keep legacy browser data import explicit.
 - [Browser data verification](browser-data-verification.md) — keep local lifecycle checks in one isolated browser profile; separate screenshots cannot prove persistence.

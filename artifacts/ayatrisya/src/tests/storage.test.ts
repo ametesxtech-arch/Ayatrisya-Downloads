@@ -40,7 +40,7 @@ describe("IndexedDB local repository",()=>{
     expect(await repo.listConversations({limit:1,offset:1})).toHaveLength(1);
   });
   it("separates guest and Firebase owners and copies guest content only on explicit request",async()=>{
-    const repo=local();const c=await repo.createConversation("Guest");await repo.addMessage(c.id,"guest content");
+    const repo=local();repo.setOwner("guest");const c=await repo.createConversation("Guest");await repo.addMessage(c.id,"guest content");
     const project=await repo.createProject({title:"Guest project"});
     await repo.saveItem({title:"Guest note",kind:"note",projectId:project.id});
     repo.setOwner("firebase:user-a");expect(await repo.listConversations()).toHaveLength(0);
@@ -50,6 +50,13 @@ describe("IndexedDB local repository",()=>{
     expect(await repo.copyGuestToCurrent()).toBe(0);
     await repo.clearLocalData();expect(await repo.listConversations()).toHaveLength(0);
     repo.setOwner("guest");expect(await repo.getConversation(c.id)).toBeDefined();
+  });
+  it("starts without an account and blocks legacy import until sign-in",async()=>{
+    const repo=local();
+    expect(repo.ownerId).toBe("signed-out");
+    await expect(repo.copyGuestToCurrent()).rejects.toThrow("Sign in before importing older browser-local content.");
+    repo.setOwner("firebase:user-a");
+    expect(await repo.copyGuestToCurrent()).toBe(0);
   });
   it("does not create orphan messages or files and cleans attachment references",async()=>{
     const repo=local();await expect(repo.addMessage("missing","hello")).rejects.toThrow("not found");
@@ -69,7 +76,7 @@ describe("IndexedDB local repository",()=>{
     }});
     const now=new Date().toISOString();
     await v1.put("conversations",{id:"preserved",ownerId:"guest",title:"Keep me",createdAt:now,updatedAt:now});v1.close();
-    const repo=new LocalRepository(name);active.push(repo);
+    const repo=new LocalRepository(name);active.push(repo);repo.setOwner("guest");
     expect((await repo.getConversation("preserved"))?.title).toBe("Keep me");
     expect((await repo.db()).version).toBe(4);
     expect((await repo.db()).objectStoreNames.contains("syncQueue")).toBe(true);

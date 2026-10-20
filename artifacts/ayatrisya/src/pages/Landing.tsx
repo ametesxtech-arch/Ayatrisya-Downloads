@@ -57,10 +57,10 @@ export function Landing() {
             Sign in
           </Link>
           <Link
-            href="/intro"
+            href="/auth/create-account"
             className="rounded-lg bg-[#7768db] px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-[#887be8]"
           >
-            Open workspace <ArrowRight size={14} className="ml-1 inline" />
+            Create account <ArrowRight size={14} className="ml-1 inline" />
           </Link>
         </div>
       </header>
@@ -80,10 +80,10 @@ export function Landing() {
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
-                href="/intro"
+                href="/auth/create-account"
                 className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-violet-500 px-5 font-semibold text-white shadow-[0_8px_30px_rgba(114,97,215,.2)] hover:bg-violet-400"
               >
-                Open workspace <ArrowRight size={16} />
+                Create account <ArrowRight size={16} />
               </Link>
               <a
                 href="#capabilities"
@@ -286,10 +286,10 @@ export function Landing() {
               configures them; nothing is sent anywhere without your consent.
             </p>
             <Link
-              href="/intro"
+              href="/auth/create-account"
               className="mt-7 inline-flex h-11 items-center gap-2 rounded-lg bg-violet-500 px-5 font-semibold text-white hover:bg-violet-400"
             >
-              Enter the workspace <ArrowRight size={15} />
+              Create account <ArrowRight size={15} />
             </Link>
           </div>
         </section>
