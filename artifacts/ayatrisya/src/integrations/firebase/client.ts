@@ -26,7 +26,8 @@ export function authError(error: unknown): string {
     "auth/network-request-failed":"Could not reach Firebase. Check your connection and retry.",
     "auth/too-many-requests":"Too many attempts. Wait a moment before trying again.",
     "auth/popup-blocked":"Your browser blocked sign-in. Allow popups for this site and retry.",
-    "auth/popup-closed-by-user":"Google sign-in was closed before completion.",
+    "auth/popup-closed-by-user":"Sign-in was closed before completion.",
+    "auth/account-exists-with-different-credential":"An account already uses this email with a different sign-in method. Sign in with that method first.",
     "auth/unauthorized-domain":"This app's domain is not authorized in Firebase Authentication.",
     "auth/operation-not-allowed":"This sign-in method is not enabled in Firebase Authentication.",
   };

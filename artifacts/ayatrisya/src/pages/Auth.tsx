@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Github } from 'lucide-react';
 import { Button, Eyebrow, Notice, inputCls } from '@/components/Primitives';
 import { Brand } from '@/components/Brand';
 import { useAuth } from '@/integrations/firebase/AuthProvider';
@@ -33,6 +33,7 @@ export function AuthPage() {
     } catch (er) { setError(errMsg(er, 'Authentication failed.')); } finally { setBusy(false); }
   }
   async function google() { setError(''); setBusy(true); try { await auth.googleSignIn(); } catch (er) { setError(errMsg(er)); } finally { setBusy(false); } }
+  async function github() { setError(''); setBusy(true); try { await auth.githubSignIn(); } catch (er) { setError(errMsg(er)); } finally { setBusy(false); } }
   if (isCheck) return <AuthFrame>
     <h1 className="display text-2xl font-semibold tracking-[-.04em]">Verify your email</h1>
     {auth.user ? <><p className="mt-3 text-sm leading-6 text-slate-400">Verification is for <b>{auth.user.email}</b>. Status: {auth.user.emailVerified ? 'verified' : 'not yet verified'}.</p>
@@ -43,8 +44,10 @@ export function AuthPage() {
   return <AuthFrame>
     <Eyebrow>{isReset ? 'Recovery' : isCreate ? 'Create account' : 'Sign in'}</Eyebrow>
     <h1 className="display text-2xl font-semibold tracking-[-.04em]">{isReset ? 'Reset your password' : isCreate ? 'Create your account' : 'Welcome back'}</h1>
-    {!auth.loading && !auth.configured && <div className="mt-4"><Notice>Firebase Authentication is not configured, so sign-in and account creation are unavailable. Ayatrisya requires an account; ask the deployment administrator to complete setup.</Notice></div>}
+    {!auth.loading && !auth.configured && <div className="mt-4"><Notice>Firebase Authentication is not configured, so sign-in and account creation are unavailable. You can still use limited guest access.</Notice></div>}
     {!isReset && <button type="button" onClick={google} disabled={busy || !auth.configured} className="mt-5 flex h-11 w-full items-center justify-center rounded-lg border border-white/10 text-sm font-semibold hover:bg-white/[.05] disabled:opacity-45">Continue with Google</button>}
+    {!isReset && <button type="button" onClick={github} disabled={busy || !auth.configured} className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-white/10 text-sm font-semibold hover:bg-white/[.05] disabled:opacity-45"><Github size={16} />Continue with GitHub</button>}
+    {!isReset && !auth.user && <button type="button" onClick={() => { auth.startGuest(); setPath('/workspace/chat'); }} className="mt-3 flex h-11 w-full items-center justify-center rounded-lg border border-violet-300/20 text-sm font-semibold text-violet-100 hover:bg-violet-300/[.06]">Continue as guest</button>}
     <form onSubmit={submit} className="mt-5 space-y-4" noValidate>
       <label className="block text-xs font-medium text-slate-300">Email<input value={email} onChange={(e) => setEmail(e.target.value)} type="email" autoComplete="email" className={`${inputCls} mt-2`} data-testid="input-email" /></label>
       {!isReset && <label className="block text-xs font-medium text-slate-300">Password<input value={password} onChange={(e) => setPassword(e.target.value)} type="password" autoComplete={isCreate ? 'new-password' : 'current-password'} className={`${inputCls} mt-2`} placeholder="At least 8 characters" data-testid="input-password" /></label>}
@@ -55,7 +58,7 @@ export function AuthPage() {
     </form>
     {!isCreate && !isReset && <button onClick={() => setPath('/auth/reset-password')} className="mt-4 block w-full text-right text-xs text-slate-400 hover:text-violet-200">Forgot password?</button>}
     <div className="my-6 border-t border-white/[.07] pt-5 text-center text-xs text-slate-400">{isCreate ? 'Already have an account?' : 'New to Ayatrisya?'}{' '}<button onClick={() => setPath(isCreate ? '/auth/sign-in' : '/auth/create-account')} className="font-semibold text-slate-100 hover:text-violet-200">{isCreate ? 'Sign in' : 'Create an account'}</button></div>
-    <p className="mt-6 text-center text-[11px] leading-5 text-slate-500">An account is required to use Ayatrisya. Your saved work stays in this browser unless you choose to use an integration.</p>
+    <p className="mt-6 text-center text-[11px] leading-5 text-slate-500">Guest access includes unlimited browser-saved chats and two image generations when generation is connected. Create an account to use the rest of Ayatrisya.</p>
   </AuthFrame>;
 }
 

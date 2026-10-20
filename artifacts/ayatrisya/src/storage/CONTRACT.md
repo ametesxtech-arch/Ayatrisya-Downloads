@@ -69,13 +69,15 @@ Backups are not sync; downloaded backups contain private data, unencrypted.
 `import { AuthProvider, useAuth } from '@/integrations/firebase/AuthProvider'`
 
 Wrap App in AuthProvider.
-`useAuth()` -> `{ user: {uid,email,displayName,emailVerified}|null, loading, configured, error,
-signIn(email,password), register(email,password), googleSignIn(), resetPassword(email),
-sendVerification(), refreshUser(), signOut() }`.
+`useAuth()` -> `{ user: {uid,email,displayName,emailVerified}|null, guest, loading, configured, error,
+signIn(email,password), register(email,password), googleSignIn(), githubSignIn(), resetPassword(email),
+sendVerification(), refreshUser(), signOut(), startGuest() }`.
 Methods reject on failure. Never display successful authentication if configured=false.
-An authenticated account is required for workspace and onboarding routes. Legacy records under the `"guest"`
-owner aren't auto-uploaded or auto-migrated; the explicit `copyGuestToCurrent` option can preserve those records
-after sign-in. Missing Firebase config blocks access rather than opening an anonymous workspace.
+Guest access is browser-local and limited to chat plus the image-generation page; other workspace and onboarding
+routes require an authenticated account. Guest records use the `"guest"` owner and are never auto-uploaded or
+auto-migrated; the explicit `copyGuestToCurrent` option can preserve them after sign-in. Missing Firebase config
+still permits guest access but blocks account sign-in. The guest image allowance is two generations; image
+generation is unavailable until a compatible model endpoint is connected.
 
 ## Model connection
 

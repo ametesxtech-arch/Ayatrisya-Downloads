@@ -29,7 +29,8 @@ export function ChatPage({ path, goto, notify }: { path: string; goto: (h: strin
   const { prefs } = usePrefs();
   const studioWidth = prefs.workspaceMode === 'studio';
   const { caps } = useCaps();
-  const uid = useAuth().user?.uid ?? 'signed-out';
+  const { user, guest } = useAuth();
+  const uid = guest ? 'guest' : user?.uid ?? 'signed-out';
   const savingRef = useRef(false), runningRef = useRef(false);
   const [saving, setSaving] = useState(false);
   const cap = caps.find((c) => c.id === prefs.model);
@@ -105,11 +106,11 @@ export function ChatPage({ path, goto, notify }: { path: string; goto: (h: strin
   const lastUserUnanswered = (m: Message, i: number) => m.role === 'user' && !list.slice(i + 1).some((x) => x.role === 'assistant');
 
   return <div className="flex h-full min-h-0 flex-col">
-    {id && <div className="flex items-center justify-end gap-1 border-b border-white/[.05] px-4 py-2 text-xs text-slate-500">
+      {id && <div className="flex items-center justify-end gap-1 border-b border-white/[.05] px-4 py-2 text-xs text-slate-500">
       <span className="mr-auto truncate">Saved in this browser{conv.data ? ` · started ${ago(conv.data.createdAt)}` : ''}</span>
-      <Button variant="quiet" onClick={() => setRenaming(conv.data?.title ?? '')}><Pencil size={13} />Rename</Button>
-      <Button variant="quiet" onClick={() => setConfirmDel(true)}><Trash2 size={13} />Delete</Button>
-      {conv.data && <ActionMenu label="More conversation actions" items={acts.items(conv.data)}><MoreHorizontal size={15} /></ActionMenu>}
+        {!guest && <><Button variant="quiet" onClick={() => setRenaming(conv.data?.title ?? '')}><Pencil size={13} />Rename</Button>
+        <Button variant="quiet" onClick={() => setConfirmDel(true)}><Trash2 size={13} />Delete</Button>
+        {conv.data && <ActionMenu label="More conversation actions" items={acts.items(conv.data)}><MoreHorizontal size={15} /></ActionMenu>}</>}
     </div>}
     <div className={`mx-auto w-full ${studioWidth ? 'max-w-[1100px]' : 'max-w-[820px]'} flex-1 px-4 py-6 sm:px-6`}>
       {id && msgs.loading && !msgs.data && <div className="space-y-4"><Skeleton className="h-16 w-2/3" /><Skeleton className="ml-auto h-12 w-1/2" /></div>}
@@ -118,7 +119,7 @@ export function ChatPage({ path, goto, notify }: { path: string; goto: (h: strin
       {(!id || (msgs.data && list.length === 0)) && <div className="reveal py-8 sm:py-16">
         <h2 className="display text-3xl font-semibold tracking-[-.05em] sm:text-4xl">{prefs.displayName ? `Welcome back, ${prefs.displayName}.` : 'What are you working on?'}</h2>
         <p className="mt-3 max-w-lg text-sm leading-6 text-slate-400">Your messages are saved in this browser as you send them. Replies only appear when an Ayatrisya model connection is configured.</p>
-        {!available && <div className="mt-6 rounded-xl border border-amber-300/15 bg-amber-300/[.04] p-4 text-sm text-amber-100/90" data-testid="status-model-unavailable"><b>{prefs.model === 'v1-fast' ? 'V1 Fast' : 'V2 Best Result'} is unavailable.</b> {cap?.reason ?? 'No model connection is configured for this deployment.'} You can still write and save messages and drafts.<div className="mt-2"><Link href="/workspace/settings" className="underline">Model status in Settings</Link></div></div>}
+         {!available && <div className="mt-6 rounded-xl border border-amber-300/15 bg-amber-300/[.04] p-4 text-sm text-amber-100/90" data-testid="status-model-unavailable"><b>{prefs.model === 'v1-fast' ? 'V1 Fast' : 'V2 Best Result'} is unavailable.</b> {cap?.reason ?? 'No model connection is configured for this deployment.'} You can still write and save {guest ? 'chats in this browser' : 'messages and drafts'}.{!guest && <div className="mt-2"><Link href="/workspace/settings" className="underline">Model status in Settings</Link></div>}</div>}
         <div className="mt-8 flex flex-wrap gap-2">{starters.map((s) => <button key={s} onClick={() => { setText(s); taRef.current?.focus(); }} className="rounded-full border border-white/10 px-3.5 py-2 text-xs text-slate-300 hover:bg-white/[.06]">{s}</button>)}</div>
       </div>}
       <ul className="space-y-5">
@@ -127,7 +128,7 @@ export function ChatPage({ path, goto, notify }: { path: string; goto: (h: strin
             <div className="mt-2 flex justify-end gap-2"><Button variant="outline" onClick={() => setEditing(null)}>Cancel</Button><Button onClick={async () => { try { await repository.editMessage(m.id, editing.text); setEditing(null); } catch (e) { notify(errMsg(e)); } }}>Save edit</Button><Button disabled={!available || busy || !editing.text.trim()} title={available ? undefined : 'Resubmitting needs a connected model'} onClick={() => setResubmit({ m, text: editing.text })}>{available ? 'Save and resubmit' : 'Resubmit unavailable'}</Button></div></div>
             : <div className={m.role === 'user' ? 'max-w-[88%] rounded-2xl rounded-br-md border border-violet-300/15 bg-violet-400/[.1] px-4 py-3' : 'w-full'}>
               {m.role === 'assistant' ? <div className="prose prose-invert prose-sm max-w-none"><ReactMarkdown components={mdComponents}>{m.content}</ReactMarkdown></div> : <p className="whitespace-pre-wrap break-words text-sm leading-6">{m.content}</p>}
-              {m.attachmentIds.length > 0 && <div className="mt-2 flex flex-wrap gap-1.5">{m.attachmentIds.map((a) => attMap.get(a) && <AttachmentChip key={a} attachment={attMap.get(a)!} />)}</div>}
+              {!guest && m.attachmentIds.length > 0 && <div className="mt-2 flex flex-wrap gap-1.5">{m.attachmentIds.map((a) => attMap.get(a) && <AttachmentChip key={a} attachment={attMap.get(a)!} />)}</div>}
             </div>}
           <div className="mt-1 flex items-center gap-1 text-[11px] text-slate-500">
             {m.role === 'user' && lastUserUnanswered(m, i) && !busy && <span data-testid="status-not-sent">{available ? 'No reply recorded' : 'Saved locally, not sent to any model'}</span>}
@@ -147,11 +148,11 @@ export function ChatPage({ path, goto, notify }: { path: string; goto: (h: strin
         {id && !available && <p className="mb-2 text-[11px] text-amber-200/80">Model unavailable. New messages are saved locally and not sent.</p>}
         {files.length > 0 && <div className="mb-2 flex flex-wrap gap-1.5">{files.map((f, i) => <span key={i} className="inline-flex items-center gap-1.5 rounded-md border border-white/10 bg-white/[.04] px-2 py-1 text-[11px]"><Paperclip size={11} />{f.name} · {formatBytes(f.size)}<button aria-label={`Remove ${f.name}`} onClick={() => setFiles(files.filter((_, j) => j !== i))}><X size={12} /></button></span>)}<span className="self-center text-[11px] text-slate-500">Attachments stay in this browser and are never sent to a model.</span></div>}
         <div className="flex items-end gap-1 rounded-2xl border border-white/10 bg-[#171920] p-2 focus-within:border-violet-400/40">
-          <input ref={fileRef} type="file" multiple hidden onChange={(e) => pick(e.target.files)} />
-          <IconButton label="Attach files (stored locally)" onClick={() => fileRef.current?.click()}><Paperclip size={17} /></IconButton>
+           {!guest && <><input ref={fileRef} type="file" multiple hidden onChange={(e) => pick(e.target.files)} />
+           <IconButton label="Attach files (stored locally)" onClick={() => fileRef.current?.click()}><Paperclip size={17} /></IconButton></>}
           <label className="sr-only" htmlFor="composer">Message</label>
           <textarea id="composer" ref={taRef} rows={1} value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing && (prefs.enterToSend ? !e.shiftKey : (e.ctrlKey || e.metaKey))) { e.preventDefault(); void send(); } }} placeholder="Write a message" className="max-h-[200px] min-h-9 flex-1 resize-none bg-transparent px-2 py-2 text-sm placeholder:text-slate-500 focus:outline-none" data-testid="input-message" aria-describedby="composer-hint" />
-          <Link href="/workspace/voice" aria-label="Open voice studio" title="Voice studio" className="grid size-9 place-items-center rounded-lg text-slate-400 hover:bg-white/[.07] hover:text-white"><Mic size={17} /></Link>
+           {!guest && <Link href="/workspace/voice" aria-label="Open voice studio" title="Voice studio" className="grid size-9 place-items-center rounded-lg text-slate-400 hover:bg-white/[.07] hover:text-white"><Mic size={17} /></Link>}
           {busy ? <button onClick={stop} aria-label="Stop generation" className="grid size-9 place-items-center rounded-lg bg-rose-500 text-white"><Square size={15} /></button>
             : <button onClick={() => void send()} disabled={saving || !!ask || (!text.trim() && !files.length)} aria-label="Send message" className="grid size-9 place-items-center rounded-lg bg-violet-500 text-white disabled:opacity-40" data-testid="button-send"><Send size={16} /></button>}
         </div>

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'wouter';
+import { Link, useLocation } from 'wouter';
 import {
   ArrowDown,
   ArrowRight,
@@ -23,9 +23,12 @@ import { Eyebrow, Panel } from '@/components/Primitives';
 import { cx } from '@/lib/cx';
 import { Mark, Brand } from '@/components/Brand';
 import { Toast } from '@/components/Toast';
+import { useAuth } from '@/integrations/firebase/AuthProvider';
 
 export function Landing() {
   const [toast, setToast] = useState('');
+  const [, setPath] = useLocation();
+  const { startGuest, user } = useAuth();
   return (
     <div className="app-noise min-h-[100dvh] overflow-hidden bg-[#101116] text-slate-100">
       <header className="relative z-10 mx-auto flex max-w-[1240px] items-center justify-between px-5 py-5 md:px-9">
@@ -50,6 +53,9 @@ export function Landing() {
           </a>
         </nav>
         <div className="flex items-center gap-2">
+          {!user && <button type="button" onClick={() => { startGuest(); setPath('/workspace/chat'); }} className="rounded-lg border border-white/10 px-3 py-2.5 text-xs text-slate-200 transition hover:bg-white/[.05]">
+            Try as guest
+          </button>}
           <Link
             href="/auth/sign-in"
             className="hidden px-3 py-2 text-xs text-slate-300 hover:text-white sm:block"

@@ -23,6 +23,7 @@ import { repository } from '@/storage/repository';
 import { useAuth } from '@/integrations/firebase/AuthProvider';
 import type { ChatMode, ModelId, WorkspaceMode } from '@/storage/types';
 import { WorkspaceHome } from '@/pages/workspace/WorkspaceHome';
+import { GuestWorkspace } from '@/components/GuestWorkspace';
 
 const modelNames: Record<ModelId, string> = { 'v1-fast': 'V1 Fast', 'v2-best': 'V2 Best Result' };
 const workspaceModeNames: Record<WorkspaceMode, string> = {
@@ -33,7 +34,7 @@ export function Workspace() {
   const [path, setPath] = useLocation();
   const { prefs, save } = usePrefs();
   const { caps } = useCaps();
-  const { user, signOut } = useAuth();
+  const { user, guest, signOut } = useAuth();
   const collapsed = prefs.sidebarCollapsed;
   const [mobileOpen, setMobileOpen] = useState(false), [dialog, setDialog] = useState(''), [chatSearch, setChatSearch] = useState(''), [chatPage, setChatPage] = useState(0);
   const menuBtn = useRef<HTMLButtonElement>(null), closeBtn = useRef<HTMLButtonElement>(null);
@@ -78,6 +79,7 @@ export function Workspace() {
     return () => mq.removeEventListener('change', f);
   }, []);
   useEffect(() => {
+    if (!asideRef.current || !mainRef.current) return;
     const hide = isMobile && !mobileOpen;
     (asideRef.current as (HTMLElement & { inert: boolean }) | null)!.inert = hide;
     (mainRef.current as (HTMLElement & { inert: boolean }) | null)!.inert = isMobile && mobileOpen;
@@ -128,6 +130,9 @@ export function Workspace() {
   const acts = useConvActions({ notify, goto, onDeleted: (ids) => { if (chatId && ids.includes(chatId)) setPath('/workspace'); } });
   const ctx = useContextMenu();
   const toggleTheme = () => save({ theme: prefs.theme === 'Light' ? 'Dark' : 'Light' });
+  if (guest) return <GuestWorkspace path={path} onNewChat={() => void newChat()} creating={creating}>
+    <FeaturePage path={path} goto={goto} notify={notify} />
+  </GuestWorkspace>;
   const commands: Command[] = [
     { id: 'home', category: 'Navigate', keywords: ['dashboard', 'overview'], label: 'Open workspace home', run: () => goto('/workspace') },
     { id: 'chat', category: 'Create', keywords: ['conversation'], label: 'New chat', hint: 'Ctrl N', run: () => void newChat() },

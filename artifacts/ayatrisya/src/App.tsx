@@ -16,22 +16,33 @@ const Onboarding = lazy(() => import('@/pages/Onboarding').then((m) => ({ defaul
 
 const queryClient = new QueryClient();
 
-function RequireAccount({ children }: { children: ReactNode }) {
-  const { user, loading } = useAuth();
-  const [, setPath] = useLocation();
-  useEffect(() => {
-    if (!loading && !user) setPath('/auth/sign-in', { replace: true });
-  }, [loading, user, setPath]);
-  if (loading) return <div className="grid min-h-[100dvh] place-items-center text-xs text-slate-500" role="status">Checking your account…</div>;
-  return user ? children : <div className="grid min-h-[100dvh] place-items-center text-xs text-slate-500" role="status">Opening sign in…</div>;
+function guestCanOpen(path: string) {
+  return path === '/workspace/images' ||
+    path === '/workspace/chat' ||
+    /^\/workspace\/chat\/[^/]+\/?$/.test(path);
 }
 
 function ProtectedWorkspace() {
-  return <RequireAccount><Workspace /></RequireAccount>;
+  const { user, guest, loading } = useAuth();
+  const [path, setPath] = useLocation();
+  useEffect(() => {
+    if (loading || user) return;
+    if (!guest) setPath('/auth/sign-in', { replace: true });
+    else if (!guestCanOpen(path)) setPath('/workspace/chat', { replace: true });
+  }, [guest, loading, path, setPath, user]);
+  if (loading) return <div className="grid min-h-[100dvh] place-items-center text-xs text-slate-500" role="status">Checking your access…</div>;
+  if (user || (guest && guestCanOpen(path))) return <Workspace />;
+  return <div className="grid min-h-[100dvh] place-items-center text-xs text-slate-500" role="status">Opening your guest workspace…</div>;
 }
 
 function ProtectedOnboarding() {
-  return <RequireAccount><Onboarding /></RequireAccount>;
+  const { user, guest, loading } = useAuth();
+  const [, setPath] = useLocation();
+  useEffect(() => {
+    if (!loading && !user) setPath(guest ? '/workspace/chat' : '/auth/sign-in', { replace: true });
+  }, [guest, loading, setPath, user]);
+  if (loading) return <div className="grid min-h-[100dvh] place-items-center text-xs text-slate-500" role="status">Checking your account…</div>;
+  return user ? <Onboarding /> : <div className="grid min-h-[100dvh] place-items-center text-xs text-slate-500" role="status">Opening your workspace…</div>;
 }
 
 function LegacyIntroRedirect() {
