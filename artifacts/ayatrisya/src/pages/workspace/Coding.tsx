@@ -7,6 +7,7 @@ import { DesktopButton } from '@/components/DesktopButton';
 import { repository } from '@/storage/repository';
 import { useLocalQuery } from '@/storage/hooks';
 import { downloadText, errMsg, safeName } from '@/lib/format';
+import { DesktopProjectManager } from '@/components/DesktopProjectManager';
 
 export function CodingPage({ notify }: { notify: (m: string) => void }) {
   const list = useLocalQuery(() => repository.listItems({ kind: 'code', sort: 'date', limit: 300 }), []);
@@ -16,8 +17,9 @@ export function CodingPage({ notify }: { notify: (m: string) => void }) {
   }
   const items = list.data ?? [];
   return <div className="mx-auto max-w-[1000px] p-4 sm:p-8">
-    <PageHeading eyebrow="Coding" title="Specify the task. Do the work on the desktop." description="The browser cannot safely open your project folders or run commands. Write task specifications here and export them for the Ayatrisya desktop app." actions={<><DesktopButton /><Button onClick={() => setOpen(true)}><Plus size={15} />New task</Button></>} />
-    <Notice>Coding specifications are stored in this browser and exported as Markdown. They do not sync automatically to the desktop app.</Notice>
+    <PageHeading eyebrow="Coding" title="Build with an AI coding agent." description="Create coding specifications in the browser, or open a local project in Ayatrisya Desktop for an approval-based coding agent." actions={<><DesktopButton /><Button onClick={() => setOpen(true)}><Plus size={15} />New task</Button></>} />
+    <DesktopProjectManager />
+    <Notice>Coding specifications are stored in this browser and exported as Markdown. Desktop project folders remain local and are never exposed to the website.</Notice>
     <div className="mt-6">
       {list.loading && !list.data && <Skeleton className="h-24" />}
       {list.error && <LoadError message={list.error} retry={list.refresh} />}

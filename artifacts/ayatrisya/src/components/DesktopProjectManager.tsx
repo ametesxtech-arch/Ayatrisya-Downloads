@@ -6,6 +6,7 @@ import {
 import { Button, areaCls, inputCls } from '@/components/Primitives';
 import { formatBytes } from '@/lib/format';
 import type { DesktopFile, DesktopProject } from '@/desktop/contracts';
+import { DesktopCodingAgent } from './DesktopCodingAgent';
 
 export function DesktopProjectManager() {
   const desktop = typeof window !== 'undefined' ? window.ayatrisyaDesktop : undefined;
@@ -55,7 +56,15 @@ export function DesktopProjectManager() {
     return () => { cancelled = true; };
   }, [desktop, active?.id, active?.available, directory, refreshKey]);
 
-  if (!desktop) return null;
+  if (!desktop) return <section className="mb-7 rounded-2xl border border-white/10 bg-[#13151c] p-4 sm:p-5">
+    <div className="flex items-start gap-3">
+      <Code2 size={17} className="mt-0.5 text-violet-200" />
+      <div>
+        <h2 className="display text-lg font-semibold">Local coding agent requires Ayatrisya Desktop</h2>
+        <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-400">The website cannot read your computer’s project files or run commands. Open this coding workspace in Ayatrisya Desktop to choose an authorized project folder. In desktop, code is sent only after your approval, edits require individual approval, and each suggested check requires a separate operating-system confirmation.</p>
+      </div>
+    </div>
+  </section>;
 
   function confirmDiscard() {
     return !dirty || window.confirm('Discard unsaved file edits?');
@@ -285,5 +294,20 @@ export function DesktopProjectManager() {
       <p className="mt-2 text-[10px] leading-4 text-slate-500">Ayatrisya shows the exact command and folder in an operating-system confirmation before running it. Commands use your OS account permissions, so they may affect files outside this folder. They stop after 60 seconds; output is capped at 128 KB. This is a command runner, not a persistent interactive shell.</p>
       {terminalOutput && <pre className="mono mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-[#090a0f] p-3 text-[11px] leading-5 text-slate-300" aria-live="polite">{terminalOutput}</pre>}
     </div>
+
+    {active?.available && <DesktopCodingAgent
+      desktop={desktop}
+      projectId={active.id}
+      projectName={active.name}
+      directory={directory}
+      files={files}
+      onPatchApplied={(relativePath, content) => {
+        if (selectedFile === relativePath) {
+          setDraft(content);
+          setDirty(false);
+        }
+        setRefreshKey((key) => key + 1);
+      }}
+    />}
   </section>;
 }
