@@ -4,6 +4,10 @@ import { PageHeading } from '@/components/PageHeading';
 import { usePrefs } from '@/hooks/use-prefs';
 import { wallpapers } from '@/data/wallpapers';
 import type { PersonalizationPreferences, Preferences } from '@/storage/types';
+import { useAuth } from '@/integrations/firebase/AuthProvider';
+import { useCloudPreferenceSync } from '@/integrations/firebase/CloudPreferenceSync';
+import { readCloudPersonalization, writeCloudPersonalization } from '@/integrations/firebase/personalization-sync';
+import { MemorySummaryBuilder } from './MemorySummaryBuilder';
 
 type SaveStatus = { kind: 'success' | 'error'; message: string } | null;
 
@@ -20,6 +24,9 @@ const defaultPersonalization: PersonalizationPreferences = {
   tone: 'balanced',
   length: 'balanced',
   format: 'automatic',
+  examples: 'when-useful',
+  clarifying: 'when-needed',
+  technicality: 'balanced',
 };
 
 function describeWallpaper(id: string) {
@@ -66,15 +73,42 @@ function imageToDataUrl(file: File): Promise<string> {
 
 export function PersonalizationPage() {
   const { prefs, loaded, save } = usePrefs();
+  const { user, guest } = useAuth();
+  const cloudSync = useCloudPreferenceSync();
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState<SaveStatus>(null);
   const [busy, setBusy] = useState(false);
   const [draft, setDraft] = useState<PersonalizationPreferences>(defaultPersonalization);
+  const [cloudAvailable, setCloudAvailable] = useState<boolean | null>(null);
+  const [cloudChecking, setCloudChecking] = useState(false);
+  const [cloudError, setCloudError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (loaded) setDraft({ ...defaultPersonalization, ...prefs.personalization });
   }, [loaded, prefs.personalization]);
+
+  useEffect(() => {
+    if (!user || guest) {
+      setCloudAvailable(null);
+      setCloudError('');
+      return;
+    }
+    let active = true;
+    setCloudChecking(true);
+    readCloudPersonalization(user.uid).then((remote) => {
+      if (active) {
+        setCloudAvailable(!!remote);
+        setCloudError('');
+      }
+    }).catch((error) => {
+      if (active) {
+        setCloudAvailable(null);
+        setCloudError(error instanceof Error ? error.message : 'Firebase Firestore is not available.');
+      }
+    }).finally(() => { if (active) setCloudChecking(false); });
+    return () => { active = false; };
+  }, [guest, user?.uid]);
 
   const filteredWallpapers = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase();
@@ -142,9 +176,61 @@ export function PersonalizationPage() {
 
   async function savePersonalization() {
     setBusy(true);
-    const ok = await persist({ personalization: { ...draft } }, 'Personalization saved on this device.');
+    const ok = await persist({ personalization: { ...draft } }, prefs.syncAcrossDevices ? 'Personalization saved. Cloud sync will update your other signed-in devices.' : 'Personalization saved on this device.');
     setBusy(false);
     if (ok) setDraft({ ...draft });
+  }
+
+  async function enableAndUpload() {
+    if (!user || guest) return;
+    setBusy(true);
+    setStatus(null);
+    setCloudError('');
+    try {
+      await writeCloudPersonalization(user.uid, { ...prefs, personalization: { ...draft } });
+      const enabled = await save({ syncAcrossDevices: true, personalization: { ...draft } });
+      if (!enabled) throw new Error('Cloud settings were uploaded, but this device could not save the sync preference. Retry after checking browser storage.');
+      setCloudAvailable(true);
+      setStatus({ kind: 'success', message: 'Cloud sync is on. This device’s response style and built-in wallpaper were uploaded.' });
+    } catch (error) {
+      setCloudError(error instanceof Error ? error.message : 'Could not enable cloud sync.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function restoreAndEnable() {
+    if (!user || guest) return;
+    setBusy(true);
+    setCloudError('');
+    setStatus(null);
+    try {
+      const remote = await readCloudPersonalization(user.uid);
+      if (!remote) {
+        setCloudAvailable(false);
+        throw new Error('No cloud settings were found yet. Upload this device’s settings first.');
+      }
+      const restored = await save({
+        wallpaper: remote.wallpaper,
+        personalization: remote.personalization,
+        syncAcrossDevices: true,
+      });
+      if (!restored) throw new Error('Cloud settings were read, but could not be saved on this device. Check browser storage and retry.');
+      setCloudAvailable(true);
+      setDraft({ ...remote.personalization });
+      setStatus({ kind: 'success', message: 'Cloud settings loaded on this device. Sync is on.' });
+    } catch (error) {
+      setCloudError(error instanceof Error ? error.message : 'Could not restore cloud settings.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function disableCloudSync() {
+    setBusy(true);
+    const ok = await persist({ syncAcrossDevices: false }, 'Cloud sync turned off. Your cloud copy was not deleted.');
+    setBusy(false);
+    if (ok) setCloudError('');
   }
 
   if (!loaded) {
@@ -226,12 +312,39 @@ export function PersonalizationPage() {
       </div>}
     </section>
 
+    <section className={`${cardClass} mb-5`} aria-labelledby="cloud-sync-heading">
+      <p className="mono mb-1 text-[10px] uppercase tracking-[.18em] text-violet-200/70">02 / Across your devices</p>
+      <h2 id="cloud-sync-heading" className="display text-lg font-semibold">Sync personalization with your account</h2>
+      <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-400">Optional Firebase Firestore sync for your response preferences, personal summary, and built-in wallpaper choice. Chat history and custom wallpaper image files are not uploaded. Before using it, enable Firestore in your existing Firebase project and publish the included security rules; the app does not create or deploy a Firebase project for you.</p>
+      {!user || guest
+        ? <p className="mt-4 rounded-lg border border-amber-300/15 bg-amber-300/[.04] p-3 text-xs text-amber-100/80">Sign in to an Ayatrisya account to sync personalization. Guest settings stay on this device.</p>
+        : prefs.syncAcrossDevices
+          ? <div className="mt-4 flex flex-col gap-3 rounded-xl border border-teal-300/15 bg-teal-300/[.035] p-3.5 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-medium text-slate-200">{cloudSync.state === 'synced' ? 'Cloud sync is on' : cloudSync.state === 'error' ? 'Cloud sync needs attention' : 'Connecting to cloud sync…'}</p>
+              <p className="mt-1 text-[11px] text-slate-500">{cloudSync.state === 'synced' ? 'Your settings are syncing for this signed-in account.' : cloudSync.error || cloudError || 'Waiting for Firebase Firestore.'}</p>
+            </div>
+            <button type="button" disabled={busy} onClick={() => void disableCloudSync()} className="min-h-9 shrink-0 rounded-lg border border-white/10 px-3 text-xs text-slate-300 hover:bg-white/[.05] disabled:opacity-50">Turn off sync</button>
+          </div>
+          : <div className="mt-4 rounded-xl border border-white/[.07] bg-white/[.02] p-3.5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs text-slate-400" role="status">{cloudChecking ? 'Checking for saved cloud settings…' : cloudAvailable ? 'A cloud copy exists for this account.' : cloudError ? 'Could not check cloud settings.' : 'No cloud copy found for this account.'}</p>
+              <button type="button" disabled={cloudChecking || busy} onClick={() => { if (user) { setCloudChecking(true); readCloudPersonalization(user.uid).then((remote) => { setCloudAvailable(!!remote); setCloudError(''); }).catch((error) => setCloudError(error instanceof Error ? error.message : 'Firestore could not be reached.')).finally(() => setCloudChecking(false)); } }} className="min-h-8 rounded-md border border-white/10 px-2.5 text-[11px] text-slate-300 hover:bg-white/[.05] disabled:opacity-50">Check cloud</button>
+            </div>
+            {cloudError && <p className="mt-2 text-[11px] text-rose-300" role="alert">{cloudError} If this is a new Firebase project, enable Firestore and publish the included firestore.rules security rules.</p>}
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button type="button" disabled={busy || cloudChecking} onClick={() => void enableAndUpload()} className="min-h-9 rounded-lg bg-violet-300 px-3 text-xs font-semibold text-[#1a1830] hover:bg-violet-200 disabled:opacity-50">{busy ? 'Saving…' : 'Upload this device & enable'}</button>
+              <button type="button" disabled={busy || cloudChecking || !cloudAvailable} onClick={() => void restoreAndEnable()} className="min-h-9 rounded-lg border border-white/10 px-3 text-xs text-slate-300 hover:bg-white/[.05] disabled:cursor-not-allowed disabled:opacity-45">Restore cloud settings & enable</button>
+            </div>
+          </div>}
+    </section>
+
     <section className={`${cardClass} mb-5`} aria-labelledby="response-heading">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="mono mb-1 text-[10px] uppercase tracking-[.18em] text-violet-200/70">02 / Response style</p>
+          <p className="mono mb-1 text-[10px] uppercase tracking-[.18em] text-violet-200/70">03 / Response style</p>
           <h2 id="response-heading" className="display text-lg font-semibold">Set the feel of your conversations</h2>
-          <p className="mt-1 text-xs leading-5 text-slate-400">Preferences stay in this browser. When Ayatrisya sends a chat to a configured model, enabled response preferences are included with that request.</p>
+          <p className="mt-1 text-xs leading-5 text-slate-400">Preferences are stored locally; optional account sync is managed above. When Ayatrisya sends a chat to a configured model, enabled response preferences are included with that request.</p>
         </div>
         <Sparkles size={18} className="mt-1 shrink-0 text-violet-200/70" aria-hidden="true" />
       </div>
@@ -258,13 +371,30 @@ export function PersonalizationPage() {
             </select>
           </label>
         </div>
+        <div className="mt-3 grid gap-3 sm:grid-cols-3">
+          <label className="text-xs font-medium text-slate-400">Examples
+            <select value={draft.examples} onChange={(event) => updateDraft('examples', event.target.value as PersonalizationPreferences['examples'])} className={`${selectClass} mt-1.5`}>
+              <option value="when-useful">When useful</option><option value="often">Often</option><option value="rarely">Rarely</option>
+            </select>
+          </label>
+          <label className="text-xs font-medium text-slate-400">Clarifying questions
+            <select value={draft.clarifying} onChange={(event) => updateDraft('clarifying', event.target.value as PersonalizationPreferences['clarifying'])} className={`${selectClass} mt-1.5`}>
+              <option value="when-needed">Only when needed</option><option value="assume">Make reasonable assumptions</option><option value="ask-first">Ask before ambiguous tasks</option>
+            </select>
+          </label>
+          <label className="text-xs font-medium text-slate-400">Technical language
+            <select value={draft.technicality} onChange={(event) => updateDraft('technicality', event.target.value as PersonalizationPreferences['technicality'])} className={`${selectClass} mt-1.5`}>
+              <option value="accessible">Accessible</option><option value="balanced">Balanced</option><option value="technical">Technical</option>
+            </select>
+          </label>
+        </div>
       </fieldset>
     </section>
 
     <section className={`${cardClass} mb-5`} aria-labelledby="memory-heading">
-      <p className="mono mb-1 text-[10px] uppercase tracking-[.18em] text-violet-200/70">03 / Personal notes</p>
+      <p className="mono mb-1 text-[10px] uppercase tracking-[.18em] text-violet-200/70">04 / Personal notes</p>
       <h2 id="memory-heading" className="display text-lg font-semibold">A note you control</h2>
-      <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-400">Write a summary about your preferences or context. It is user-edited and stored only in this browser, not generated automatically. The summary is included in model requests only when both personalization and the opt-in below are enabled.</p>
+      <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-400">Write your own summary or draft one from selected chats below. Drafting runs locally from your messages only; review and save it yourself. It stays in this browser unless you enable account sync above. The summary is included in model requests only when both personalization and the opt-in below are enabled.</p>
       <label className={`mt-4 flex cursor-pointer items-center justify-between gap-4 rounded-xl border p-3.5 ${draft.useMemory && draft.enabled ? 'border-violet-300/20 bg-violet-300/[.045]' : 'border-white/[.07] bg-white/[.02]'}`}>
         <span><span className="block text-sm font-medium text-slate-200">Opt in to use this summary</span><span className="mt-0.5 block text-[11px] text-slate-500">Choose whether this summary is included in personalization.</span></span>
         <input type="checkbox" checked={draft.useMemory} disabled={!draft.enabled} onChange={(event) => updateDraft('useMemory', event.target.checked)} className="h-4 w-4 accent-violet-300 disabled:cursor-not-allowed" aria-label="Opt in to use the personal summary" data-testid="input-use-memory" />
@@ -272,10 +402,11 @@ export function PersonalizationPage() {
       <label className="mt-4 block text-xs font-medium text-slate-400" htmlFor="memory-summary">Your summary</label>
       <textarea id="memory-summary" value={draft.memorySummary} onChange={(event) => updateDraft('memorySummary', event.target.value)} disabled={!draft.enabled} rows={4} maxLength={2400} placeholder="For example: I prefer examples in TypeScript and appreciate a brief explanation before the details." className={`${inputClass} mt-1.5 resize-y leading-5 disabled:cursor-not-allowed`} data-testid="textarea-memory-summary" />
       <div className="mt-1 flex justify-between text-[10px] text-slate-500"><span>Only use details you are comfortable keeping in this browser.</span><span>{draft.memorySummary.length}/2,400</span></div>
+      <MemorySummaryBuilder onUse={(summary) => updateDraft('memorySummary', summary)} />
     </section>
 
     <section className={`${cardClass} mb-5`} aria-labelledby="guidance-heading">
-      <p className="mono mb-1 text-[10px] uppercase tracking-[.18em] text-violet-200/70">04 / Guidance</p>
+      <p className="mono mb-1 text-[10px] uppercase tracking-[.18em] text-violet-200/70">05 / Guidance</p>
       <h2 id="guidance-heading" className="display text-lg font-semibold">What to lean into — and leave out</h2>
       <p className="mt-1 text-xs leading-5 text-slate-400">Add your own response instructions and things you would rather avoid.</p>
       <div className="mt-4 grid gap-4 md:grid-cols-2">

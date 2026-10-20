@@ -29,6 +29,20 @@ service cloud.firestore {
           "clarifying",
           "technicality"
         ])
+        && request.resource.data.personalization.enabled is bool
+        && request.resource.data.personalization.useMemory is bool
+        && request.resource.data.personalization.memorySummary is string
+        && request.resource.data.personalization.memorySummary.size() <= 6000
+        && request.resource.data.personalization.instructions is string
+        && request.resource.data.personalization.instructions.size() <= 2000
+        && request.resource.data.personalization.avoid is string
+        && request.resource.data.personalization.avoid.size() <= 1000
+        && request.resource.data.personalization.tone in ["balanced", "friendly", "professional", "direct", "creative"]
+        && request.resource.data.personalization.length in ["concise", "balanced", "detailed"]
+        && request.resource.data.personalization.format in ["automatic", "paragraphs", "bullets", "steps"]
+        && request.resource.data.personalization.examples in ["when-useful", "often", "rarely"]
+        && request.resource.data.personalization.clarifying in ["when-needed", "assume", "ask-first"]
+        && request.resource.data.personalization.technicality in ["accessible", "balanced", "technical"]
         && request.resource.data.updatedAt is string;
     }
   }

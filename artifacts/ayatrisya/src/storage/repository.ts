@@ -54,7 +54,12 @@ export class LocalRepository {
   }
   async getPreferences(): Promise<Preferences> {
     const record = await this.get<{ value: Preferences }>("preferences", "ui");
-    return { ...defaultPreferences, ...record?.value };
+    return {
+      ...defaultPreferences,
+      ...record?.value,
+      homeSections: { ...defaultPreferences.homeSections, ...record?.value?.homeSections },
+      personalization: { ...defaultPreferences.personalization, ...record?.value?.personalization },
+    };
   }
   async savePreferences(patch: Partial<Preferences>): Promise<Preferences> {
     return operations.atomic(this,["preferences"],async(tx,owner)=>{
