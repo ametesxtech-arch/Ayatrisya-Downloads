@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
-  ChevronRight, FileCode2, Folder, FolderOpen, FolderPlus, RefreshCw,
+  ChevronRight, Code2, FileCode2, Folder, FolderOpen, FolderPlus, RefreshCw,
   Save, SquareTerminal, Trash2,
 } from 'lucide-react';
 import { Button, areaCls, inputCls } from '@/components/Primitives';

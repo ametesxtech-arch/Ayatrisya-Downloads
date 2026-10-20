@@ -46,7 +46,7 @@ export function isEligibleCodingFile(relativePath: string): boolean {
 export function hasLikelySecret(content: string): boolean {
   return /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/.test(content) ||
     /\b(?:sk-[A-Za-z0-9_-]{24,}|gh[pousr]_[A-Za-z0-9]{20,}|AIza[0-9A-Za-z_-]{30,})\b/.test(content) ||
-    /\b(?:api[_-]?key|client[_-]?secret|access[_-]?token|auth[_-]?token|password)\b\s*[:=]\s*["'][^"'\r\n]{12,}["']/i.test(content);
+    /\b(?:api[_-]?key|client[_-]?secret|access[_-]?token|auth[_-]?token|token|password)\b\s*[:=]\s*["'][^"'\r\n]{12,}["']/i.test(content);
 }
 
 export function isAllowedAgentCommand(command: string): boolean {
