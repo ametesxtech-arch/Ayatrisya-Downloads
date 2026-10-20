@@ -44,11 +44,11 @@ function imageToDataUrl(file: File): Promise<string> {
         context.drawImage(image, 0, 0, canvas.width, canvas.height);
         let quality = 0.84;
         let result = canvas.toDataURL('image/jpeg', quality);
-        while (result.length > 1_800_000 && quality > 0.48) {
+        while (result.length > 1_400_000 && quality > 0.48) {
           quality -= 0.08;
           result = canvas.toDataURL('image/jpeg', quality);
         }
-        if (result.length > 1_800_000) throw new Error('This image is too large after compression. Choose a smaller image.');
+        if (result.length > 1_400_000) throw new Error('This image is too large after compression. Choose a smaller image.');
         resolve(result);
       } catch (error) {
         reject(error);
@@ -104,8 +104,8 @@ export function PersonalizationPage() {
 
   async function uploadWallpaper(file?: File) {
     if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      setStatus({ kind: 'error', message: 'Choose an image file to use as a wallpaper.' });
+    if (!['image/png', 'image/jpeg', 'image/webp', 'image/avif'].includes(file.type)) {
+      setStatus({ kind: 'error', message: 'Choose a PNG, JPEG, WebP, or AVIF image file.' });
       if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
@@ -155,7 +155,7 @@ export function PersonalizationPage() {
     </div>;
   }
 
-  return <main className="route-in mx-auto max-w-[980px] p-4 pb-12 sm:p-8">
+  return <div className="route-in mx-auto max-w-[980px] p-4 pb-12 sm:p-8">
     <PageHeading eyebrow="Your workspace" title="Personalization" description="Shape the look and response style of your private Ayatrisya workspace." />
 
     <section className={`${cardClass} mb-5 overflow-hidden`} aria-labelledby="wallpaper-heading">
@@ -187,7 +187,7 @@ export function PersonalizationPage() {
           <div className="mb-3 grid h-9 w-9 place-items-center rounded-lg bg-violet-300/10 text-violet-200"><ImagePlus size={17} /></div>
           <h3 className="text-sm font-medium">Use your own image</h3>
           <p className="mt-1 text-[11px] leading-4 text-slate-500">Stored locally in this browser as a compressed JPEG. Up to 20 MB before compression.</p>
-          <input ref={fileInputRef} type="file" accept="image/*" className="sr-only" aria-label="Choose a custom wallpaper image" onChange={(event) => void uploadWallpaper(event.target.files?.[0])} data-testid="input-custom-wallpaper" />
+      <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/avif" className="sr-only" aria-label="Choose a custom wallpaper image" onChange={(event) => void uploadWallpaper(event.target.files?.[0])} data-testid="input-custom-wallpaper" />
           <button type="button" disabled={busy} onClick={() => fileInputRef.current?.click()} className="mt-4 inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/[.045] px-3 text-xs font-medium text-slate-200 hover:bg-white/[.08] disabled:cursor-wait disabled:opacity-50" data-testid="button-upload-wallpaper">
             <Upload size={14} />{busy ? 'Processing image…' : prefs.customWallpaperData ? 'Replace image' : 'Choose image'}
           </button>
@@ -231,7 +231,7 @@ export function PersonalizationPage() {
         <div>
           <p className="mono mb-1 text-[10px] uppercase tracking-[.18em] text-violet-200/70">02 / Response style</p>
           <h2 id="response-heading" className="display text-lg font-semibold">Set the feel of your conversations</h2>
-          <p className="mt-1 text-xs leading-5 text-slate-400">These are saved preferences for this browser. They do not connect or send anything by themselves.</p>
+          <p className="mt-1 text-xs leading-5 text-slate-400">Preferences stay in this browser. When Ayatrisya sends a chat to a configured model, enabled response preferences are included with that request.</p>
         </div>
         <Sparkles size={18} className="mt-1 shrink-0 text-violet-200/70" aria-hidden="true" />
       </div>
@@ -264,7 +264,7 @@ export function PersonalizationPage() {
     <section className={`${cardClass} mb-5`} aria-labelledby="memory-heading">
       <p className="mono mb-1 text-[10px] uppercase tracking-[.18em] text-violet-200/70">03 / Personal notes</p>
       <h2 id="memory-heading" className="display text-lg font-semibold">A note you control</h2>
-      <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-400">Write a short summary about your preferences or context. It is user-edited and stored only in this browser; it is not generated automatically.</p>
+      <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-400">Write a summary about your preferences or context. It is user-edited and stored only in this browser, not generated automatically. The summary is included in model requests only when both personalization and the opt-in below are enabled.</p>
       <label className={`mt-4 flex cursor-pointer items-center justify-between gap-4 rounded-xl border p-3.5 ${draft.useMemory && draft.enabled ? 'border-violet-300/20 bg-violet-300/[.045]' : 'border-white/[.07] bg-white/[.02]'}`}>
         <span><span className="block text-sm font-medium text-slate-200">Opt in to use this summary</span><span className="mt-0.5 block text-[11px] text-slate-500">Choose whether this summary is included in personalization.</span></span>
         <input type="checkbox" checked={draft.useMemory} disabled={!draft.enabled} onChange={(event) => updateDraft('useMemory', event.target.checked)} className="h-4 w-4 accent-violet-300 disabled:cursor-not-allowed" aria-label="Opt in to use the personal summary" data-testid="input-use-memory" />
@@ -280,12 +280,12 @@ export function PersonalizationPage() {
       <p className="mt-1 text-xs leading-5 text-slate-400">Add your own response instructions and things you would rather avoid.</p>
       <div className="mt-4 grid gap-4 md:grid-cols-2">
         <label className="block text-xs font-medium text-slate-400" htmlFor="custom-instructions">Custom instructions
-          <textarea id="custom-instructions" value={draft.instructions} onChange={(event) => updateDraft('instructions', event.target.value)} disabled={!draft.enabled} rows={5} maxLength={2400} placeholder="What context or approach should responses keep in mind?" className={`${inputClass} mt-1.5 resize-y leading-5 disabled:cursor-not-allowed`} data-testid="textarea-custom-instructions" />
-          <span className="mt-1 block text-right text-[10px] font-normal text-slate-500">{draft.instructions.length}/2,400</span>
+      <textarea id="custom-instructions" value={draft.instructions} onChange={(event) => updateDraft('instructions', event.target.value)} disabled={!draft.enabled} rows={5} maxLength={2000} placeholder="What context or approach should responses keep in mind?" className={`${inputClass} mt-1.5 resize-y leading-5 disabled:cursor-not-allowed`} data-testid="textarea-custom-instructions" />
+          <span className="mt-1 block text-right text-[10px] font-normal text-slate-500">{draft.instructions.length}/2,000</span>
         </label>
         <label className="block text-xs font-medium text-slate-400" htmlFor="things-to-avoid">Things to avoid
-          <textarea id="things-to-avoid" value={draft.avoid} onChange={(event) => updateDraft('avoid', event.target.value)} disabled={!draft.enabled} rows={5} maxLength={2400} placeholder="Anything you would prefer not to see in responses?" className={`${inputClass} mt-1.5 resize-y leading-5 disabled:cursor-not-allowed`} data-testid="textarea-things-to-avoid" />
-          <span className="mt-1 block text-right text-[10px] font-normal text-slate-500">{draft.avoid.length}/2,400</span>
+          <textarea id="things-to-avoid" value={draft.avoid} onChange={(event) => updateDraft('avoid', event.target.value)} disabled={!draft.enabled} rows={5} maxLength={1000} placeholder="Anything you would prefer not to see in responses?" className={`${inputClass} mt-1.5 resize-y leading-5 disabled:cursor-not-allowed`} data-testid="textarea-things-to-avoid" />
+          <span className="mt-1 block text-right text-[10px] font-normal text-slate-500">{draft.avoid.length}/1,000</span>
         </label>
       </div>
     </section>
@@ -298,7 +298,7 @@ export function PersonalizationPage() {
         <Check size={14} />{busy ? 'Saving…' : 'Save response preferences'}
       </button>
     </div>
-  </main>;
+  </div>;
 }
 
 export default PersonalizationPage;

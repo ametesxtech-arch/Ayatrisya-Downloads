@@ -7,6 +7,7 @@ import { AttachmentChip } from '@/components/AttachmentPreview';
 import { repository } from '@/storage/repository';
 import { useLocalQuery } from '@/storage/hooks';
 import { modelClient } from '@/ai/client';
+import { applyPersonalization } from '@/ai/personalization';
 import { useCaps, usePrefs } from '@/hooks/use-prefs';
 import { useAuth } from '@/integrations/firebase/AuthProvider';
 import { MAX_UPLOAD, ago, errMsg, formatBytes } from '@/lib/format';
@@ -70,7 +71,7 @@ export function ChatPage({ path, goto, notify }: { path: string; goto: (h: strin
     abortRef.current = ac; retryRef.current = { cid, history };
     setBusy(true); setStreamFor(cid); setStream(''); setError('');
     try {
-      const out = await modelClient.generateResponse(history, { model: prefs.model, mode: prefs.mode, signal: ac.signal, onToken: (t: string) => setStream((s) => s + t) });
+      const out = await modelClient.generateResponse(applyPersonalization(history, prefs.personalization), { model: prefs.model, mode: prefs.mode, signal: ac.signal, onToken: (t: string) => setStream((s) => s + t) });
       if (out.trim() && !ac.signal.aborted) await repository.addMessage(cid, out, 'assistant');
       retryRef.current = null;
     } catch (e) { setError(ac.signal.aborted ? 'Generation stopped. Your message is saved.' : errMsg(e, 'The model request failed.')); }

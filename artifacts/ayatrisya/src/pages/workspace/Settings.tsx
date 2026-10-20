@@ -6,24 +6,26 @@ import { PageHeading } from '@/components/PageHeading';
 import { useCaps, usePrefs } from '@/hooks/use-prefs';
 import { repository } from '@/storage/repository';
 import { useLocalQuery } from '@/storage/hooks';
+import { PersonalizationPage } from '@/pages/workspace/Personalization';
 import { downloadBlob, exportBackup, inspectBackup, restoreBackup } from '@/storage/backup';
 import { driveSync } from '@/integrations/google-drive/sync';
 import { errMsg, formatBytes } from '@/lib/format';
 import type { ChatMode, ModelId, Preferences } from '@/storage/types';
 
-type Section = 'appearance' | 'models' | 'privacy' | 'storage';
-const sections: Array<[Section, string]> = [['appearance', 'Appearance'], ['models', 'Models'], ['privacy', 'Privacy'], ['storage', 'Storage and backup']];
+type Section = 'appearance' | 'personalization' | 'models' | 'privacy' | 'storage';
+const sections: Array<[Section, string]> = [['appearance', 'Appearance'], ['personalization', 'Personalization'], ['models', 'Models'], ['privacy', 'Privacy'], ['storage', 'Storage and backup']];
 const MAX_BACKUP = 100 * 1024 * 1024;
 
 export function SettingsPage({ notify, goto, initial = 'appearance' }: { notify: (m: string) => void; goto: (h: string) => void; initial?: Section }) {
   const [section, setSection] = useState<Section>(initial);
   useEffect(() => setSection(initial), [initial]);
   return <div className="mx-auto max-w-[900px] p-4 sm:p-8">
-    <PageHeading eyebrow="Settings" title={section === 'storage' ? 'Storage and backup' : 'Settings'} description="Preferences are saved in this browser for the current workspace owner." />
+    {section !== 'personalization' && <PageHeading eyebrow="Settings" title={section === 'storage' ? 'Storage and backup' : 'Settings'} description="Preferences are saved in this browser for the current workspace owner." />}
     <div role="tablist" aria-label="Settings sections" className="mb-6 flex gap-1 overflow-x-auto border-b border-white/[.07]">
       {sections.map(([k, l]) => <button key={k} role="tab" aria-selected={section === k} onClick={() => setSection(k)} className={`whitespace-nowrap border-b-2 px-4 py-3 text-xs font-medium ${section === k ? 'border-violet-400 text-white' : 'border-transparent text-slate-400 hover:text-slate-100'}`}>{l}</button>)}
     </div>
     {section === 'appearance' && <Appearance />}
+    {section === 'personalization' && <PersonalizationPage />}
     {section === 'models' && <Models />}
     {section === 'privacy' && <Privacy goStorage={() => setSection('storage')} goto={goto} />}
     {section === 'storage' && <Storage notify={notify} />}

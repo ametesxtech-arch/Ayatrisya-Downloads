@@ -4,6 +4,7 @@ import { openDB } from "idb";
 import { LocalRepository, storageError } from "../storage/repository";
 import { exportBackup, inspectBackup, restoreBackup } from "../storage/backup";
 import { validateFile } from "../storage/files";
+import { defaultPreferences } from "../storage/types";
 
 const active:LocalRepository[]=[];
 function local(){const repo=new LocalRepository(`test-${crypto.randomUUID()}`);active.push(repo);return repo;}
@@ -15,12 +16,18 @@ describe("IndexedDB local repository",()=>{
     const c=await first.createConversation();
     const message=await first.addMessage(c.id,"a private question");
     await first.editMessage(message.id,"edited private question");
-    await first.savePreferences({theme:"Light",mode:"Savage",onboardingComplete:true});
+    await first.savePreferences({
+      theme:"Light",mode:"Savage",onboardingComplete:true,wallpaper:"preset-42",
+      personalization:{...defaultPreferences.personalization,tone:"direct",memorySummary:"Learning TypeScript.",useMemory:true},
+    });
     await first.close();
     const reopened=new LocalRepository(name);active.push(reopened);
     expect((await reopened.getConversation(c.id))?.title).toBe("a private question");
     expect((await reopened.getMessages(c.id))[0].content).toBe("edited private question");
-    expect(await reopened.getPreferences()).toMatchObject({theme:"Light",mode:"Savage",onboardingComplete:true});
+    expect(await reopened.getPreferences()).toMatchObject({
+      theme:"Light",mode:"Savage",onboardingComplete:true,wallpaper:"preset-42",
+      personalization:{tone:"direct",memorySummary:"Learning TypeScript.",useMemory:true},
+    });
   });
   it("creates, renames, archives and transactionally deletes projects and related content",async()=>{
     const repo=local();const p=await repo.createProject({title:"Project",tags:["local"]});
@@ -95,6 +102,7 @@ describe("validated private backups",()=>{
   it("exports/restores actual text and binary files without losing their references",async()=>{
     const first=local(),second=local();const p=await first.createProject({title:"Project"});
     const c=await first.createConversation();const file=await first.addFile(new File(["binary contents"],"a.txt",{type:"text/plain"}),p.id,c.id);
+    await first.savePreferences({wallpaper:"custom",customWallpaperData:"data:image/jpeg;base64,/9j/2Q=",personalization:{...defaultPreferences.personalization,memorySummary:"I prefer practical examples.",useMemory:true}});
     await first.addMessage(c.id,"attached","user",[file.id]);
     await first.saveItem({kind:"document",title:"My doc",content:"document content",projectId:p.id});
     const text=await (await exportBackup(first)).text();
@@ -102,6 +110,7 @@ describe("validated private backups",()=>{
     await restoreBackup(text,"merge",second);
     expect(await (await second.getFile(file.id))!.text()).toBe("binary contents");
     expect((await second.getMessages(c.id))[0].attachmentIds).toEqual([file.id]);
+    expect(await second.getPreferences()).toMatchObject({wallpaper:"custom",customWallpaperData:"data:image/jpeg;base64,/9j/2Q=",personalization:{memorySummary:"I prefer practical examples.",useMemory:true}});
     const repeat=await restoreBackup(text,"merge",second);expect(repeat.imported).toBe(0);expect(repeat.skipped).toBeGreaterThan(0);
   });
   it("merge preserves newer local edits; replace affects only the active owner",async()=>{

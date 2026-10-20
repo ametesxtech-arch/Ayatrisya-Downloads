@@ -10,6 +10,7 @@ import { usePrefs } from '@/hooks/use-prefs';
 import { Emblem } from '@/components/Brand';
 import { Landing } from '@/pages/Landing';
 import { DesktopDownloadsPage } from '@/pages/DesktopDownloads';
+import { wallpapers } from '@/data/wallpapers';
 
 const Workspace = lazy(() => import('@/components/WorkspaceShell').then((m) => ({ default: m.Workspace })));
 const AuthPage = lazy(() => import('@/pages/Auth').then((m) => ({ default: m.AuthPage })));
@@ -59,6 +60,19 @@ function RoutedBoundary({ children }: { children: ReactNode }) {
 
 function PrefsEffects() {
   const { prefs } = usePrefs();
+  useEffect(() => {
+    const root = document.documentElement;
+    const image = prefs.wallpaper === 'custom'
+      ? prefs.customWallpaperData
+      : wallpapers.find((wallpaper) => wallpaper.id === prefs.wallpaper)?.src ?? '';
+    if (image) {
+      root.dataset.wallpaperActive = 'true';
+      root.style.setProperty('--workspace-wallpaper', `url("${image}")`);
+    } else {
+      delete root.dataset.wallpaperActive;
+      root.style.removeProperty('--workspace-wallpaper');
+    }
+  }, [prefs.wallpaper, prefs.customWallpaperData]);
   useEffect(() => {
     const root = document.documentElement;
     const mq = window.matchMedia('(prefers-color-scheme: light)');
