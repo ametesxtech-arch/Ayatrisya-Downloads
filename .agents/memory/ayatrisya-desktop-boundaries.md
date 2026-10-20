@@ -27,3 +27,11 @@ platform bindings.
 **How to apply:** When adding a native runner or changing pnpm overrides, confirm
 its architecture's optional binaries remain in the lockfile and pass a frozen
 install on that runner before debugging packaging.
+
+Never create or deploy to a Firebase project without the user's explicit
+approval.
+
+**Why:** The user set this boundary for Ayatrisya.
+
+**How to apply:** Get explicit approval before creating Firebase resources or
+deploying to Firebase.
