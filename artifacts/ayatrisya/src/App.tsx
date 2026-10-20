@@ -9,6 +9,7 @@ import { AuthProvider, useAuth } from '@/integrations/firebase/AuthProvider';
 import { usePrefs } from '@/hooks/use-prefs';
 import { Emblem } from '@/components/Brand';
 import { Landing } from '@/pages/Landing';
+import { DesktopDownloadsPage } from '@/pages/DesktopDownloads';
 
 const Workspace = lazy(() => import('@/components/WorkspaceShell').then((m) => ({ default: m.Workspace })));
 const AuthPage = lazy(() => import('@/pages/Auth').then((m) => ({ default: m.AuthPage })));
@@ -82,6 +83,7 @@ function Router() {
       <Suspense fallback={<div className="grid min-h-[100dvh] place-items-center text-xs text-slate-500" role="status"><span className="grid place-items-center gap-3"><Emblem size={44} mode="loading" /><span>Loading Ayatrisya</span></span></div>}>
         <Switch>
           <Route path="/" component={Landing} />
+          <Route path="/desktop" component={DesktopDownloadsPage} />
           <Route path="/intro" component={LegacyIntroRedirect} />
           <Route path="/auth/sign-in" component={AuthPage} />
           <Route path="/auth/create-account" component={AuthPage} />

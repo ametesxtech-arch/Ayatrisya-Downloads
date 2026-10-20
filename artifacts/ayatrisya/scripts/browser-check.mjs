@@ -45,6 +45,19 @@ try {
   await call('Page.enable');await call('Runtime.enable');await call('Network.enable');
   await call('Page.setDownloadBehavior',{behavior:'allow',downloadPath:dir});
   await call('Emulation.setDeviceMetricsOverride',{width:1440,height:1000,deviceScaleFactor:1,mobile:false});
+  await call('Page.navigate',{url:'http://127.0.0.1:80/'});
+  await wait(`document.querySelector('a[aria-label="Get Ayatrisya Desktop"]')`,'desktop download action');
+  const desktopUrl=await evaluate(`document.querySelector('a[aria-label="Get Ayatrisya Desktop"]').href`);
+  if(new URL(desktopUrl).pathname==='/desktop'){
+    await click('a[aria-label="Get Ayatrisya Desktop"]');
+    await wait(`location.pathname==='/desktop'`,'desktop download page');
+    assert(await evaluate(`document.body.innerText.includes('Installer status')`),'Desktop installer status is missing');
+  }else{
+    assert.equal(new URL(desktopUrl).protocol,'https:','Desktop download links must use HTTPS');
+  }
+  passed.push('Desktop action opens the download/status page or a secure configured installer URL');
+  await call('Page.navigate',{url:'http://127.0.0.1:80/'});
+  await wait(`document.querySelector('a[aria-label="Get Ayatrisya Desktop"]')`,'landing page after desktop status check');
   const testEmail=process.env.AYATRISYA_TEST_EMAIL,testPassword=process.env.AYATRISYA_TEST_PASSWORD;
   if(!testEmail||!testPassword){
     await call('Page.navigate',{url:'http://127.0.0.1:80/workspace'});

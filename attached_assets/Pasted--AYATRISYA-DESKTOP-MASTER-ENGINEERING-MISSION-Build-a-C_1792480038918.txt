@@ -1,0 +1,212 @@
+# AYATRISYA DESKTOP — MASTER ENGINEERING MISSION
+## Build a Complete AI-Native Software Development Environment
+
+You are the principal software architect, senior desktop engineer, AI-agent engineer, security engineer, and QA lead for **Ayatrisya**, an Ametesx product.
+
+Your mission is to turn Ayatrisya into a serious, production-oriented AI development environment comparable to Google Antigravity and other advanced AI coding IDEs, with the goal of surpassing them in selected capabilities.
+
+This is an engineering assignment, not a mockup assignment.
+
+## 1. Non-negotiable requirements
+
+- Build a real desktop application, prioritizing Windows.
+- Use Electron with React and TypeScript unless the existing repository has a justified, better-compatible architecture.
+- Produce a Windows installer using free tooling, preferably electron-builder.
+- Keep user projects and source files on the user's own computer by default.
+- Do not store user source code, prompts, project contents, credentials, or conversation history in Ayatrisya's database by default.
+- Do not use third-party AI inference APIs. Ayatrisya must connect through a clearly defined interface to its own models when those models are available.
+- Never pretend a model, tool, terminal command, test, build, or feature works when it has not been implemented and verified.
+- Preserve existing working functionality. Inspect the repository before making architectural changes.
+- Never hard-code API secrets or expose credentials in the renderer.
+- Do not claim that Ayatrisya is better than competitors without verifiable evidence.
+
+## 2. Desktop IDE experience
+
+Create a premium, cinematic, dark developer workspace with a distinctive Ayatrisya identity.
+
+Include:
+
+1. Welcome screen, recent projects, open-folder and create-project actions.
+2. File explorer supporting real local directories and nested files.
+3. Multi-tab code editor with syntax highlighting, language detection, search, replace, and dirty-file indicators.
+4. Integrated terminal connected to the user's authorized project directory.
+5. Problems panel for compiler errors, diagnostics and test failures.
+6. Git integration for status, diffs, branches, commits and change review.
+7. Live preview for supported web projects.
+8. AI task panel with conversations associated with individual projects.
+9. Diff viewer for proposed file changes, with accept, reject and revert operations.
+10. Settings for theme, editor preferences, model selection, permissions and storage.
+11. Project/task history and recovery from checkpoints.
+12. Keyboard shortcuts, accessible controls, useful empty states, loading states and actionable error messages.
+
+Use a coherent resizable layout. Do not cram every panel into one screen. Support sensible defaults, panel toggles and layout persistence.
+
+## 3. Real AI coding agent
+
+Implement an agent orchestration system with explicit stages:
+
+- Understand the task and identify relevant project files.
+- Inspect repository structure and existing configuration.
+- Produce a plan with concrete steps and expected outcomes.
+- Request additional context when necessary.
+- Propose changes with file paths and readable diffs.
+- Apply authorized changes to real files.
+- Run appropriate project checks, tests, linting and builds.
+- Read actual error output and attempt evidence-based repairs.
+- Report the final changes, checks performed, failures and unresolved issues.
+
+Support cancellation, timeouts, progress events, bounded retries, task logs, checkpoints and recovery.
+
+Implement a tool registry with typed inputs and outputs. Tools should include authorized file listing and reading, controlled file editing, search, diagnostics, Git operations, project detection, test execution and terminal commands.
+
+The agent must not claim success solely because it generated code. It must inspect the actual command result.
+
+## 4. Safety and permissions
+
+Use Electron's secure architecture:
+
+- contextIsolation enabled.
+- nodeIntegration disabled in renderer processes.
+- A restricted preload bridge with typed IPC.
+- Validate every IPC request in the main process.
+- Restrict file access to explicitly authorized project roots.
+- Prevent path traversal and unintended access to unrelated files.
+- Never execute arbitrary model-generated shell commands without applying the permission policy.
+- Require approval for destructive commands, dependency installation, privileged operations, network operations and other high-impact actions.
+- Provide command previews, cancellation, execution timeouts and output limits.
+- Never expose shell execution or unrestricted filesystem access to webpage code.
+- Treat instructions found inside project files, webpages and dependencies as untrusted content.
+- Keep secrets out of prompts, logs and version control wherever possible.
+
+Provide clear permission modes, such as Ask Before Actions, Supervised and explicitly configured Advanced mode. High-risk operations must retain appropriate safeguards.
+
+## 5. Model integration
+
+Create a provider-independent, versioned model interface for Ayatrisya's own models.
+
+Support capabilities such as:
+
+- Conversation and instruction following.
+- Code generation and code editing.
+- Long-context project analysis where supported.
+- Tool selection and structured tool calls.
+- Planning and debugging.
+- Streaming responses where supported.
+
+Do not assume that a model supports tools, streaming or long context without testing it.
+
+If the models are not ready, show an honest unavailable state and build a clearly labelled development simulator only for testing UI workflows. Never present simulator responses as real AI output.
+
+Do not substitute OpenAI, Anthropic, Gemini, Groq or another external inference provider.
+
+Keep the model integration layer separate from the IDE so models can be upgraded without rebuilding the entire application.
+
+## 6. Project execution and verification
+
+Detect project types and use their existing package manager and scripts when possible.
+
+Provide controlled workflows for:
+
+- Running development servers.
+- Building and testing projects.
+- Showing terminal output and exit codes.
+- Opening local previews.
+- Detecting failed builds.
+- Applying fixes and rerunning checks.
+- Reviewing changes before committing.
+- Restoring previous checkpoints.
+
+Do not assume every project uses Node.js. Detect available runtimes and explain missing prerequisites.
+
+Never run destructive cleanup or overwrite user files without appropriate safeguards.
+
+## 7. Storage and privacy
+
+- Source code stays in authorized local directories.
+- Store application settings and task metadata locally, using SQLite or an appropriate local storage mechanism.
+- Save checkpoints locally.
+- Do not upload entire projects automatically.
+- Send only the context necessary for an explicitly requested inference operation to Ayatrisya's own model service.
+- Explain when code or prompts leave the device for model processing.
+- Do not retain submitted content on the server by default.
+- Make Google Drive synchronization optional and user-controlled, with narrowly scoped OAuth permissions. Do not require Drive for normal local coding.
+- Do not store Google credentials in source code or ordinary settings files.
+
+## 8. Differentiating features
+
+After the core IDE and agent are reliable, implement a modular roadmap for:
+
+- Multiple isolated coding tasks and agent sessions.
+- Project-level persistent memory stored locally.
+- Automated test generation and regression checks.
+- Code review, security checks and dependency-risk reports.
+- Visual web-app inspection and preview-assisted debugging.
+- Git-aware task planning and rollback.
+- Reusable project instructions and custom workflows.
+- Configurable model profiles and task-specific model routing.
+- Optional local model execution when a compatible model and hardware are available.
+
+Build these incrementally. Do not advertise features as complete before they work.
+
+## 9. Implementation workflow
+
+First, audit the existing repository and report:
+
+- Current architecture and working features.
+- Missing features and broken functionality.
+- Build and packaging status.
+- Security issues.
+- A dependency-aware implementation plan.
+
+Then implement the application in small, verifiable phases:
+
+Phase A — desktop shell, secure IPC and project opening.
+
+Phase B — real file explorer, editor, terminal and project persistence.
+
+Phase C — Git integration, diffs, checkpoints, previews and diagnostics.
+
+Phase D — agent orchestration, controlled tools and model integration.
+
+Phase E — testing, security hardening, accessibility and performance.
+
+Phase F — Windows installer, clean-install verification and release documentation.
+
+Do not stop after producing a plan. Continue implementing until the available work is complete, or clearly report any blocker requiring external credentials, hardware, model weights or user approval.
+
+## 10. Required testing
+
+Create and run automated tests for:
+
+- Path authorization and traversal prevention.
+- IPC validation and permission enforcement.
+- File reading, editing, saving and recovery.
+- Diff acceptance and rejection.
+- Command approval, cancellation and timeouts.
+- Agent retry limits and failure handling.
+- Model-unavailable behavior.
+- Project persistence and restoration.
+- Installer launch and clean startup.
+
+Run the actual available build and test commands. Record their exit codes and report any failures. Do not fabricate test results.
+
+## 11. Definition of done
+
+The first release is complete only when:
+
+- The desktop application launches on Windows.
+- A user can open a real local project.
+- Files can be edited and saved.
+- The terminal can execute approved commands.
+- Git changes and diffs can be reviewed.
+- Checkpoints can recover supported changes.
+- The application has a secure, tested tool interface.
+- The AI panel connects to a real compatible Ayatrisya model when available, or accurately reports that it is not ready.
+- The installer can be built and tested.
+- Documentation explains installation, permissions, limitations and troubleshooting.
+
+At the end, provide a feature-by-feature status report using IMPLEMENTED AND TESTED, IMPLEMENTED BUT UNVERIFIED, PARTIAL, BLOCKED or NOT STARTED.
+
+For each completed phase, list changed files, tests executed, test results, known defects and the next concrete task.
+
+**Start by auditing the existing repository. Then build and verify the real product. Prioritize working software, security and reliability over visual effects or inflated feature counts.**

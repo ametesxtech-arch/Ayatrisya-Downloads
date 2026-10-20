@@ -190,9 +190,9 @@ export function Landing() {
               Your projects stay on your machine.
             </h2>
             <p className="mt-5 max-w-lg text-sm leading-7 text-slate-400">
-              Real local project access requires the Ayatrisya desktop
-              application. It is not released yet, and the web app never reads
-              your filesystem.
+              Work with folders you choose and commands you approve. The web
+              app never reads your filesystem; use the desktop page for current
+              installer availability.
             </p>
             <DesktopButton className="mt-7" />
           </div>

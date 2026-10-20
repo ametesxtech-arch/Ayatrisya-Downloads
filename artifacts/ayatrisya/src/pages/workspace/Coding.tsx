@@ -17,7 +17,7 @@ export function CodingPage({ notify }: { notify: (m: string) => void }) {
   const items = list.data ?? [];
   return <div className="mx-auto max-w-[1000px] p-4 sm:p-8">
     <PageHeading eyebrow="Coding" title="Specify the task. Do the work on the desktop." description="The browser cannot safely open your project folders or run commands. Write task specifications here and export them for the Ayatrisya desktop app." actions={<><DesktopButton /><Button onClick={() => setOpen(true)}><Plus size={15} />New task</Button></>} />
-    <Notice>Desktop app status: not released and no connection protocol exists, so nothing here connects to a desktop app. Specifications are stored in this browser and exported as Markdown.</Notice>
+    <Notice>Coding specifications are stored in this browser and exported as Markdown. They do not sync automatically to the desktop app.</Notice>
     <div className="mt-6">
       {list.loading && !list.data && <Skeleton className="h-24" />}
       {list.error && <LoadError message={list.error} retry={list.refresh} />}
@@ -25,7 +25,7 @@ export function CodingPage({ notify }: { notify: (m: string) => void }) {
       {items.length > 0 && <><ItemList items={items} notify={notify} />
         <Button variant="outline" className="mt-4" onClick={() => downloadText(items.map((i) => `# ${i.title}\n\n${i.content}`).join('\n\n---\n\n'), `${safeName('coding-tasks')}.md`, 'text/markdown')}><Download size={14} />Export all as Markdown</Button></>}
     </div>
-    <p className="mt-8 flex items-center gap-2 text-xs text-slate-500"><Code2 size={14} />Desktop features such as local folder access, file edits and tests will require explicit authorisation in the desktop app once it exists.</p>
+    <p className="mt-8 flex items-center gap-2 text-xs text-slate-500"><Code2 size={14} />Use Ayatrisya Desktop for local folders and approved commands. The browser remains limited to browser storage.</p>
     {open && <Modal title="New coding task" onClose={() => setOpen(false)}><form onSubmit={(e) => { e.preventDefault(); void create(); }} className="space-y-4">
       <label className="block text-xs font-medium text-slate-400">Title<input data-autofocus value={title} onChange={(e) => setTitle(e.target.value)} className={`${inputCls} mt-1.5`} /></label>
       <label className="block text-xs font-medium text-slate-400">Specification<textarea value={spec} onChange={(e) => setSpec(e.target.value)} className={`${areaCls} mono mt-1.5 min-h-40`} /></label>
