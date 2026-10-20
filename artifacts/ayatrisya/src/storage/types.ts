@@ -2,6 +2,19 @@ export type ChatMode = "Normal" | "Savage" | "Joke";
 export type ModelId = "v1-fast" | "v2-best";
 export type WorkspaceMode = "standard" | "focus" | "studio" | "developer" | "compact";
 export type ItemKind = "note" | "document" | "presentation" | "file" | "task" | "code";
+export type PersonalizationTone = "balanced" | "friendly" | "professional" | "direct" | "creative";
+export type PersonalizationLength = "concise" | "balanced" | "detailed";
+export type PersonalizationFormat = "automatic" | "paragraphs" | "bullets" | "steps";
+export interface PersonalizationPreferences {
+  enabled: boolean;
+  useMemory: boolean;
+  memorySummary: string;
+  instructions: string;
+  avoid: string;
+  tone: PersonalizationTone;
+  length: PersonalizationLength;
+  format: PersonalizationFormat;
+}
 export interface BaseRecord {
   id: string;
   ownerId: string;
@@ -64,12 +77,17 @@ export interface Preferences {
   homeDensity: "comfortable" | "compact";
   homeSections: { projects: boolean; conversations: boolean; items: boolean };
   recentCommands: string[];
+  wallpaper: string;
+  customWallpaperData: string;
+  personalization: PersonalizationPreferences;
 }
 export const defaultPreferences: Preferences = {
   theme: "Dark", sidebarCollapsed: false, reducedMotion: false, skipIntro: false,
   onboardingComplete: false, displayName: "", language: "English", mode: "Normal", model: "v1-fast",
   enterToSend:true,historySort:"newest",historyPinnedFirst:true,animationIntensity:"full",logoIdle:false,projectView:"grid",
   workspaceMode:"standard",homeDensity:"comfortable",homeSections:{projects:true,conversations:true,items:true},recentCommands:[],
+  wallpaper:"none",customWallpaperData:"",
+  personalization:{enabled:true,useMemory:true,memorySummary:"",instructions:"",avoid:"",tone:"balanced",length:"balanced",format:"automatic"},
 };
 export interface ListOptions { search?: string; offset?: number; limit?: number }
 export interface ItemOptions extends ListOptions {
