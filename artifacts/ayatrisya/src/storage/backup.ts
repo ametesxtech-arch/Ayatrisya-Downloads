@@ -13,6 +13,10 @@ const prefsSchema = z.object({
   theme: z.enum(["Dark","Light","Follow system"]), sidebarCollapsed: z.boolean(), reducedMotion: z.boolean(), skipIntro:z.boolean(), onboardingComplete:z.boolean(), displayName:z.string().max(100), language:z.literal("English"), mode:z.enum(["Normal","Savage","Joke"]), model:z.enum(["v1-fast","v2-best"]),
   enterToSend:z.boolean().default(true),historySort:z.enum(["newest","oldest","title"]).default("newest"),historyPinnedFirst:z.boolean().default(true),
   animationIntensity:z.enum(["full","subtle","none"]).default("full"),logoIdle:z.boolean().default(false),projectView:z.enum(["grid","list"]).default("grid"),
+  workspaceMode:z.enum(["standard","focus","studio","developer","compact"]).default("standard"),
+  homeDensity:z.enum(["comfortable","compact"]).default("comfortable"),
+  homeSections:z.object({projects:z.boolean().default(true),conversations:z.boolean().default(true),items:z.boolean().default(true)}).default({projects:true,conversations:true,items:true}),
+  recentCommands:z.array(z.string().max(200)).max(20).default([]),
 }).strict();
 const backupSchema = z.object({
   format: z.literal("ayatrisya-backup"), version: z.union([z.literal(1),z.literal(2)]), exportedAt: z.string().datetime(),

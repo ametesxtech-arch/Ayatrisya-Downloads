@@ -149,3 +149,14 @@ html[data-intensity="none"] .route-in,html[data-intensity="none"] .stagger>*,htm
 html[data-intensity="subtle"] .stagger>*{animation-delay:0ms!important}
 html[data-motion="reduced"] .route-in,html[data-motion="reduced"] .stagger>*,html[data-motion="reduced"] [role=menu],html[data-motion="reduced"] [role=dialog]{animation:none!important}
 @media(prefers-reduced-motion:reduce){.route-in,.stagger>*,[role=menu],[role=dialog]{animation:none!important}[data-tip]::after{transition:none}}
+
+/* Workspace modes change usable space and density without hiding the mode control. */
+.workspace-sidebar{transition:width var(--dur-base) var(--ease-out),opacity var(--dur-base) var(--ease-out),border-color var(--dur-base) var(--ease-out)}
+@media(min-width:768px){
+  .workspace-shell[data-workspace-mode="focus"] .workspace-sidebar{display:none}
+}
+.workspace-shell[data-workspace-mode="compact"] .workspace-nav-link{min-height:2rem;margin-block:.1rem;padding-block:.3rem;font-size:11px}
+.workspace-shell[data-workspace-mode="studio"] .workspace-main-content{background-image:radial-gradient(ellipse at 78% 0%,rgba(104,112,242,.035),transparent 48%)}
+html[data-appearance="light"] .workspace-home{background:#f2f2f7;color:#1b1d2a}
+html[data-appearance="light"] .workspace-home [class*="bg-[#14"],html[data-appearance="light"] .workspace-home [class*="bg-[#15"]{background-color:#fff}
+html[data-appearance="light"] .workspace-home [class*="border-white/"]{border-color:rgba(40,40,90,.15)}

@@ -264,9 +264,9 @@ export function Landing() {
                 <Globe2 className="mb-5 text-blue-200" size={20} />
                 <h3 className="font-semibold">Integrations are optional</h3>
                 <p className="mt-2 text-xs leading-6 text-slate-500">
-                  Google Drive support may be added later as an opt-in
-                  manual backup and restore. It works only when an OAuth client is
-                  configured and has not been tested live.
+                  Google Drive is an optional manual backup and restore. It
+                  requires a separately configured OAuth client and does not
+                  continuously sync your files.
                 </p>
               </Panel>
             </div>

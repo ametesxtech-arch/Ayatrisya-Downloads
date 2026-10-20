@@ -63,6 +63,7 @@ export class LocalRepository {
     if (!["Dark", "Light", "Follow system"].includes(value.theme) || !["Normal", "Savage", "Joke"].includes(value.mode) || !["v1-fast", "v2-best"].includes(value.model) || value.language !== "English" || value.displayName.length > 100)
       throw new Error("Invalid interface preferences.");
     if(!["newest","oldest","title"].includes(value.historySort)||!["full","subtle","none"].includes(value.animationIntensity)||!["grid","list"].includes(value.projectView)||["enterToSend","historyPinnedFirst","logoIdle","reducedMotion","sidebarCollapsed","skipIntro","onboardingComplete"].some(key=>typeof value[key as keyof Preferences]!=="boolean"))throw new Error("Invalid behavior preferences.");
+    if(!["standard","focus","studio","developer","compact"].includes(value.workspaceMode)||!["comfortable","compact"].includes(value.homeDensity)||!value.homeSections||typeof value.homeSections!=="object"||["projects","conversations","items"].some(key=>typeof value.homeSections[key as keyof Preferences["homeSections"]]!=="boolean")||!Array.isArray(value.recentCommands)||value.recentCommands.length>20||value.recentCommands.some(command=>typeof command!=="string"||command.length>200))throw new Error("Invalid workspace preferences.");
     await tx.objectStore("preferences").put({ ...this.base(), id: "ui", ownerId: owner, value });
     return value;
     });

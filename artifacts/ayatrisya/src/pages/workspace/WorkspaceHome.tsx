@@ -4,9 +4,10 @@ import {
   Code2, File, FileText, FolderKanban, Image, Library, MessageSquare,
   Pin, Plus, Presentation, Search, Sparkles, StickyNote, Waves,
 } from 'lucide-react';
+import { Emblem } from '@/components/Brand';
 import type { Conversation, Project, ProjectItem, StorageStats } from '@/storage/types';
 
-type Action = 'new-chat' | 'new-project' | 'create-document' | 'library' | 'image-studio' | 'voice-studio' | 'coding' | 'search';
+type Action = 'new-chat' | 'new-project' | 'create-document' | 'library' | 'projects' | 'image-studio' | 'voice-studio' | 'coding' | 'search';
 type Section = 'projects' | 'conversations' | 'items';
 
 export interface WorkspaceHomeProps {
@@ -79,9 +80,9 @@ function EmptyState({ title, detail, actionLabel, onAction }: { title: string; d
   );
 }
 
-function ActionTile({ icon: Icon, label, hint, onClick, accent = false }: { icon: typeof MessageSquare; label: string; hint: string; onClick: () => void; accent?: boolean }) {
+function ActionTile({ icon: Icon, label, hint, onClick, accent = false, testId }: { icon: typeof MessageSquare; label: string; hint: string; onClick: () => void; accent?: boolean; testId?: string }) {
   return (
-    <button type="button" onClick={onClick} className={`group flex min-h-[74px] items-center gap-3 rounded-xl border px-3.5 text-left transition duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-300 ${accent ? 'border-violet-300/20 bg-violet-300/[.075] hover:border-violet-300/40 hover:bg-violet-300/[.11]' : 'border-white/[.075] bg-[#15171e]/80 hover:border-white/[.14] hover:bg-[#1b1d26]'}`}>
+    <button type="button" data-testid={testId} onClick={onClick} className={`group flex min-h-[74px] items-center gap-3 rounded-xl border px-3.5 text-left transition duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-300 ${accent ? 'border-violet-300/20 bg-violet-300/[.075] hover:border-violet-300/40 hover:bg-violet-300/[.11]' : 'border-white/[.075] bg-[#15171e]/80 hover:border-white/[.14] hover:bg-[#1b1d26]'}`}>
       <span className={`grid size-9 shrink-0 place-items-center rounded-lg border ${accent ? 'border-violet-200/15 bg-violet-200/[.08] text-violet-100' : 'border-white/[.07] bg-white/[.035] text-slate-300 group-hover:text-cyan-100'}`}><Icon size={16} strokeWidth={1.8} /></span>
       <span className="min-w-0 flex-1">
         <span className="block text-[12px] font-semibold text-slate-200">{label}</span>
@@ -102,7 +103,7 @@ export function WorkspaceHome({
   const compact = density === 'compact';
 
   return (
-    <div className="relative isolate min-h-full overflow-hidden bg-[#101116] text-slate-100">
+    <div className="workspace-home relative isolate min-h-full overflow-hidden bg-[#101116] text-slate-100">
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
         <div className="absolute -right-40 -top-52 h-[500px] w-[500px] rounded-full border border-violet-300/[.055]" />
         <div className="absolute -right-24 -top-36 h-[340px] w-[340px] rounded-full border border-cyan-200/[.045]" />
@@ -137,7 +138,7 @@ export function WorkspaceHome({
           </div>
           <div className="relative z-10 max-w-[660px]">
             <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-violet-200/[.12] bg-violet-200/[.045] px-2.5 py-1.5 text-[10px] font-medium tracking-wide text-violet-100/80">
-              <span className="size-1.5 rounded-full bg-cyan-200/80" />
+              <Emblem size={18} mode="subtle" />
               {modelAvailable ? 'Model connection available' : 'Workspace ready · model unavailable'}
             </div>
             <h1 className="display text-[clamp(1.8rem,4vw,2.65rem)] font-semibold leading-[1.08] tracking-[-.055em] text-slate-100">
@@ -149,7 +150,7 @@ export function WorkspaceHome({
             {!modelAvailable && <p className="mt-2 text-[11px] text-slate-500">AI responses are unavailable right now. Your workspace and saved content remain accessible.</p>}
             <div className="mt-6 flex flex-wrap gap-2">
               <button type="button" data-testid="button-new-chat" onClick={() => onAction('new-chat')} className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-violet-300 px-4 text-xs font-bold text-[#171523] hover:bg-violet-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-200">
-                <Plus size={15} /> New conversation <span className="ml-1 hidden border-l border-black/15 pl-2 font-mono text-[9px] opacity-65 sm:inline">⌘ N</span>
+                <Plus size={15} /> New conversation <span className="ml-1 hidden border-l border-black/15 pl-2 font-mono text-[9px] opacity-65 sm:inline">Ctrl / ⌘ N</span>
               </button>
               <button type="button" onClick={() => onAction('new-project')} className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-white/[.1] bg-white/[.025] px-4 text-xs font-semibold text-slate-200 hover:bg-white/[.07] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-300">
                 <FolderKanban size={15} /> New project
@@ -160,7 +161,7 @@ export function WorkspaceHome({
             </div>
           </div>
           <div className="relative z-10 mt-7 grid grid-cols-2 gap-2 sm:grid-cols-4 md:max-w-[760px]">
-            <ActionTile icon={FileText} label="Create document" hint="Start with a blank page" onClick={() => onAction('create-document')} />
+            <ActionTile icon={FileText} label="Create document" hint="Start with a blank page" testId="button-create-document" onClick={() => onAction('create-document')} />
             <ActionTile icon={Image} label="Image studio" hint="Open your visual tools" onClick={() => onAction('image-studio')} />
             <ActionTile icon={Waves} label="Voice studio" hint="Work with audio" onClick={() => onAction('voice-studio')} />
             <ActionTile icon={Code2} label="Coding workspace" hint="Open a development space" onClick={() => onAction('coding')} />
@@ -193,7 +194,7 @@ export function WorkspaceHome({
             <div className="space-y-7">
               <section aria-labelledby="section-recent-projects">
                 <SectionHeading title="Recent projects" count={recentProjects.length} open={sections.projects} onToggle={() => onToggleSection('projects')} action={<button type="button" onClick={() => onAction('new-project')} className="inline-flex min-h-8 items-center gap-1.5 rounded-md px-2 text-[11px] text-slate-400 hover:bg-white/[.05] hover:text-slate-200"><Plus size={13} />New</button>} />
-                {sections.projects && (recentProjects.length ? <div className="grid gap-2 sm:grid-cols-2">
+                {sections.projects && (recentProjects.length ? <div className="stagger grid gap-2 sm:grid-cols-2">
                   {recentProjects.map((project) => <button key={project.id} type="button" onClick={() => onOpenProject(project.id)} className={`group relative flex flex-col justify-between overflow-hidden rounded-xl border border-white/[.075] bg-[#15171e]/85 p-4 text-left hover:border-white/[.15] hover:bg-[#191b24] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-300 ${compact ? 'min-h-[102px]' : 'min-h-[122px]'}`}>
                     <span aria-hidden className={`absolute inset-y-0 left-0 w-[2px] ${project.color === 'cyan' ? 'bg-cyan-200/70' : project.color === 'rose' ? 'bg-rose-300/70' : project.color === 'amber' ? 'bg-amber-200/70' : project.color === 'emerald' ? 'bg-emerald-200/70' : 'bg-violet-300/75'}`} />
                     <span className="flex w-full items-start justify-between gap-2">
@@ -209,12 +210,12 @@ export function WorkspaceHome({
                     </span>
                   </button>)}
                 </div> : <EmptyState title="Start a project space" detail="Bring related conversations and working files together in one place." actionLabel="Create project" onAction={() => onAction('new-project')} />)}
-                {sections.projects && projects.filter((p) => !p.archived).length > recentProjects.length && <button type="button" onClick={() => onAction('library')} className="mt-2 inline-flex min-h-8 items-center gap-1.5 px-1 text-[11px] text-slate-500 hover:text-slate-300">Explore all projects <ArrowRight size={12} /></button>}
+                {sections.projects && projects.filter((p) => !p.archived).length > recentProjects.length && <button type="button" onClick={() => onAction('projects')} className="mt-2 inline-flex min-h-8 items-center gap-1.5 px-1 text-[11px] text-slate-500 hover:text-slate-300">Explore all projects <ArrowRight size={12} /></button>}
               </section>
 
               <section aria-labelledby="section-recent-conversations">
                 <SectionHeading title="Recent conversations" count={recentConversations.length} open={sections.conversations} onToggle={() => onToggleSection('conversations')} action={<button type="button" onClick={() => onAction('new-chat')} className="inline-flex min-h-8 items-center gap-1.5 rounded-md px-2 text-[11px] text-slate-400 hover:bg-white/[.05] hover:text-slate-200"><Plus size={13} />New</button>} />
-                {sections.conversations && (recentConversations.length ? <div className="divide-y divide-white/[.055] rounded-xl border border-white/[.07] bg-[#15171e]/75">
+                {sections.conversations && (recentConversations.length ? <div className="stagger divide-y divide-white/[.055] rounded-xl border border-white/[.07] bg-[#15171e]/75">
                   {recentConversations.map((conversation) => <button key={conversation.id} type="button" onClick={() => onOpenConversation(conversation.id)} className={`group flex w-full items-center gap-3 px-3.5 text-left hover:bg-white/[.035] focus-visible:outline focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-violet-300 ${compact ? 'min-h-12' : 'min-h-[58px]'}`}>
                     <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-violet-300/[.065] text-violet-200/80"><MessageSquare size={14} /></span>
                     <span className="min-w-0 flex-1 truncate text-[12px] font-medium text-slate-300 group-hover:text-slate-100">{conversation.title}</span>
@@ -229,7 +230,7 @@ export function WorkspaceHome({
             <div className="space-y-7">
               <section aria-labelledby="section-recently-updated">
                 <SectionHeading title="Recently updated" count={recentItems.length} open={sections.items} onToggle={() => onToggleSection('items')} action={<button type="button" onClick={() => onAction('library')} className="inline-flex min-h-8 items-center gap-1.5 rounded-md px-2 text-[11px] text-slate-400 hover:bg-white/[.05] hover:text-slate-200">Library <ArrowRight size={12} /></button>} />
-                {sections.items && (recentItems.length ? <div className="divide-y divide-white/[.055] rounded-xl border border-white/[.07] bg-[#15171e]/75">
+                {sections.items && (recentItems.length ? <div className="stagger divide-y divide-white/[.055] rounded-xl border border-white/[.07] bg-[#15171e]/75">
                   {recentItems.map((item) => {
                     const Icon = kindIcon[item.kind];
                     return <button key={item.id} type="button" onClick={() => onOpenItem(item.id)} className={`group flex w-full items-center gap-3 px-3.5 text-left hover:bg-white/[.035] focus-visible:outline focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-violet-300 ${compact ? 'min-h-12' : 'min-h-[58px]'}`}>

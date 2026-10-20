@@ -27,6 +27,7 @@ const starters = ['Help me outline a project plan', 'Summarise my notes into key
 export function ChatPage({ path, goto, notify }: { path: string; goto: (h: string) => void; notify: (m: string) => void }) {
   const id = path.startsWith('/workspace/chat/') ? path.split('/')[3] : null;
   const { prefs } = usePrefs();
+  const studioWidth = prefs.workspaceMode === 'studio';
   const { caps } = useCaps();
   const uid = useAuth().user?.uid ?? 'guest';
   const savingRef = useRef(false), runningRef = useRef(false);
@@ -110,7 +111,7 @@ export function ChatPage({ path, goto, notify }: { path: string; goto: (h: strin
       <Button variant="quiet" onClick={() => setConfirmDel(true)}><Trash2 size={13} />Delete</Button>
       {conv.data && <ActionMenu label="More conversation actions" items={acts.items(conv.data)}><MoreHorizontal size={15} /></ActionMenu>}
     </div>}
-    <div className="mx-auto w-full max-w-[820px] flex-1 px-4 py-6 sm:px-6">
+    <div className={`mx-auto w-full ${studioWidth ? 'max-w-[1100px]' : 'max-w-[820px]'} flex-1 px-4 py-6 sm:px-6`}>
       {id && msgs.loading && !msgs.data && <div className="space-y-4"><Skeleton className="h-16 w-2/3" /><Skeleton className="ml-auto h-12 w-1/2" /></div>}
       {msgs.error && <LoadError message={msgs.error} retry={msgs.refresh} />}
       {id && conv.data === undefined && !conv.loading && !conv.error && <Notice>This conversation was not found in this browser. <Link href="/workspace" className="underline">Start a new chat</Link>.</Notice>}
@@ -142,7 +143,7 @@ export function ChatPage({ path, goto, notify }: { path: string; goto: (h: strin
       <div ref={endRef} />
     </div>
     <div className="safe-b sticky bottom-0 border-t border-white/[.06] bg-[#101116]/95 px-3 pt-3 backdrop-blur sm:px-6">
-      <div className="mx-auto max-w-[820px]">
+      <div className={`mx-auto ${studioWidth ? 'max-w-[1100px]' : 'max-w-[820px]'}`}>
         {id && !available && <p className="mb-2 text-[11px] text-amber-200/80">Model unavailable. New messages are saved locally and not sent.</p>}
         {files.length > 0 && <div className="mb-2 flex flex-wrap gap-1.5">{files.map((f, i) => <span key={i} className="inline-flex items-center gap-1.5 rounded-md border border-white/10 bg-white/[.04] px-2 py-1 text-[11px]"><Paperclip size={11} />{f.name} · {formatBytes(f.size)}<button aria-label={`Remove ${f.name}`} onClick={() => setFiles(files.filter((_, j) => j !== i))}><X size={12} /></button></span>)}<span className="self-center text-[11px] text-slate-500">Attachments stay in this browser and are never sent to a model.</span></div>}
         <div className="flex items-end gap-1 rounded-2xl border border-white/10 bg-[#171920] p-2 focus-within:border-violet-400/40">
