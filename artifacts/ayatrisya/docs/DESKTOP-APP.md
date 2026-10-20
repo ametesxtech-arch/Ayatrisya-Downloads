@@ -83,6 +83,9 @@ credentials and must be completed before broad distribution.
 macOS installers on their native GitHub-hosted runners. Run it manually with
 `workflow_dispatch` or push a `desktop-v*` tag. The installers are uploaded as
 workflow artifacts for 30 days; the workflow does not publish a public release.
+The Windows job also silently installs the NSIS package and confirms the
+installed app remains running for ten seconds. This is a startup smoke check,
+not a full interactive application test.
 
 For website downloads, configure HTTPS URLs for
 `VITE_DESKTOP_DOWNLOAD_LINUX_URL`, `VITE_DESKTOP_DOWNLOAD_WINDOWS_URL`, and

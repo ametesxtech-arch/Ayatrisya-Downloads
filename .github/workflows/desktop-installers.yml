@@ -3,6 +3,8 @@ name: Build Ayatrisya desktop installers
 on:
   workflow_dispatch:
   push:
+    branches:
+      - replit/desktop-installers
     tags:
       - "desktop-v*"
 
@@ -47,6 +49,26 @@ jobs:
 
       - name: Build installer on native operating system
         run: pnpm --filter @workspace/ayatrisya run desktop:package:${{ matrix.target }}
+
+      - name: Install and launch Windows build
+        if: matrix.target == 'windows'
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem "generated-artifacts/ayatrisya-desktop/*.exe" | Select-Object -First 1
+          if (-not $installer) { throw "Windows installer was not produced." }
+
+          $installDir = Join-Path $env:RUNNER_TEMP "AyatrisyaSmoke"
+          $install = Start-Process -FilePath $installer.FullName -ArgumentList @("/S", "/D=$installDir") -Wait -PassThru
+          if ($install.ExitCode -ne 0) { throw "Windows installer exited with code $($install.ExitCode)." }
+
+          $app = Join-Path $installDir "ayatrisya.exe"
+          if (-not (Test-Path $app)) { throw "Installed Ayatrisya executable was not found." }
+
+          $process = Start-Process -FilePath $app -PassThru
+          Start-Sleep -Seconds 10
+          $process.Refresh()
+          if ($process.HasExited) { throw "Installed Ayatrisya exited before the startup check completed." }
+          Stop-Process -Id $process.Id -Force
 
       - uses: actions/upload-artifact@v4
         with:

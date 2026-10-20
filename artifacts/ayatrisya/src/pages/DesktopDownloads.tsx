@@ -1,5 +1,5 @@
-import { ArrowLeft, Download, HardDriveDownload } from 'lucide-react';
-import { Link } from 'wouter';
+import { ArrowLeft, Download, HardDriveDownload } from "lucide-react";
+import { Link } from "wouter";
 
 const env = import.meta.env as unknown as {
   VITE_DESKTOP_DOWNLOAD_URL?: string;
@@ -12,7 +12,7 @@ function secureHttpsUrl(value?: string) {
   if (!value?.trim()) return undefined;
   try {
     const url = new URL(value.trim());
-    return url.protocol === 'https:' ? url.toString() : undefined;
+    return url.protocol === "https:" ? url.toString() : undefined;
   } catch {
     return undefined;
   }
@@ -21,18 +21,19 @@ function secureHttpsUrl(value?: string) {
 const releasePageUrl = secureHttpsUrl(env.VITE_DESKTOP_DOWNLOAD_URL);
 const platforms = [
   {
-    name: 'Linux',
-    status: 'x64 AppImage built; unsigned',
+    name: "Linux",
+    status: "x64 AppImage built on Linux; unsigned",
     downloadUrl: secureHttpsUrl(env.VITE_DESKTOP_DOWNLOAD_LINUX_URL),
   },
   {
-    name: 'Windows',
-    status: 'Native Windows build required; cross-build failed under Wine',
+    name: "Windows",
+    status: "x64 NSIS build and installed-app startup check passed; unsigned",
     downloadUrl: secureHttpsUrl(env.VITE_DESKTOP_DOWNLOAD_WINDOWS_URL),
   },
   {
-    name: 'macOS',
-    status: 'Native macOS build required; signing and notarization are not configured',
+    name: "macOS",
+    status:
+      "Universal DMG built on macOS; signing and notarization are not configured",
     downloadUrl: secureHttpsUrl(env.VITE_DESKTOP_DOWNLOAD_MAC_URL),
   },
 ];
@@ -41,7 +42,10 @@ export function DesktopDownloadsPage() {
   return (
     <main className="min-h-[100dvh] bg-[#0d0e12] px-5 py-8 text-slate-100 sm:px-8 sm:py-12">
       <div className="mx-auto max-w-4xl">
-        <Link href="/" className="inline-flex items-center gap-2 text-sm text-slate-400 transition-colors hover:text-white">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 text-sm text-slate-400 transition-colors hover:text-white"
+        >
           <ArrowLeft size={15} />
           Back to Ayatrisya
         </Link>
@@ -50,10 +54,15 @@ export function DesktopDownloadsPage() {
           <div className="flex size-12 items-center justify-center rounded-2xl border border-violet-300/20 bg-violet-400/10 text-violet-200">
             <HardDriveDownload size={22} />
           </div>
-          <p className="mt-7 text-[11px] font-semibold uppercase tracking-[.2em] text-violet-200">Ayatrisya Desktop</p>
-          <h1 className="display mt-2 text-4xl font-semibold tracking-[-.06em] sm:text-5xl">Get Ayatrisya Desktop</h1>
+          <p className="mt-7 text-[11px] font-semibold uppercase tracking-[.2em] text-violet-200">
+            Ayatrisya Desktop
+          </p>
+          <h1 className="display mt-2 text-4xl font-semibold tracking-[-.06em] sm:text-5xl">
+            Get Ayatrisya Desktop
+          </h1>
           <p className="mt-5 max-w-2xl text-sm leading-7 text-slate-400">
-            The desktop app can open folders you choose and run commands only after you approve them. The web app stays browser-only.
+            The desktop app can open folders you choose and run commands only
+            after you approve them. The web app stays browser-only.
           </p>
 
           {releasePageUrl ? (
@@ -67,20 +76,36 @@ export function DesktopDownloadsPage() {
               Open Ayatrisya releases
             </a>
           ) : (
-            <div role="status" className="mt-7 rounded-xl border border-amber-200/15 bg-amber-200/[.06] p-4 text-sm text-amber-100/90">
+            <div
+              role="status"
+              className="mt-7 rounded-xl border border-amber-200/15 bg-amber-200/[.06] p-4 text-sm text-amber-100/90"
+            >
               Public release and installer links are not configured yet.
             </div>
           )}
         </section>
 
-        <section className="mt-6 rounded-2xl border border-white/[.08] bg-[#111319] p-5 sm:p-7" aria-labelledby="platform-status">
-          <h2 id="platform-status" className="text-sm font-semibold text-slate-200">Installer status</h2>
+        <section
+          className="mt-6 rounded-2xl border border-white/[.08] bg-[#111319] p-5 sm:p-7"
+          aria-labelledby="platform-status"
+        >
+          <h2
+            id="platform-status"
+            className="text-sm font-semibold text-slate-200"
+          >
+            Installer status
+          </h2>
           <ul className="mt-4 divide-y divide-white/[.06]">
             {platforms.map((platform) => (
-              <li key={platform.name} className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+              <li
+                key={platform.name}
+                className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between"
+              >
                 <div>
                   <span className="text-sm font-medium">{platform.name}</span>
-                  <p className="mt-1 text-xs leading-5 text-slate-400">{platform.status}</p>
+                  <p className="mt-1 text-xs leading-5 text-slate-400">
+                    {platform.status}
+                  </p>
                 </div>
                 {platform.downloadUrl ? (
                   <a
@@ -91,17 +116,23 @@ export function DesktopDownloadsPage() {
                     Download
                   </a>
                 ) : (
-                  <span className="shrink-0 text-xs text-slate-500">Not hosted</span>
+                  <span className="shrink-0 text-xs text-slate-500">
+                    Not hosted
+                  </span>
                 )}
               </li>
             ))}
           </ul>
           <p className="mt-4 text-xs leading-5 text-slate-500">
-            Each installer needs its own public HTTPS download URL. Build instructions are in the project documentation.
+            Each installer needs its own public HTTPS download URL. Build
+            instructions are in the project documentation.
           </p>
         </section>
 
-        <Link href="/" className="mt-6 inline-flex min-h-10 items-center text-sm text-slate-400 transition-colors hover:text-white">
+        <Link
+          href="/"
+          className="mt-6 inline-flex min-h-10 items-center text-sm text-slate-400 transition-colors hover:text-white"
+        >
           Return to the web app
         </Link>
       </div>

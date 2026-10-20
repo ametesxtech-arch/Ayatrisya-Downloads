@@ -14,3 +14,16 @@ Native installers need native operating-system runners. In the Replit Linux envi
 **Why:** Replit's Linux host cannot run the Windows NSIS packaging step reliably and does not provide Apple's macOS packaging tools.
 
 **How to apply:** Preserve the browser/desktop capability boundary. Never silently broaden folder access or sync scope. Use native Windows and macOS runners before calling those installers complete or tested; keep signing, notarization, and public hosting status explicit.
+
+Native desktop CI must keep the runner-specific optional binaries for Rollup,
+esbuild, lightningcss, and Tailwind's native engine in the pnpm lockfile. The
+Replit development workspace was optimized for Linux x64, so its platform
+overrides originally removed the Windows and macOS binaries.
+
+**Why:** The first real native CI run passed Linux but failed on Windows and
+macOS before electron-builder ran because Vite could not load the missing
+platform bindings.
+
+**How to apply:** When adding a native runner or changing pnpm overrides, confirm
+its architecture's optional binaries remain in the lockfile and pass a frozen
+install on that runner before debugging packaging.
