@@ -27,6 +27,7 @@ export interface AyatrisyaDesktopApi {
   removeProjectFolder(projectId: string): Promise<void>;
   listFiles(projectId: string, relativePath: string): Promise<DesktopFile[]>;
   readFile(projectId: string, relativePath: string): Promise<string>;
+  createFile(projectId: string, relativePath: string): Promise<void>;
   writeFile(projectId: string, relativePath: string, content: string): Promise<void>;
   runCommand(projectId: string, command: string): Promise<DesktopCommandResult>;
 }

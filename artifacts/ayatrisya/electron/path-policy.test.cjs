@@ -29,9 +29,11 @@ test("keeps resolved paths inside the selected project, including symbolic links
   await fs.mkdir(root);
   await fs.mkdir(outside);
   await fs.writeFile(path.join(root, "readme.md"), "hello");
+  const rootLink = path.join(temp, "project-link");
   await fs.writeFile(path.join(outside, "secret.txt"), "not for this project");
   try {
     await fs.symlink(outside, path.join(root, "external"), "dir");
+    await fs.symlink(outside, rootLink, "dir");
   } catch (error) {
     if (error.code === "EPERM" || error.code === "EACCES") {
       t.diagnostic("Symlink creation is not permitted in this environment.");
@@ -44,6 +46,10 @@ test("keeps resolved paths inside the selected project, including symbolic links
   assert.equal(await fs.readFile(found.path, "utf8"), "hello");
   await assert.rejects(resolveExistingPath(fs, root, "../outside/secret.txt"));
   await assert.rejects(resolveWritableFile(fs, root, "../outside/secret.txt"));
+  if (await fs.lstat(rootLink).then((stat) => stat.isSymbolicLink(), () => false)) {
+    await assert.rejects(resolveExistingPath(fs, rootLink, "secret.txt"), /replaced/);
+    await assert.rejects(resolveWritableFile(fs, rootLink, "new.txt"), /replaced/);
+  }
 
   try {
     await fs.realpath(path.join(root, "external"));

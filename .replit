@@ -27,3 +27,7 @@ VITE_FIREBASE_AUTH_DOMAIN = "ayatrisya.firebaseapp.com"
 VITE_FIREBASE_PROJECT_ID = "ayatrisya"
 VITE_FIREBASE_APP_ID = "1:663542830691:web:70912ddce81c1ecd284a56"
 FIREBASE_PROJECT_ID = "ayatrisya"
+
+[nix]
+channel = "stable-25_05"
+packages = ["glib", "nspr", "nss", "atk", "at-spi2-atk", "cups", "dbus", "cairo", "gtk3", "pango", "xorg.libX11", "xorg.libXcomposite", "xorg.libXdamage", "xorg.libXext", "xorg.libXfixes", "xorg.libXrandr", "xorg.libxcb", "mesa", "libxkbcommon", "alsa-lib", "libgbm", "xorg.xorgserver", "gsettings-desktop-schemas", "hicolor-icon-theme"]

@@ -2,9 +2,12 @@
 
 ## Local data
 
-No cloud content database or backend upload service is used. Conversations,
-projects, notes, documents, presentations, preferences and permitted files are
-stored in IndexedDB in the current browser profile and current site origin.
+No cloud content database or backend upload service is used. In the web app,
+conversations, projects, notes, documents, presentations, preferences and
+permitted files are stored in IndexedDB in the current browser profile and site
+origin. In the desktop app, that same React workspace uses a stable local
+`localhost` origin for IndexedDB, and user-selected project folders remain at
+their original paths on the computer.
 Firebase identities have distinct local namespaces. New users must sign in; there
 is no anonymous workspace. Records created by older guest-mode versions stay in a
 separate legacy namespace and can be explicitly imported after sign-in. Import
@@ -141,11 +144,40 @@ Next: deploy the team's runtime, confirm protocol/CORS, configure the endpoint,
 then test capability availability, real generation, streaming, stop, failures,
 privacy consent and STT/TTS with team-provided models.
 
-## Desktop release
+## Desktop app
 
-Optional `VITE_DESKTOP_DOWNLOAD_URL` must point to a genuine HTTPS release.
-Until supplied, desktop download remains coming soon. The browser does not
-execute commands or read arbitrary folders.
+The desktop build uses Electron and the shared React/Vite UI. Renderer JavaScript
+has no Node.js or shell access. A small context-isolated preload exposes only
+typed project-folder operations; the main process accepts requests only from
+the trusted top-level Ayatrisya window.
+
+Folder access requires choosing each directory in the operating-system picker.
+Only relative paths under a granted folder can be listed, read or edited.
+Symlinks are not exposed by the file list and resolved paths are checked against
+the selected folder. The built-in editor accepts text files up to 1 MB. Revoking
+access removes Ayatrisya's saved grant and does not delete user files.
+
+The desktop command runner is one-shot, not an interactive persistent shell.
+Each command is shown in an operating-system confirmation dialog with its exact
+working folder. It runs only in that selected project root, has a 60-second
+timeout and a 128 KB output limit. The web app does not expose this bridge and
+does not claim unrestricted local-file or terminal access.
+
+The selected-folder grants and the desktop app's local data remain on that
+computer. Existing Google Drive backup/restore is optional and user-triggered;
+it currently covers Ayatrisya's own workspace backup, **not the contents of
+selected OS project folders**. Those folders are not uploaded or synced.
+
+The packaged app serves its UI from a stable loopback `localhost` origin so
+IndexedDB remains available across restarts. Add `localhost` to Firebase
+Authentication's authorized domains for desktop sign-in. The OAuth popup
+bridge permits Firebase's standard `firebaseapp.com` / `web.app` auth handler
+and Google OAuth popups; custom Firebase auth domains need a deliberate
+desktop allowlist change before they will work.
+
+See [DESKTOP-APP.md](DESKTOP-APP.md) for development, installer commands and
+OS-specific build/signing requirements. Installer artifacts are written to
+`generated-artifacts/ayatrisya-desktop/` and are not committed or deployed.
 
 ## Checks
 

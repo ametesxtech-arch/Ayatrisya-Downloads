@@ -33,7 +33,12 @@ function isWithin(root, candidate) {
 
 async function resolveExistingPath(fs, root, relativePath, expectedKind = "file") {
   const clean = cleanRelativePath(relativePath, true);
-  const rootReal = await fs.realpath(root);
+  const rootPath = path.resolve(root);
+  const rootInfo = await fs.lstat(rootPath);
+  if (rootInfo.isSymbolicLink() || !rootInfo.isDirectory()) {
+    throw new Error("The selected project folder is unavailable or has been replaced.");
+  }
+  const rootReal = await fs.realpath(rootPath);
   const candidate = path.resolve(rootReal, clean || ".");
   if (!isWithin(rootReal, candidate)) throw new Error("File access must stay inside the selected project folder.");
   const realPath = await fs.realpath(candidate);
@@ -47,7 +52,12 @@ async function resolveExistingPath(fs, root, relativePath, expectedKind = "file"
 
 async function resolveWritableFile(fs, root, relativePath) {
   const clean = cleanRelativePath(relativePath);
-  const rootReal = await fs.realpath(root);
+  const rootPath = path.resolve(root);
+  const rootInfo = await fs.lstat(rootPath);
+  if (rootInfo.isSymbolicLink() || !rootInfo.isDirectory()) {
+    throw new Error("The selected project folder is unavailable or has been replaced.");
+  }
+  const rootReal = await fs.realpath(rootPath);
   const candidate = path.resolve(rootReal, clean);
   if (!isWithin(rootReal, candidate)) throw new Error("File access must stay inside the selected project folder.");
 

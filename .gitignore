@@ -2,11 +2,13 @@
 
 # compiled output
 dist
+/generated-artifacts/
 tmp
 out-tsc
 *.tsbuildinfo
 .expo
 .expo-shared
+artifacts/ayatrisya/desktop/build/
 
 # dependencies
 node_modules

@@ -13,6 +13,7 @@ import { DeleteProjectDialog, DriveBadge, DriveDialog } from '@/components/ItemD
 import { usePrefs } from '@/hooks/use-prefs';
 import { pushNotice } from '@/lib/notify';
 import { ActionMenu, useContextMenu, type MenuItem } from '@/components/Menus';
+import { DesktopProjectManager } from '@/components/DesktopProjectManager';
 
 const colors = { violet: 'text-violet-200 bg-violet-400/15', cyan: 'text-cyan-200 bg-cyan-400/15', rose: 'text-rose-200 bg-rose-400/15', amber: 'text-amber-200 bg-amber-400/15', emerald: 'text-emerald-200 bg-emerald-400/15' } as const;
 const icons = { folder: FolderKanban, code: Code2, book: BookOpen, music: Music2, orbit: Orbit } as const;
@@ -70,8 +71,9 @@ function ProjectList({ goto, notify }: { goto: (h: string) => void; notify: (m: 
     { label: 'Delete', danger: true, onSelect: () => setDel(p) },
   ];
   const act = async (fn: () => Promise<void>, ok: string) => { try { await fn(); if (ok) notify(ok); } catch (e) { notify(errMsg(e)); } };
-  return <div className="mx-auto max-w-[1100px] p-4 sm:p-8">
+  return <div className="mx-auto max-w-[1400px] p-4 sm:p-8">
     <PageHeading eyebrow="Projects" title="Keep the work in one place." description="Projects group notes, documents and files stored in this browser. Backups are manual from Storage." actions={<Button onClick={() => setForm('new')} data-testid="button-new-project"><Plus size={15} />New project</Button>} />
+    <DesktopProjectManager />
     <div className="mb-4 grid gap-2 sm:grid-cols-[1fr_auto_auto_auto]">
       <label className="relative block"><span className="sr-only">Search projects</span><Search size={15} className="absolute left-3 top-3.5 text-slate-500" /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search projects" className={`${inputCls} pl-9`} /></label>
       <label><span className="sr-only">Sort projects</span><select value={sort} onChange={(e) => setSort(e.target.value as 'date' | 'name')} className={inputCls}><option value="date">Recently updated</option><option value="name">Name</option></select></label>

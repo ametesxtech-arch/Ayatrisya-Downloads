@@ -1,0 +1,39 @@
+# AYATRISYA DESKTOP — AI-FIRST CODING ENVIRONMENT LIKE ANTIGRAVITY
+
+Important clarification: Ayatrisya Desktop is not merely a companion app or a wrapper for the Ayatrisya website. It must become a dedicated AI coding environment inspired by the workflow of modern agentic IDEs.
+
+Build the desktop architecture around coding projects and an AI agent that will use Ayatrisya's own models, developed separately by Antigravity.
+
+## Core requirements
+
+1. Build a cross-platform desktop application using Electron and the existing React/TypeScript UI where appropriate.
+2. Create a dedicated Coding Workspace with:
+   - Project creation and opening.
+   - User-authorized local folder access.
+   - File explorer and tabs.
+   - Code editor with syntax highlighting.
+   - Integrated terminal.
+   - Diff viewer and change review.
+   - Git integration where available.
+   - App preview and test results.
+   - AI conversation and agent task panel.
+3. Implement an agent orchestration layer that can eventually connect to Ayatrisya's own locally hosted or self-hosted models.
+4. The agent workflow must support task planning, file inspection, proposed edits, controlled file modifications, test execution, error analysis, and iterative fixes.
+5. Show the agent's plan and important actions. Let users review changes before accepting them.
+6. Require explicit approval before destructive file operations, package installation, external network operations, or potentially dangerous terminal commands.
+7. Never provide the renderer with unrestricted filesystem, shell, or Node.js access. Use a narrow, validated Electron IPC bridge and a secure execution service.
+8. Support cancellation, timeouts, task history, error recovery, and rollback of changes where possible.
+9. Keep projects and coding files on the user's computer by default. Do not upload project contents to Ayatrisya servers unless the user explicitly submits the relevant content for model processing or enables a specific sync feature.
+10. Do not integrate third-party AI inference APIs. Build a typed model interface for Ayatrisya's own models and display an honest unavailable state until a real model endpoint is connected.
+11. Keep the regular Ayatrisya web application functional; the desktop coding environment is an additional dedicated experience.
+12. Use free, open-source packaging tools and prepare a Windows `.exe` installer as the first distribution target.
+
+## Implementation strategy
+
+Build the desktop shell, project/file management, editor, diff viewer, terminal integration, and security boundaries first. Implement a deterministic mock agent only for clearly labelled development testing. Never present mock responses as real AI.
+
+Then connect the coding-agent orchestration interface to Antigravity's separately developed Ayatrisya models when their real inference interface is ready.
+
+Do not claim full autonomous coding works until the actual model, tool execution, file operations, and test-and-repair loop have passed end-to-end tests.
+
+Finish with a real Windows build, installation test, security review, and reproducible build instructions.
