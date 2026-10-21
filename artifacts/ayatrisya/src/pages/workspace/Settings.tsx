@@ -78,8 +78,9 @@ function Models() {
       {error && <LoadError message={error} retry={refresh} />}
       {caps.map((c) => <div key={c.id} className="py-3 text-sm" data-testid={`capability-${c.id}`}><div className="flex items-center justify-between"><b>{c.label}</b><span className={`text-xs ${c.available ? 'text-teal-300' : 'text-amber-300'}`}>{c.available ? 'Reported available' : 'Unavailable'}</span></div><p className="mt-1 text-xs text-slate-500">{c.reason}{c.available ? ` Streaming: ${c.streaming ? 'yes' : 'no'}. Modalities: ${c.modalities.join(', ') || 'text'}.` : ''}</p></div>)}
       {!loading && caps.length === 0 && !error && <p className="py-3 text-sm text-slate-400">No capabilities were reported. No model is connected.</p>}
-      <p className="py-3 text-xs text-slate-500">The web endpoint is configured when the app is built. Ayatrisya Desktop can use the separate local endpoint above. There is no fallback to a third-party AI service.</p>
+      <p className="py-3 text-xs text-slate-500">“Reported available” comes from the model capability list; it does not prove inference works. Hosted model calls are authenticated and proxied through Ayatrisya’s server. Desktop localhost inference remains separate. No third-party AI service is used.</p>
     </Card>
+    <LiveModelTest model={prefs.model} />
     {import.meta.env.DEV && <Card title="Developer-only visual preview">
       <p className="py-3 text-xs text-slate-400">DEMO — NOT REAL AI. This isolated example is not a model response, is never saved to a conversation, and is excluded from production builds.</p>
       <Button variant="outline" onClick={() => setDemoOpen(v => !v)}>{demoOpen ? 'Hide illustration' : 'Preview example response layout'}</Button>
@@ -88,21 +89,44 @@ function Models() {
   </>;
 }
 
-function isLoopbackEndpoint(raw: string) {
-  try {
-    const endpoint = new URL(raw);
-    return ["http:", "https:"].includes(endpoint.protocol) &&
-      ["localhost", "127.0.0.1", "[::1]"].includes(endpoint.hostname.toLowerCase()) &&
-      endpoint.pathname === "/" && !endpoint.username && !endpoint.password &&
-      !endpoint.search && !endpoint.hash;
-  } catch {
-    return false;
+function LiveModelTest({ model }: { model: ModelId }) {
+  const [busy, setBusy] = useState(false);
+  const [status, setStatus] = useState("");
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    setStatus("");
+    setError("");
+  }, [model]);
+
+  async function runTest() {
+    setBusy(true);
+    setError("");
+    setStatus("");
+    try {
+      const result = await modelClient.generateResponse(
+        [{ role: "user", content: "Reply with a short greeting to confirm this live inference test." }],
+        { model, mode: "Normal" },
+      );
+      if (!result.trim()) throw new Error("The model returned an empty response.");
+      setStatus(`${model === "v1-fast" ? "V1 Fast" : "V2 Best Result"} completed a live inference test. The test prompt and response were not saved.`);
+    } catch (cause) {
+      setError(errMsg(cause));
+    } finally {
+      setBusy(false);
+    }
   }
+
+  return <Card title="Live inference test">
+    <p className="py-3 text-xs leading-5 text-slate-400">Send a short, unsaved test prompt through the selected model. A health check or capability report alone does not verify that generation works.</p>
+    <Button onClick={() => void runTest()} disabled={busy}>{busy ? "Testing model…" : "Run live inference test"}</Button>
+    {status && <p className="mt-3 text-xs text-teal-200" role="status">{status}</p>}
+    {error && <p className="mt-3 text-xs text-rose-200" role="alert">{error}</p>}
+  </Card>;
 }
 
 function DesktopLocalModel({ onRefresh }: { onRefresh: () => void }) {
   const desktop = typeof window !== "undefined" ? window.ayatrisyaDesktop : undefined;
-  const envCandidate = import.meta.env.VITE_AYATRISYA_ENDPOINT ?? "";
   const [endpoint, setEndpoint] = useState("");
   const [savedEndpoint, setSavedEndpoint] = useState("");
   const [loading, setLoading] = useState(Boolean(desktop));
@@ -116,14 +140,14 @@ function DesktopLocalModel({ onRefresh }: { onRefresh: () => void }) {
     desktop.getLocalModelEndpoint().then((saved) => {
       if (!active) return;
       setSavedEndpoint(saved);
-      setEndpoint(saved || (isLoopbackEndpoint(envCandidate) ? envCandidate : ""));
+      setEndpoint(saved);
     }).catch((cause) => {
       if (active) setError(errMsg(cause));
     }).finally(() => {
       if (active) setLoading(false);
     });
     return () => { active = false; };
-  }, [desktop, envCandidate]);
+  }, [desktop]);
 
   async function saveEndpoint() {
     if (!desktop) return;
@@ -170,7 +194,7 @@ function DesktopLocalModel({ onRefresh }: { onRefresh: () => void }) {
     {!desktop
       ? <p className="py-3 text-xs leading-5 text-slate-400">Local model URLs are available only in Ayatrisya Desktop. A browser cannot reach localhost on your computer.</p>
       : <div className="py-3">
-        <p className="text-xs leading-5 text-slate-400">Connect an Ayatrisya model adapter running on this computer. Only localhost, 127.0.0.1, or [::1] is accepted. The address is saved on this desktop and is not synced. It can expose chat, planning, and image/3D/music generation through the documented Ayatrisya protocol. No vendor AI API is called.</p>
+      <p className="text-xs leading-5 text-slate-400">Connect an Ayatrisya model adapter running on this computer. Only localhost, 127.0.0.1, or [::1] is accepted. The address is saved on this desktop and is not synced. It uses a separate local transport; hosted API credentials are never sent to your computer. No vendor AI API is called.</p>
         <label htmlFor="desktop-local-model-url" className="mt-3 block text-xs font-medium text-slate-400">Local adapter URL</label>
         <input id="desktop-local-model-url" type="url" value={endpoint} onChange={(event) => setEndpoint(event.target.value)} placeholder="http://127.0.0.1:1234" autoComplete="off" spellCheck={false} className={`${inputCls} mt-1.5 max-w-xl`} disabled={loading || busy} />
         <p className="mt-1 text-[10px] text-slate-500">{savedEndpoint ? "A local endpoint is saved on this desktop." : "No local endpoint is saved."} This setting does not store API credentials.</p>

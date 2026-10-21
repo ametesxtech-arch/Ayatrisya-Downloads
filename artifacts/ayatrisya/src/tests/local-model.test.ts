@@ -40,7 +40,7 @@ describe("desktop-local model transport", () => {
       configurable: true,
       value: { ayatrisyaDesktop: bridge },
     });
-    const client = new AyatrisyaModelClient("");
+    const client = new AyatrisyaModelClient();
 
     try {
       const caps = await client.getModelCapabilities();

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { firebaseAuth, firebaseConfigured } from "@/integrations/firebase/client";
 import type {
   AssetGenerationKind,
   AssetGenerationOptions,
@@ -26,6 +27,18 @@ const localModelPaths = new Set([
   "/generate/music",
 ]);
 const MAX_GENERATION_RESPONSE_BYTES = 24 * 1024 * 1024;
+type TokenProvider = () => Promise<string>;
+
+async function getFirebaseModelToken(): Promise<string> {
+  if (!firebaseConfigured) {
+    throw new Error("Firebase sign-in is not configured, so hosted models are unavailable.");
+  }
+  const user = firebaseAuth().currentUser;
+  if (!user) {
+    throw new Error("Sign in to Ayatrisya to use hosted models. Your local chats remain available.");
+  }
+  return user.getIdToken();
+}
 
 async function readJsonBounded(response: Response, maxBytes: number): Promise<unknown> {
   if (!response.body) throw new Error("The Ayatrisya model returned an empty response.");
@@ -104,20 +117,10 @@ function decodeGeneratedAsset(
   const extension = spec[1];
   return { blob: new Blob([bytes], { type: spec[0] }), fileName: `${rawBase || `ayatrisya-${kind}`}${extension}` };
 }
-export function validateEndpoint(raw:string):string {
-  const endpoint = new URL(raw);
-  if (endpoint.protocol !== "https:" || endpoint.username || endpoint.password || endpoint.search || endpoint.hash) throw new Error("Use an HTTPS Ayatrisya-owned endpoint without credentials, query strings, or fragments.");
-  if (/(^|\.)(openai\.com|anthropic\.com|googleapis\.com|groq\.com|openrouter\.ai|huggingface\.co|huggingface\.com)$/.test(endpoint.hostname)) throw new Error("Third-party AI inference endpoints are not permitted.");
-  if (["localhost","127.0.0.1","0.0.0.0"].includes(endpoint.hostname)) throw new Error("A production browser cannot use a localhost model URL.");
-  return endpoint.href.replace(/\/$/,"");
-}
 export class AyatrisyaModelClient implements ModelTransport {
-  private endpoint:string|null=null;
-  private configError="";
   private generation?:AbortController;
   private localRequestId?:string;
-  constructor(raw = import.meta.env.VITE_AYATRISYA_ENDPOINT ?? "") {
-    if (raw) try { this.endpoint=validateEndpoint(raw); } catch(e) {this.configError=e instanceof Error?e.message:"Invalid model configuration.";}
+  constructor(private readonly tokenProvider: TokenProvider = getFirebaseModelToken) {
   }
   private async request(path:string,init:RequestInit={},signal?:AbortSignal) {
     const desktop = typeof window !== "undefined" ? window.ayatrisyaDesktop : undefined;
@@ -155,14 +158,20 @@ export class AyatrisyaModelClient implements ModelTransport {
         if (this.localRequestId === requestId) this.localRequestId = undefined;
       }
     }
-    if(!this.endpoint)throw new Error(this.configError || "Ayatrisya's model endpoint is not configured. Your message can remain saved locally; no AI request was sent.");
+    const token = await this.tokenProvider();
     const controller=new AbortController(); const abort=()=>controller.abort(signal?.reason);
     if(signal?.aborted)abort();else signal?.addEventListener("abort",abort,{once:true});
     const timer=setTimeout(()=>controller.abort(new DOMException("Model request timed out.","TimeoutError")),120000);
     const dispose=()=>{clearTimeout(timer);signal?.removeEventListener("abort",abort);};
     try {
-      const response=await fetch(`${this.endpoint}${path}`,{...init,signal:controller.signal,credentials:"omit",redirect:"error",referrerPolicy:"no-referrer"});
-      if(!response.ok)throw new Error(response.status===503?"The Ayatrisya model is unavailable. Retry later.":`Ayatrisya model request failed (${response.status}).`);
+      const headers=new Headers(init.headers);
+      headers.set("Authorization",`Bearer ${token}`);
+      const response=await fetch(`/api/model${path}`,{...init,headers,signal:controller.signal,credentials:"omit",redirect:"error",referrerPolicy:"no-referrer"});
+      if(!response.ok) {
+        let message="";
+        try { message=z.object({error:z.string().max(200)}).parse(await response.clone().json()).error; } catch { /* use the safe status message */ }
+        throw new Error(message || (response.status===503?"The Ayatrisya model is unavailable. Retry later.":`Ayatrisya model request failed (${response.status}).`));
+      }
       return {response,dispose};
     } catch(e) {dispose();throw e;}
   }
@@ -172,7 +181,6 @@ export class AyatrisyaModelClient implements ModelTransport {
     let localEndpoint = "";
     try { localEndpoint = desktop ? await desktop.getLocalModelEndpoint() : ""; }
     catch { return unavailable("Could not read the desktop local model setting."); }
-    if(!this.endpoint && !localEndpoint)return unavailable(this.configError||"No Ayatrisya model endpoint configured");
     try {
       const {response,dispose}=await this.request("/capabilities");
       try {
@@ -183,17 +191,34 @@ export class AyatrisyaModelClient implements ModelTransport {
           return {id:id as ModelCapability["id"],label,available:model?.available??false,reason:model?.reason??(model?.available?"Ready":"Model not ready"),streaming:localEndpoint?false:model?.streaming??false,attachments:false,modalities:localEndpoint?(model?.modalities??["chat"]).filter((modality)=>supportedLocalModalities.includes(modality)):model?.modalities??[]};
         });
       } finally {dispose();}
-    } catch {return unavailable(localEndpoint?"Could not verify the local adapter. Check its /capabilities response.":"Could not verify model availability. Check endpoint health and CORS.");}
+    } catch (error) {
+      return unavailable(error instanceof Error ? error.message : "Could not verify Ayatrisya model availability.");
+    }
   }
   async getConnectionHealth() {
     let localEndpoint: string;
     try { localEndpoint = typeof window !== "undefined" && window.ayatrisyaDesktop ? await window.ayatrisyaDesktop.getLocalModelEndpoint() : ""; }
     catch { return {configured:true,connected:false,message:"Could not read the desktop local model setting"}; }
-    if(!this.endpoint&&!localEndpoint)return {configured:false,connected:false,message:this.configError||"No Ayatrisya endpoint configured"};
     try {
       const {response,dispose}=await this.request("/health");
-      try {const body=await response.json();return {configured:true,connected:body?.status==="ok",message:body?.status==="ok"?"Ayatrisya endpoint reachable":"Endpoint returned an invalid health status"};} finally {dispose();}
-    } catch {return {configured:true,connected:false,message:"Ayatrisya endpoint could not be reached"};}
+      let health: unknown;
+      try {health=await response.json();} finally {dispose();}
+      if (!z.object({status:z.literal("ok")}).safeParse(health).success) {
+        return {configured:true,connected:false,message:"Model service returned an invalid health status."};
+      }
+      const capability = (await this.getModelCapabilities()).find((model) => model.available);
+      if (!capability) {
+        return {configured:true,connected:false,message:"Health check passed, but no model reports available."};
+      }
+      const text = await this.generateResponse(
+        [{role:"user",content:"Reply with a short greeting to confirm this live inference test."}],
+        {model:capability.id,mode:"Normal"},
+      );
+      if (!text.trim()) return {configured:true,connected:false,message:"The model returned an empty response during the inference test."};
+      return {configured:true,connected:true,message:`Live inference succeeded with ${capability.label}.`};
+    } catch (error) {
+      return {configured:Boolean(localEndpoint)||firebaseConfigured,connected:false,message:error instanceof Error?error.message:"Ayatrisya model endpoint could not be reached"};
+    }
   }
   async generateResponse(messages:ModelMessage[],options:GenerationOptions):Promise<string> {
     const capability=(await this.getModelCapabilities()).find(m=>m.id===options.model);

@@ -1,5 +1,4 @@
 import { createHash } from "node:crypto";
-import { createRemoteJWKSet, jwtVerify } from "jose";
 import { Router, type IRouter, type Request, type Response } from "express";
 import {
   createOAuthState,
@@ -7,15 +6,13 @@ import {
   openOAuthCookie,
   sealOAuthCookie,
 } from "../lib/oauth-security";
+import { verifiedFirebaseUid } from "../lib/firebase-auth";
 
 const router: IRouter = Router();
 const STATE_TTL_MS = 10 * 60 * 1000;
 const CONNECTION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const REFRESH_SESSION_TTL_MS = 90 * 24 * 60 * 60 * 1000;
 const COOKIE_ROOT = "/api/integrations";
-const FIREBASE_KEYS = createRemoteJWKSet(
-  new URL("https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com"),
-);
 
 type Provider = "github" | "figma";
 type OAuthState = {
@@ -69,14 +66,12 @@ const providers: Record<Provider, {
   },
 };
 
-let firebaseProjectId = process.env.FIREBASE_PROJECT_ID ?? "";
-
 function configured(provider: Provider): boolean {
   return Boolean(
     providers[provider].clientId &&
     providers[provider].clientSecret &&
     (process.env.SESSION_SECRET?.length ?? 0) >= 32 &&
-    firebaseProjectId &&
+    process.env.FIREBASE_PROJECT_ID &&
     (process.env.NODE_ENV !== "production" || process.env.AYATRISYA_APP_ORIGIN),
   );
 }
@@ -166,33 +161,6 @@ function appOriginForRequest(req: Request): string | undefined {
     }
     return url.origin;
   } catch {
-    return undefined;
-  }
-}
-
-async function firebaseUid(req: Request, res: Response): Promise<string | undefined> {
-  const authorization = req.get("authorization");
-  const match = authorization?.match(/^Bearer ([^\s]+)$/i);
-  if (!match) {
-    res.status(401).json({ error: "Sign in to Ayatrisya before connecting an account." });
-    return undefined;
-  }
-  firebaseProjectId = process.env.FIREBASE_PROJECT_ID ?? "";
-  if (!firebaseProjectId) {
-    res.status(503).json({ error: "Firebase authentication is not configured on the connector service." });
-    return undefined;
-  }
-  try {
-    const { payload } = await jwtVerify(match[1], FIREBASE_KEYS, {
-      issuer: `https://securetoken.google.com/${firebaseProjectId}`,
-      audience: firebaseProjectId,
-    });
-    if (typeof payload.sub !== "string" || !/^[\w-]{1,128}$/.test(payload.sub)) {
-      throw new Error("Invalid Firebase subject.");
-    }
-    return payload.sub;
-  } catch {
-    res.status(401).json({ error: "Your sign-in session expired. Sign in again and retry." });
     return undefined;
   }
 }
@@ -382,7 +350,7 @@ function returnToApp(origin: string, provider: Provider, result: "connected" | "
 
 router.get("/integrations/status", async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
-  const uid = await firebaseUid(req, res);
+  const uid = await verifiedFirebaseUid(req, res);
   if (!uid) return;
   const status = {} as Record<Provider, {
     configured: boolean;
@@ -409,7 +377,7 @@ router.get("/integrations/:provider/start", async (req, res) => {
     res.status(404).json({ error: "That provider is not supported." });
     return;
   }
-  const uid = await firebaseUid(req, res);
+  const uid = await verifiedFirebaseUid(req, res);
   if (!uid) return;
   if (!configured(provider)) {
     res.status(503).json({ error: `${providers[provider].label} OAuth is not configured on this server.` });
@@ -565,7 +533,7 @@ router.post("/integrations/:provider/disconnect", async (req, res) => {
     res.status(404).json({ error: "That provider is not supported." });
     return;
   }
-  const uid = await firebaseUid(req, res);
+  const uid = await verifiedFirebaseUid(req, res);
   if (!uid) return;
   const current = openOAuthCookie<ProviderSession>(
     parseCookie(req, providerCookieName(provider)),

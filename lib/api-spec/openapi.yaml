@@ -10,6 +10,10 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: model
+    description: Authenticated Ayatrisya model gateway operations
+security:
+  - FirebaseBearer: []
 paths:
   /healthz:
     get:
@@ -17,6 +21,7 @@ paths:
       tags: [health]
       summary: Health check
       description: Returns server health status
+      security: []
       responses:
         "200":
           description: Healthy
@@ -24,7 +29,323 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /model/health:
+    get:
+      operationId: getModelHealth
+      tags: [model]
+      summary: Check Ayatrisya model service health
+      responses:
+        "200":
+          description: Model service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModelHealth"
+        "401":
+          description: Sign-in required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModelError"
+        "503":
+          description: Model service is not configured or unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModelError"
+  /model/capabilities:
+    get:
+      operationId: getModelCapabilities
+      tags: [model]
+      summary: Read models and modalities reported by the Ayatrisya model service
+      responses:
+        "200":
+          description: Reported capabilities
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModelCapabilities"
+        "401":
+          description: Sign-in required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModelError"
+        "503":
+          description: Model service is not configured or unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModelError"
+  /model/chat:
+    post:
+      operationId: sendModelChat
+      tags: [model]
+      summary: Send a chat request to an Ayatrisya model
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatInput"
+      responses:
+        "200":
+          description: Model response (JSON, NDJSON, or server-sent events)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatOutput"
+            application/x-ndjson:
+              schema:
+                type: string
+            text/event-stream:
+              schema:
+                type: string
+        "400":
+          description: Invalid chat request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModelError"
+        "401":
+          description: Sign-in required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModelError"
+        "429":
+          description: Per-user model request limit reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModelError"
+        "503":
+          description: Model service is not configured or unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModelError"
+  /model/generate/image:
+    post:
+      operationId: generateModelImage
+      tags: [model]
+      summary: Generate an image with an Ayatrisya model
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ModelAssetInput"
+      responses:
+        "200":
+          description: Generated image
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneratedAsset"
+        "400":
+          description: Invalid generation request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModelError"
+        "401":
+          description: Sign-in required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModelError"
+        "429":
+          description: Per-user model request limit reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModelError"
+        "503":
+          description: Model service is not configured or unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModelError"
+  /model/generate/3d:
+    post:
+      operationId: generateModel3d
+      tags: [model]
+      summary: Generate a 3D asset with an Ayatrisya model
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ModelAssetInput"
+      responses:
+        "200":
+          description: Generated 3D asset
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneratedAsset"
+        "400":
+          description: Invalid generation request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModelError"
+        "401":
+          description: Sign-in required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModelError"
+        "429":
+          description: Per-user model request limit reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModelError"
+        "503":
+          description: Model service is not configured or unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModelError"
+  /model/generate/music:
+    post:
+      operationId: generateModelMusic
+      tags: [model]
+      summary: Generate music with an Ayatrisya model
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ModelAssetInput"
+      responses:
+        "200":
+          description: Generated music
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneratedAsset"
+        "400":
+          description: Invalid generation request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModelError"
+        "401":
+          description: Sign-in required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModelError"
+        "429":
+          description: Per-user model request limit reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModelError"
+        "503":
+          description: Model service is not configured or unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModelError"
+  /model/transcribe:
+    post:
+      operationId: transcribeWithModel
+      tags: [model]
+      summary: Transcribe audio with an Ayatrisya model
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/AudioTranscriptionInput"
+      responses:
+        "200":
+          description: Transcribed text
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TranscriptionOutput"
+        "400":
+          description: Invalid transcription request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModelError"
+        "401":
+          description: Sign-in required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModelError"
+        "429":
+          description: Per-user model request limit reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModelError"
+        "503":
+          description: Model service is not configured or unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModelError"
+  /model/speech:
+    post:
+      operationId: synthesizeModelSpeech
+      tags: [model]
+      summary: Synthesize speech with an Ayatrisya model
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SpeechInput"
+      responses:
+        "200":
+          description: Generated speech audio
+          content:
+            audio/mpeg:
+              schema:
+                type: string
+                format: binary
+            audio/wav:
+              schema:
+                type: string
+                format: binary
+        "400":
+          description: Invalid speech request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModelError"
+        "401":
+          description: Sign-in required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModelError"
+        "429":
+          description: Per-user model request limit reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModelError"
+        "503":
+          description: Model service is not configured or unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModelError"
 components:
+  securitySchemes:
+    FirebaseBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
   schemas:
     HealthStatus:
       type: object
@@ -33,4 +354,151 @@ components:
           type: string
       required:
         - status
+    ModelError:
+      type: object
+      properties:
+        error:
+          type: string
+          maxLength: 200
+      required: [error]
+    ModelHealth:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [ok]
+      required: [status]
+    ModelCapability:
+      type: object
+      properties:
+        id:
+          type: string
+          enum: [v1-fast, v2-best]
+        available:
+          type: boolean
+        reason:
+          type: string
+          maxLength: 300
+        streaming:
+          type: boolean
+        attachments:
+          type: boolean
+        modalities:
+          type: array
+          maxItems: 16
+          items:
+            type: string
+            maxLength: 40
+      required: [id, available]
+    ModelCapabilities:
+      type: object
+      properties:
+        models:
+          type: array
+          maxItems: 2
+          items:
+            $ref: "#/components/schemas/ModelCapability"
+      required: [models]
+    ModelMessage:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: [user, assistant]
+        content:
+          type: string
+          maxLength: 100000
+      required: [role, content]
+    ChatInput:
+      type: object
+      properties:
+        messages:
+          type: array
+          minItems: 1
+          maxItems: 128
+          items:
+            $ref: "#/components/schemas/ModelMessage"
+        model:
+          type: string
+          enum: [v1-fast, v2-best]
+        mode:
+          type: string
+          enum: [Normal, Savage, Joke]
+        stream:
+          type: boolean
+      required: [messages, model, mode, stream]
+    ChatOutput:
+      type: object
+      properties:
+        text:
+          type: string
+          maxLength: 2000000
+      required: [text]
+    ModelAssetInput:
+      type: object
+      properties:
+        prompt:
+          type: string
+          minLength: 1
+          maxLength: 4000
+        model:
+          type: string
+          enum: [v1-fast, v2-best]
+        format:
+          type: string
+          enum: [PNG, JPEG, GLB, WAV, MP3]
+        aspectRatio:
+          type: string
+          maxLength: 16
+        width:
+          type: integer
+          minimum: 1
+          maximum: 4096
+        height:
+          type: integer
+          minimum: 1
+          maximum: 4096
+        durationSeconds:
+          type: integer
+          minimum: 1
+          maximum: 300
+      required: [prompt, model, format]
+    GeneratedAsset:
+      type: object
+      properties:
+        fileName:
+          type: string
+          minLength: 1
+          maxLength: 160
+        mimeType:
+          type: string
+          minLength: 1
+          maxLength: 100
+        dataBase64:
+          type: string
+          minLength: 1
+          maxLength: 20000000
+      required: [fileName, mimeType, dataBase64]
+    AudioTranscriptionInput:
+      type: object
+      properties:
+        audio:
+          type: string
+          description: Multipart audio file part; forwarded without decoding.
+      required: [audio]
+    TranscriptionOutput:
+      type: object
+      properties:
+        text:
+          type: string
+          maxLength: 200000
+      required: [text]
+    SpeechInput:
+      type: object
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 20000
+      required: [text]
 
