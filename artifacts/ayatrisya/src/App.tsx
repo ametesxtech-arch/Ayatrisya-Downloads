@@ -10,6 +10,7 @@ import { usePrefs } from '@/hooks/use-prefs';
 import { Emblem } from '@/components/Brand';
 import { Landing } from '@/pages/Landing';
 import { DesktopDownloadsPage } from '@/pages/DesktopDownloads';
+import { PublicDocumentation, PublicLegalRoute } from '@/pages/PublicPages';
 import { wallpapers } from '@/data/wallpapers';
 import { CloudPreferenceSyncProvider } from '@/integrations/firebase/CloudPreferenceSync';
 
@@ -99,6 +100,13 @@ function Router() {
         <Switch>
           <Route path="/" component={Landing} />
           <Route path="/desktop" component={DesktopDownloadsPage} />
+          <Route path="/documentation" component={PublicDocumentation} />
+          <Route path="/privacy" component={PublicLegalRoute} />
+          <Route path="/terms" component={PublicLegalRoute} />
+          <Route path="/contact" component={PublicLegalRoute} />
+          <Route path="/copyright" component={PublicLegalRoute} />
+          <Route path="/licenses" component={PublicLegalRoute} />
+          <Route path="/cookies" component={PublicLegalRoute} />
           <Route path="/intro" component={LegacyIntroRedirect} />
           <Route path="/auth/sign-in" component={AuthPage} />
           <Route path="/auth/create-account" component={AuthPage} />

@@ -2,12 +2,14 @@
 
 ## Local data
 
-No cloud content database or backend upload service is used. In the web app,
-conversations, projects, notes, documents, presentations, preferences and
-permitted files are stored in IndexedDB in the current browser profile and site
-origin. In the desktop app, that same React workspace uses a stable local
-`localhost` origin for IndexedDB, and user-selected project folders remain at
-their original paths on the computer.
+By default, conversations, projects, notes, documents, presentations,
+preferences, and permitted files are stored in IndexedDB in the current browser
+profile and site origin. Desktop uses a stable local `localhost` origin for
+IndexedDB, and user-selected project folders remain at their original paths.
+Separate, opt-in routes can send selected personalization settings to Firebase
+Firestore, user-selected content/backups to Google Drive, and model requests to
+the authenticated hosted model gateway. Those routes are described below; local
+storage does not mean that every optional feature is local-only.
 Firebase identities have distinct local namespaces. New users must sign in; there
 is no anonymous workspace. Records created by older guest-mode versions stay in a
 separate legacy namespace and can be explicitly imported after sign-in. Import
@@ -28,8 +30,13 @@ local profile only. A downloaded backup is not a synchronization operation.
 
 ## Firebase Authentication
 
-Uses the official Firebase web SDK only for identity. There is no Firestore
-content storage. Configure these **public web-app configuration** variables:
+Uses the official Firebase web SDK for identity. Optional cross-device
+personalization uses one Firestore document per signed-in user. It contains a
+built-in wallpaper choice and selected personalization controls, including the
+memory summary; it does not contain conversations, messages, attachments, or
+custom wallpaper image bytes. Turning sync off stops future sync but does not
+delete the existing Firestore document. Configure these **public web-app
+configuration** variables:
 
 - `VITE_FIREBASE_API_KEY`
 - `VITE_FIREBASE_AUTH_DOMAIN`
@@ -76,10 +83,13 @@ be published and approved by Figma before other users can authorize it.
 
 These initial connections verify account identity only. They **do not** read
 GitHub repositories or Figma design files, and they do not send or sync Ayatrisya
-content. GitHub and Figma access tokens are encrypted in short-lived browser
-cookies and are refreshed server-side when the provider supports it. Disconnect
-clears Ayatrisya's session; revoke its authorization separately in the provider's
-security settings to invalidate the provider grant too.
+workspace content. The API service exchanges OAuth codes, retrieves account
+identity, and stores an encrypted provider session in a secure, HttpOnly cookie;
+provider tokens are not available to browser JavaScript. Disconnect clears the
+Ayatrisya session; revoke the provider grant separately in the provider's
+security settings. Cookie expiry depends on provider token expiry and the
+configured maximum session lifetime; this is not a statement about provider
+data retention.
 
 Set `FIREBASE_PROJECT_ID` on the API service to the same Firebase project as
 `VITE_FIREBASE_PROJECT_ID`. Missing OAuth app settings are reported as not
@@ -100,77 +110,47 @@ The Replit project-owner connector is intentionally NOT used to handle app users
 private content. Tokens are in memory only, expire, and are revoked on disconnect.
 Connecting does not immediately upload anything.
 
-Implemented boundary: manual browser-profile backup/restore in
-`Ayatrisya/Backups/workspace-backup.json`, a local pending/failed/conflict queue,
-bounded retry scheduling, checksums, guarded writes, explicit conflict choices,
-pause/resume and read-back confirmation. It refuses to overwrite when Drive does
-not provide an ETag. This is NOT a finished continuous, per-item, cross-device
-bidirectional sync service. Exports/Projects remote folders, item-level tombstones,
-automatic background retries and offline Drive files are not implemented.
-Remote download requires an explicit validated merge/replace restore.
+Implemented boundary: full browser-profile backup/restore in
+`Ayatrisya/Backups/workspace-backup.json`, plus explicit project and item copies
+after the user selects those actions. A full backup can include conversations,
+messages, projects, notes, preferences, attachment metadata, and file bytes.
+Uploads use a local pending/failed/conflict queue, guarded writes, explicit
+conflict choices, and read-back confirmation; overwrites are refused without a
+Drive ETag. This is not automatic continuous bidirectional sync. Remote full
+backup restore requires an explicit validated merge/replace choice. The app can
+move tracked remote project/item copies to Drive trash; no in-app delete control
+for the full backup file was found, so users must manage that copy in Drive.
 There are no live OAuth or Drive test results without an authorized account.
 
-## Ametesx-owned model protocol
+## Hosted and desktop-local model processing
 
-Optional `VITE_AYATRISYA_ENDPOINT` must be the exact HTTPS endpoint of
-Ametesx-controlled infrastructure, with no credentials/query/fragment.
-No third-party inference provider or localhost fallback is supported.
-The browser sends no cookies or secrets to the model server; configure CORS for
-the exact app origins. If model-server authorization becomes necessary, add a
-server-side credential boundary rather than putting secrets in the browser.
+The browser sends model requests to the same-origin Ayatrisya API routes under
+`/api/model/*`. The API verifies a Firebase ID token, applies per-user limits,
+and forwards the request to the HTTPS endpoint configured by the server-only
+`AYATRISYA_MODEL_ENDPOINT` and `AYATRISYA_MODEL_API_KEY` variables. The model
+endpoint operator, region, and content-retention terms are deployment-specific
+and were not verified in this workspace. A URL or environment variable alone
+does not prove that the endpoint is operated by Ametesx.
 
-- `GET /health` -> `{ "status": "ok" }`
-- `GET /capabilities` -> `{ "models": [{ "id": "v1-fast" | "v2-best",
-  "available": true, "reason": "...", "streaming": true,
-  "modalities": ["chat", "stt", "tts"] }] }`
-- `POST /chat` JSON `{ messages: [{role,content}], model, mode, stream }`
-  where modes are `Normal`, `Savage`, `Joke`.
-- Non-stream reply: `application/json` `{ "text": "..." }`.
-- Stream: NDJSON or SSE `data:` JSON lines `{ "token": "..." }`,
-  optional `{ "done": true }` / `[DONE]`. Errors may use `{ "error": "..." }`.
-- `POST /transcribe` multipart audio -> `{ "text": "..." }`
-- `POST /speech` JSON `{ "text": "..." }` -> `audio/*` bytes.
+Hosted chat sends the message history supplied to the model, together with
+personalization-injected context. The chat attachment bytes are stored locally
+and are not included in the chat request; when a message contains only
+attachments, the submitted model text includes their filenames. Hosted
+transcription sends the selected recording to the model endpoint, and speech
+synthesis sends its text. Image, 3D, and music generation send the prompt and
+generation settings. Returned text/audio/assets are received by the app and
+saved locally when the user chooses to keep them.
 
-### Ayatrisya-owned image, 3D, and music generation
+Ayatrisya Desktop uses a separate Electron main-process bridge to a model
+service on the same computer, restricted to loopback addresses and fixed model
+paths. It does not send model requests to the hosted gateway as a fallback.
+This integration does not include model weights or establish which local model
+is installed. The local model service itself receives the request.
 
-The configured Ayatrisya model endpoint may additionally declare `image`, `3d`,
-or `music` in a model's `modalities`. A capability is considered available only
-when the endpoint reports it; the UI never fabricates output while unavailable.
-Prompts are sent only after the user confirms each generation action. Web
-requests go to the configured HTTPS Ayatrisya-owned endpoint; desktop-local
-requests use the fixed loopback paths through Electron IPC.
-
-- `POST /generate/image` JSON
-  `{ "prompt", "model", "format": "PNG" | "JPEG", "aspectRatio",
-  "width", "height" }`
-- `POST /generate/3d` JSON
-  `{ "prompt", "model", "format": "GLB" }`
-- `POST /generate/music` JSON
-  `{ "prompt", "model", "format": "WAV" | "MP3", "durationSeconds" }`
-- Each returns JSON `{ "fileName", "mimeType", "dataBase64" }`. Ayatrisya
-  checks the declared media type, payload size, and basic file signature before
-  showing or saving the result.
-
-The local bridge permits only these fixed routes, loopback hosts, bounded
-request fields, and JSON responses. The renderer cannot choose arbitrary URLs
-or paths. Generation response bodies are limited to 24 MB; decoded asset files
-are limited to 18 MB. `GLB` is the supported generated 3D delivery format.
-This protocol is an integration contract, not a bundled model: the desktop
-adapter, model weights, and suitable compute must be supplied and operated by
-the Ayatrisya owner. No third-party inference provider is included.
-
-Text-only chat transport deliberately does not upload local attachments.
-Generation supports network/format/status errors, 120-second timeout, AbortSignal
-and stop cancellation. STT/TTS calls are gated by declared actual capability.
-No prompt/audio/file body is logged. There is no production mock AI mode.
-The development-only Models settings visual preview is explicitly labelled
-`DEMO — NOT REAL AI`, isolated from conversations, and removed from production.
-
-The application cannot prove ownership from a URL; the deployment owner must
-configure only Ametesx infrastructure and disclose remote processing to users.
-Next: deploy the team's runtime, confirm protocol/CORS, configure the endpoint,
-then test capability availability, real generation, streaming, stop, failures,
-privacy consent and STT/TTS with team-provided models.
+The gateway has request-size limits, per-user rate limits, a timeout, and
+cancellation. The model route does not intentionally log prompt or audio bodies;
+platform, API access-log, and model-endpoint logging/retention policies are not
+verified here. No claim about remote retention or training use is made.
 
 ## Desktop app
 

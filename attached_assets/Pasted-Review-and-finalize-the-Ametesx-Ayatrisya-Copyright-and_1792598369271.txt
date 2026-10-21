@@ -1,0 +1,36 @@
+Review and finalize the Ametesx · Ayatrisya Copyright and Intellectual Property page.
+
+Preserve the existing design, factual wording, and cautious legal tone. Inspect the actual repository before changing anything.
+
+### 1. Verify the MIT licence scope
+- Inspect the root package manifest, root LICENSE file, repository documentation, and relevant package-level licences.
+- Determine which code and components the MIT licence actually covers.
+- Do not imply that the Ayatrisya or Ametesx logos, brand names, visual identity, documentation, model weights, datasets, generated assets, or third-party materials are automatically MIT-licensed.
+- If the scope remains unclear, explicitly mark it for owner confirmation.
+
+### 2. Verify third-party notices
+- Identify relevant dependencies, fonts, icons, YARA-X components, malware rules, and model assets actually distributed with the product.
+- Preserve their individual licences, attribution requirements, and redistribution restrictions.
+- Do not claim that a dependency or model can be redistributed until its applicable terms have been checked.
+- Link to the actual third-party notices or create a dedicated `/licenses` page if appropriate.
+
+### 3. Complete the rights-request process
+- Do not invent a contact email or legal entity.
+- If no verified rights-request channel exists, retain an owner-review warning and mark publication as blocked until one is configured.
+
+### 4. Improve page clarity
+Keep separate sections for:
+- Ametesx and Ayatrisya brand identity.
+- Original software and content.
+- Open-source software and third-party materials.
+- Models, datasets and generated content.
+- Copyright or intellectual-property enquiries.
+
+Only include statements supported by the repository or confirmed by the owner. Avoid asserting legal rights beyond what has been established.
+
+### 5. Verify before finishing
+- Test the page and footer navigation on desktop and mobile.
+- Run the existing typecheck and production build.
+- Report the exact files and licence notices inspected, what was verified, unresolved owner decisions, and actual test results.
+
+Do not mark the page legally approved while the licence scope or rights-request contact remains unresolved.

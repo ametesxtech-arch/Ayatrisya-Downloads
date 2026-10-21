@@ -1,5 +1,6 @@
 import { ArrowLeft, Download, HardDriveDownload } from "lucide-react";
 import { Link } from "wouter";
+import { PublicSiteFooter, PublicSiteHeader } from "@/components/PublicSite";
 
 const env = import.meta.env as unknown as {
   VITE_DESKTOP_DOWNLOAD_URL?: string;
@@ -40,8 +41,10 @@ const platforms = [
 
 export function DesktopDownloadsPage() {
   return (
-    <main className="min-h-[100dvh] bg-[#0d0e12] px-5 py-8 text-slate-100 sm:px-8 sm:py-12">
-      <div className="mx-auto max-w-4xl">
+    <div className="min-h-[100dvh] bg-[#0d0e12] text-slate-100">
+      <PublicSiteHeader />
+      <main className="px-5 py-8 sm:px-8 sm:py-12">
+       <div className="mx-auto max-w-4xl">
         <Link
           href="/"
           className="inline-flex items-center gap-2 text-sm text-slate-400 transition-colors hover:text-white"
@@ -135,7 +138,9 @@ export function DesktopDownloadsPage() {
         >
           Return to the web app
         </Link>
-      </div>
-    </main>
+       </div>
+      </main>
+      <PublicSiteFooter />
+    </div>
   );
 }

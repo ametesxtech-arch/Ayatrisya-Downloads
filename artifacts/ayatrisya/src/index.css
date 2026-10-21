@@ -96,6 +96,8 @@ html[data-appearance="light"] ::placeholder{color:#6a7089}
 /* Motion tokens: transform and opacity only */
 :root{--dur-fast:140ms;--dur-base:240ms;--dur-slow:520ms;--ease-out:cubic-bezier(.2,.7,.2,1);--ease-soft:cubic-bezier(.4,0,.2,1);--z-sidebar:40;--z-menu:70;--z-modal:80;--z-toast:90}
 .brand-mark{display:block;object-fit:contain}
+.public-reading a:not([class]){color:#b3a9ff;text-decoration:underline;text-decoration-color:rgba(179,169,255,.35);text-underline-offset:3px}
+.public-reading a:not([class]):hover{text-decoration-color:#b3a9ff}
 .brand-mark-intro{animation:brand-mark-intro 680ms var(--ease-out) both}
 .brand-mark-subtle{animation:brand-mark-nudge 1100ms var(--ease-out) both}
 .brand-mark-loading{animation:brand-mark-breathe 2.8s var(--ease-soft) infinite}

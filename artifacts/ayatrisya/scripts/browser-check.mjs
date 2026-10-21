@@ -78,6 +78,39 @@ try {
     assert.equal(new URL(desktopUrl).protocol,'https:','Desktop download links must use HTTPS');
   }
   passed.push('Desktop action opens the download/status page or a secure configured installer URL');
+  const publicInfoRoutes=[
+    ['/documentation','Documentation'],
+    ['/privacy','Privacy Policy'],
+    ['/terms','Terms of Service'],
+    ['/contact','Contact'],
+    ['/copyright','Copyright and intellectual property'],
+    ['/licenses','Third-party licenses and attributions'],
+    ['/cookies','Cookies and storage notice'],
+  ];
+  for(const [route,title] of publicInfoRoutes){
+    await call('Page.navigate',{url:`http://127.0.0.1:80${route}`});
+    await wait(`location.pathname===${JSON.stringify(route)}`,`${route} route`);
+    await wait(`document.querySelector('h1')?.textContent.toLowerCase().includes(${JSON.stringify(title.toLowerCase())})`,`${route} heading`);
+    assert(await evaluate(`!!document.querySelector('footer a[href="/privacy"]')&&!!document.querySelector('footer a[href="/copyright"]')&&!!document.querySelector('footer a[href="/terms"]')&&!!document.querySelector('footer a[href="/documentation"]')`),`${route} is missing a required public policy/documentation footer link`);
+    for(const width of [360,390,768,1366,1920]){await setViewport(width,width<640?844:1000,width<1024);await assertNoHorizontalOverflow(`${route} at ${width}px`);}
+  }
+  await call('Page.navigate',{url:'http://127.0.0.1:80/documentation'});
+  await wait(`document.querySelector('[data-testid="input-documentation-search"]')`,'documentation search');
+  await click('footer a[href="/privacy"]');
+  await wait(`location.pathname==='/privacy'&&document.querySelector('h1')?.textContent.includes('Privacy Policy')`,'footer privacy link navigation');
+  assert(await evaluate(`document.querySelector('[data-testid="legal-page-unpublished"]')?.textContent.includes('Privacy Policy is not yet published')`),'Privacy route must remain unpublished');
+  assert(await evaluate(`document.querySelector('[data-testid="legal-page-unpublished"]')?.textContent.includes('Effective date: Pending owner and qualified legal approval')`),'Privacy effective date must remain pending');
+  assert.equal(await evaluate(`document.body.innerText.includes('Owner review required before publishing')`),false,'Internal privacy draft must not be rendered on the public route');
+  await call('Page.navigate',{url:'http://127.0.0.1:80/contact'});
+  await wait(`document.querySelector('[data-testid="legal-page-unpublished"]')?.textContent.includes('No verified, monitored contact channel')`,'contact publication gate');
+  await call('Page.navigate',{url:'http://127.0.0.1:80/copyright'});
+  await wait(`document.querySelector('h1')?.textContent.includes('Copyright and intellectual property')`,'copyright page');
+  assert(await evaluate(`document.body.innerText.includes('Draft for owner and legal review')&&document.body.innerText.includes('Rights-request contact: pending owner configuration')`),'Copyright page must remain visibly gated on owner review and a verified rights contact');
+  await call('Page.navigate',{url:'http://127.0.0.1:80/documentation'});
+  await wait(`document.querySelector('[data-testid="input-documentation-search"]')`,'documentation search after footer navigation');
+  await input('[data-testid="input-documentation-search"]','loopback');
+  await wait(`document.body.innerText.toLowerCase().includes('loopback')`,'documentation search results');
+  passed.push('Documentation and legal routes load with shared footer links; Privacy stays unpublished with a pending effective date; Copyright remains a draft; responsive widths 360, 390, 768, 1366, and 1920px; documentation search works');
   await call('Page.navigate',{url:'http://127.0.0.1:80/'});
   await wait(`document.querySelector('a[aria-label="Get Ayatrisya Desktop"]')`,'landing page after desktop status check');
   const testEmail=process.env.AYATRISYA_TEST_EMAIL,testPassword=process.env.AYATRISYA_TEST_PASSWORD;

@@ -1,0 +1,85 @@
+# Ametesx — Intellectual Property Ownership and Rights Policy
+
+Update the Ametesx Copyright and Intellectual Property page to establish Ametesx's intended ownership of its original intellectual property across its products, including Ayatrisya.
+
+## 1. Ownership statement
+
+Use the following as the core policy:
+
+“**Ametesx — Intellectual Property and Ownership**
+
+Ametesx is the parent brand for its products, including Ayatrisya. Subject to applicable law and any documented third-party rights, Ametesx claims ownership of the original intellectual property created for and lawfully owned by Ametesx, including its original software, source code, website design, original written content, product documentation, original graphics, logos, branding, visual identity, and other original creative materials.
+
+All rights in such material are reserved to the extent those rights are owned by or have been validly assigned or licensed to Ametesx. No permission to copy, modify, redistribute, commercially exploit, or use Ametesx-owned branding or proprietary materials is granted except as expressly authorized by Ametesx or permitted by applicable law.
+
+The Ametesx and Ayatrisya names, logos, and product identities are intended to identify Ametesx and its products. Their legal status and any applicable registrations must not be misrepresented.”
+
+## 2. Scope of intended ownership
+
+Clearly identify these categories as Ametesx-owned where ownership is verified:
+- Ametesx brand identity and original brand assets.
+- Ayatrisya product identity and original visual design.
+- Original website source code and proprietary application code.
+- Original user-interface designs, layouts and original graphics.
+- Original documentation, text, illustrations and marketing materials.
+- Original code, tools and models created by Ametesx, subject to contributor rights and applicable third-party licences.
+- Original inventions or other intellectual property only where the relevant legal requirements are met.
+
+## 3. Protect proprietary materials
+
+For original materials that Ametesx owns and intends to keep proprietary:
+- Do not describe them as MIT-licensed or open-source unless that is an intentional, authorized licensing decision.
+- Do not automatically apply the root package manifest's MIT licence to every product, brand asset, model, dataset or piece of content.
+- Inspect the actual LICENSE files, package manifests, repository notices and contributor agreements.
+- Identify conflicting or ambiguous licensing statements for owner review before publication.
+- Do not silently change existing licence terms or remove required third-party notices.
+
+## 4. Third-party rights remain separate
+
+Include a clear statement:
+
+“Third-party software, models, datasets, fonts, icons, libraries and other materials remain subject to their respective owners' rights and applicable licence terms. Ametesx does not claim ownership of third-party material merely because it is used, integrated, hosted or distributed as part of an Ametesx product.”
+
+Maintain a separate Third-Party Licenses and Attributions page.
+
+## 5. Ownership and assignment records
+
+Create an internal checklist, not a public claim of completed ownership, covering:
+- Code and creative work authored by the founder.
+- Work contributed by other developers or contractors.
+- Written assignments or licences needed to establish Ametesx's rights.
+- Third-party assets and model licences.
+- Repository licence conflicts.
+- Relevant trademark, copyright and other registration decisions.
+
+Do not claim that ownership has been legally transferred unless the required transfer has actually occurred.
+
+## 6. Copyright notice
+
+Use this footer format:
+
+“© [current year] Ametesx. All rights reserved.”
+
+For Ayatrisya product-specific materials, use:
+
+“© [current year] Ametesx · Ayatrisya. All rights reserved.”
+
+Apply these notices only to material Ametesx owns or is authorized to protect this way. Do not imply that a copyright notice overrides third-party licences.
+
+## 7. Enforcement and contact
+
+Explain that Ametesx may enforce rights it owns or is authorized to enforce, subject to applicable law.
+
+Do not invent a legal entity, registration, jurisdiction, or contact email. Keep the rights-request contact marked as an owner-review blocker until a real, monitored contact channel is configured.
+
+## 8. Implementation and verification
+
+- Inspect the actual repository before making changes.
+- Preserve existing website functionality and visual design.
+- Update the copyright page and relevant footer notices.
+- Check the root MIT licence and all applicable package-level notices.
+- Do not relicense third-party work or make retroactive licence changes without authorization.
+- Test the page, navigation, responsive layout, typecheck and production build.
+- Report verified ownership claims, licence conflicts and unresolved legal actions.
+
+The objective is to establish a strong, accurate statement of Ametesx's intended ownership of its own intellectual property without falsely claiming rights over material belonging to others.

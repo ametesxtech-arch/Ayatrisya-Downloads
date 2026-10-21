@@ -1,0 +1,183 @@
+# Ametesx Website — Complete Documentation, Legal Pages & Footer
+
+Implement a complete, polished documentation and legal-information system for the Ametesx website and its products, including Ayatrisya.
+
+Use the existing codebase, routing system, design tokens, branding, and components. Inspect the project before editing. Do not rebuild the website from scratch or break existing functionality.
+
+## 1. Footer redesign
+
+Use the provided Ayatrisya footer screenshot as the visual reference.
+
+Create a consistent, premium dark footer with:
+- Ametesx logo and brand name.
+- Product
+- Privacy
+- Documentation
+- Contact
+- Terms
+- Copyright notice: `© [current year] Ametesx · All rights reserved.`
+- A short, accurate local-first statement where applicable.
+
+Design requirements:
+- Near-black background with subtle borders.
+- Muted blue-grey text and restrained purple branding accents.
+- Horizontal, well-spaced layout on desktop.
+- Responsive stacking on mobile and tablet.
+- Accessible contrast, visible keyboard focus and working links.
+- Consistent typography, spacing and alignment.
+- Use the real existing logo asset. Do not invent a replacement logo.
+- Display the current year dynamically.
+
+Do not copy the Ayatrisya footer's product branding into every product. Use Ametesx as the parent brand and the correct product identity on each product page.
+
+## 2. Create a central documentation hub
+
+Add a `/documentation` page with a professional navigation layout, search if feasible, breadcrumbs, responsive navigation and clear categories.
+
+Include the following sections when relevant to the actual products and features present in the repository:
+
+### Getting Started
+- Overview of Ametesx and its products.
+- Account creation and sign-in.
+- Quick-start guides.
+- System requirements.
+- Frequently asked questions.
+
+### Products
+- Product overview and current development status.
+- Feature documentation.
+- Setup and installation guides.
+- Supported platforms and limitations.
+- Troubleshooting.
+
+### Ayatrisya
+Create a product-specific documentation section covering:
+- Overview and architecture.
+- Web versus desktop operation.
+- Local model runtime and cloud gateway distinction.
+- Model capabilities and limitations.
+- Chat and coding-agent workflows.
+- Image, music, 3D and speech features, where implemented.
+- Storage and privacy behavior.
+- Installation and update instructions.
+- API integration, authentication and error handling, if supported by the code.
+- WAR MODE security documentation, only for verified desktop functionality.
+- Troubleshooting and known limitations.
+
+Clearly distinguish implemented features from planned, experimental or unavailable features. Do not describe mockups or procedural generation as trained AI capabilities.
+
+### Developer Documentation
+- Architecture overview.
+- Project setup.
+- Environment variables, documenting names and purposes but never secret values.
+- API routes verified against source code.
+- Authentication and authorization.
+- Deployment and build instructions.
+- Testing and troubleshooting.
+- Versioning and changelog.
+
+Do not publish internal secrets, private repository URLs, credentials, API keys, sensitive server configuration or private user data.
+
+## 3. Create the legal pages
+
+Implement these pages using the existing routing and styling conventions:
+
+- `/privacy` — Privacy Policy
+- `/terms` — Terms of Service
+- `/contact` — Contact
+- `/copyright` — Copyright and Intellectual Property
+- `/licenses` — Third-Party Licenses and Attributions
+- `/cookies` — Cookie and Storage Notice, if applicable
+
+All pages must be accessible from the footer and documentation hub.
+
+### Privacy Policy
+
+Use the actual implementation to document:
+- Information collected during authentication.
+- Whether and how prompts, files, chats and generated content are processed or stored.
+- Local versus cloud processing.
+- Third-party services and integrations actually used.
+- Cookies, browser storage and local device storage.
+- Data retention and deletion mechanisms.
+- Security measures and their limitations.
+- User privacy requests and a verified contact channel.
+
+Do not promise that all data stays local if cloud inference, Firebase or other external services process it. Clearly disclose the difference between local desktop inference and web/mobile processing.
+
+### Terms of Service
+
+Cover appropriate terms for:
+- Acceptable and prohibited use.
+- User responsibility for uploaded content and generated output.
+- AI output limitations and the need to verify important results.
+- Account security.
+- Availability, experimental features and service changes.
+- Intellectual property.
+- Suspension and termination.
+- Appropriate limitation-of-liability and governing-law language for review.
+
+Do not invent a registered company, legal address, company registration number, jurisdiction, or enforceability claims.
+
+### Contact
+
+Use only an existing, verified contact email or contact channel discovered in the project. If none exists, create a clean contact page with a clearly marked configuration placeholder for the owner to fill in. Do not invent an email address.
+
+If a contact form exists or is added, validate inputs, protect it against abuse and provide real submission/error states. Do not show a success message unless submission actually succeeds.
+
+### Copyright and Intellectual Property
+
+Explain that original Ametesx website content, branding and software are protected to the extent applicable under law. Clearly distinguish Ametesx-owned material from third-party models, dependencies, fonts, icons, datasets and other licensed assets.
+
+Do not claim exclusive ownership of third-party material or assign a licence to the entire codebase unless the repository's actual licence supports it.
+
+### Third-Party Licenses
+
+Inspect the dependency manifests and actual bundled assets. Generate a truthful attribution page for identifiable third-party libraries and assets, preserving their licence names and required notices. Identify model licences separately from software dependency licences.
+
+Do not invent licences, authors, attributions or redistribution permissions. Flag unresolved licence questions for review.
+
+### Cookies and Storage
+
+Describe the actual use of cookies, local storage, IndexedDB, authentication persistence and any analytics or tracking found in the code. Do not claim that the site uses no cookies or tracking until verified.
+
+## 4. Copyright notices
+
+Use a consistent footer notice, such as:
+
+`© [current year] Ametesx. All rights reserved.`
+
+For Ayatrisya, use the appropriate product identity alongside the parent brand where relevant.
+
+Avoid claiming that every third-party component is owned by Ametesx. Do not add fake registration symbols, patents or trademark claims.
+
+## 5. Quality and technical requirements
+
+- Inspect the existing router and use its established patterns.
+- Reuse existing components, logo assets and design tokens.
+- Keep existing pages and working functionality intact.
+- Add page titles, meta descriptions and canonical URLs where the deployment domain is verified.
+- Ensure semantic headings, accessible links and keyboard navigation.
+- Add a useful 404 page if the site does not already have one.
+- Test all footer links and routes.
+- Test mobile, tablet and desktop layouts.
+- Run the existing typecheck, lint, test suite and production build.
+- Fix regressions introduced by these changes.
+- Do not introduce unnecessary paid dependencies or external services.
+- Do not expose private implementation details or secrets in public documentation.
+
+## 6. Important publishing rule
+
+Inspect the repository and existing implementation first. Draft factual documentation from verified source code and configuration.
+
+Where a fact is unknown, use a clearly marked owner-review placeholder or record it in an internal checklist. Do not publish invented claims about data handling, security, uptime, legal status, licences, contact details or product capabilities.
+
+Before finishing, produce a concise report listing:
+1. Pages and routes created or updated.
+2. Footer and responsive-design changes.
+3. Documentation sources inspected.
+4. Legal or licence details that still need owner review.
+5. Tests and build commands actually run, with results.
+6. Any remaining issues.
+
+Implement the complete changes now, following the existing codebase rather than generating a separate, disconnected mockup.

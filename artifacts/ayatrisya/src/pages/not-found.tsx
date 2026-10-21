@@ -1,23 +1,31 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { AlertCircle } from "lucide-react";
+import { Link } from "wouter";
+import { PublicSiteFooter, PublicSiteHeader } from "@/components/PublicSite";
 
 export default function NotFound() {
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-gray-50">
-      <Card className="w-full max-w-md mx-4">
-        <CardContent className="pt-6">
-          <div className="flex mb-4 gap-2">
-            <AlertCircle className="h-8 w-8 text-red-500" />
-            <h1 className="text-2xl font-bold text-gray-900">
-              404 Page Not Found
-            </h1>
-          </div>
-
-          <p className="mt-4 text-sm text-gray-600">
-            Did you forget to add the page to the router?
-          </p>
-        </CardContent>
-      </Card>
+    <div className="flex min-h-[100dvh] flex-col bg-[#101116] text-slate-100">
+      <PublicSiteHeader />
+      <main className="grid flex-1 place-items-center px-4 py-12">
+        <Card className="w-full max-w-md border-white/[.08] bg-[#15171e] text-slate-100">
+          <CardContent className="pt-6">
+            <div className="mb-4 flex gap-3">
+              <AlertCircle className="h-7 w-7 shrink-0 text-violet-300" />
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[.18em] text-violet-300">Not found</p>
+                <h1 className="display mt-1 text-2xl font-semibold tracking-[-.04em]">This page isn’t here</h1>
+              </div>
+            </div>
+            <p className="mt-4 text-sm leading-6 text-slate-400">The address may be incorrect or the page may have moved.</p>
+            <div className="mt-6 flex gap-4 text-xs">
+              <Link href="/" className="text-violet-200 underline underline-offset-4">Ayatrisya home</Link>
+              <Link href="/documentation" className="text-violet-200 underline underline-offset-4">Documentation</Link>
+            </div>
+          </CardContent>
+        </Card>
+      </main>
+      <PublicSiteFooter />
     </div>
   );
 }

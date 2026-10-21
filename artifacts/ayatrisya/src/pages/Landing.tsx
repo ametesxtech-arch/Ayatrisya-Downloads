@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Link, useLocation } from 'wouter';
 import {
   ArrowDown,
@@ -22,11 +21,10 @@ import { DesktopButton } from '@/components/DesktopButton';
 import { Eyebrow, Panel } from '@/components/Primitives';
 import { cx } from '@/lib/cx';
 import { Mark, Brand } from '@/components/Brand';
-import { Toast } from '@/components/Toast';
+import { PublicSiteFooter } from '@/components/PublicSite';
 import { useAuth } from '@/integrations/firebase/AuthProvider';
 
 export function Landing() {
-  const [toast, setToast] = useState('');
   const [, setPath] = useLocation();
   const { startGuest, user } = useAuth();
   return (
@@ -48,10 +46,22 @@ export function Landing() {
           <a href="#desktop" className="hover:text-white">
             Desktop
           </a>
+          <Link href="/documentation" className="hover:text-white">
+            Documentation
+          </Link>
           <a href="#about" className="hover:text-white">
             About
           </a>
         </nav>
+        <details className="relative lg:hidden">
+          <summary className="flex min-h-9 cursor-pointer list-none items-center rounded-lg border border-white/[.08] px-3 text-xs text-slate-300 focus-visible:outline-2 focus-visible:outline-violet-300 [&::-webkit-details-marker]:hidden">Menu</summary>
+          <nav aria-label="Mobile navigation" className="absolute right-0 top-11 z-30 grid min-w-44 gap-1 rounded-xl border border-white/10 bg-[#171920] p-2 shadow-2xl">
+            <a href="#capabilities" className="rounded-lg px-3 py-2.5 text-xs text-slate-300 hover:bg-white/[.05]">Product</a>
+            <a href="#desktop" className="rounded-lg px-3 py-2.5 text-xs text-slate-300 hover:bg-white/[.05]">Desktop</a>
+            <Link href="/documentation" className="rounded-lg px-3 py-2.5 text-xs text-slate-300 hover:bg-white/[.05]">Documentation</Link>
+            <a href="#about" className="rounded-lg px-3 py-2.5 text-xs text-slate-300 hover:bg-white/[.05]">Privacy</a>
+          </nav>
+        </details>
         <div className="landing-header-actions flex shrink-0 items-center gap-1.5 sm:gap-2">
           {!user && <button type="button" onClick={() => { startGuest(); setPath('/workspace/chat'); }} className="landing-guest-cta shrink-0 whitespace-nowrap rounded-lg border border-white/10 px-2.5 py-2.5 text-[10px] text-slate-200 transition hover:bg-white/[.05] sm:px-3 sm:text-xs">
             <span className="landing-guest-label-long">Try as guest</span><span className="landing-guest-label-short">Guest</span>
@@ -300,47 +310,7 @@ export function Landing() {
           </div>
         </section>
       </main>
-      <footer className="border-t border-white/[.06] px-5 py-8 md:px-9">
-        <div className="mx-auto flex max-w-[1160px] flex-col gap-5 text-[11px] text-slate-500 sm:flex-row sm:items-center sm:justify-between">
-          <Brand compact />
-          <div className="flex flex-wrap gap-x-6 gap-y-2">
-            <a href="#capabilities" className="hover:text-slate-300">
-              Product
-            </a>
-            <a href="#about" className="hover:text-slate-300">
-              Privacy
-            </a>
-            <button
-              onClick={() =>
-                setToast(
-                  'Documentation will be published as the product develops.',
-                )
-              }
-              className="hover:text-slate-300"
-            >
-              Documentation
-            </button>
-            <button
-              onClick={() =>
-                setToast('Contact information will be available soon.')
-              }
-              className="hover:text-slate-300"
-            >
-              Contact
-            </button>
-            <button
-              onClick={() =>
-                setToast('Terms will be published before public release.')
-              }
-              className="hover:text-slate-300"
-            >
-              Terms
-            </button>
-          </div>
-          <span>© Ametesx · local-first</span>
-        </div>
-      </footer>
-      {toast && <Toast message={toast} close={() => setToast('')} />}
+      <PublicSiteFooter />
     </div>
   );
 }

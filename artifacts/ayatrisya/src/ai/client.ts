@@ -304,7 +304,7 @@ export class AyatrisyaModelClient implements ModelTransport {
   }
   async getConnectionHealth() {
     const runtime = await this.desktopProvider();
-    let localEndpoint = "";
+    let localEndpoint: string;
     try { localEndpoint = runtime ? await runtime.api.getLocalModelEndpoint() : ""; }
     catch { return {configured:true,connected:false,message:"The saved desktop model endpoint is invalid. Update it in Ayatrisya Settings."}; }
     if (runtime && !localEndpoint) {
