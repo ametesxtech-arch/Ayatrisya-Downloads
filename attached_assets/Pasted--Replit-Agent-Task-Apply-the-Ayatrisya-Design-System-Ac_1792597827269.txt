@@ -1,0 +1,114 @@
+# Replit Agent Task: Apply the Ayatrisya Design System Across Ametesx
+
+Use the attached screenshot as the visual reference. I want you to upgrade the **entire Ametesx website** to match this premium, minimal, dark design language, while preserving Ametesx's own identity and existing functionality.
+
+## 1. Visual direction
+
+Recreate the reference's visual style:
+- Deep near-black background with subtle charcoal tones.
+- Restrained indigo, violet and blue accents.
+- Premium typography with clean spacing and alignment.
+- Minimal borders, subtle separators and restrained glow effects.
+- Generous whitespace and a polished, professional technology-brand appearance.
+- Consistent spacing, corner radii, iconography and typography across all pages.
+
+Do not make every section glow or add excessive gradients. The design should feel refined, cinematic and intentional.
+
+## 2. Global header and footer
+
+Create or refine reusable global components.
+
+**Header**
+- Consistent brand logo and Ametesx wordmark.
+- Clean navigation with active, hover and keyboard-focus states.
+- Responsive mobile navigation.
+- Proper alignment and spacing at desktop, tablet and mobile widths.
+
+**Footer**
+- Match the screenshot's overall composition: near-black background, horizontal layout, subtle top divider, left-aligned brand, centered navigation and right-aligned copyright.
+- Use the actual Ametesx brand assets and correct brand name.
+- Include the existing relevant links, such as Product, Privacy, Documentation, Contact and Terms, where those pages or destinations exist.
+- Use the actual current year dynamically for copyright.
+- At smaller widths, wrap or stack elements cleanly without horizontal overflow.
+- Ensure every link works and uses the correct destination.
+
+The screenshot is a design reference, not a request to rename Ametesx to Ayatrisya. Ametesx remains the parent brand.
+
+## 3. Apply the design to the ENTIRE existing website
+
+Audit every existing route, page and major section, including:
+- Homepage and hero
+- Product listings and product detail sections
+- Ayatrisya product page
+- Features and benefits
+- Documentation and resources
+- Contact forms
+- Privacy policy, terms and other legal pages
+- Login or account-related pages, if present
+- Backgrounds and any existing admin-configured content
+
+Apply a shared design system rather than independently styling each page. Reuse existing working components and data.
+
+Create design tokens for:
+- Background and surface colors
+- Primary and secondary text
+- Accent colors
+- Borders and shadows
+- Typography scale
+- Spacing
+- Radius
+- Transitions and focus states
+
+## 4. Preserve functionality
+
+This is a visual and consistency upgrade, not a destructive rebuild.
+
+- Preserve all existing routes, product information, forms, authentication, integrations and admin functionality.
+- Preserve existing uploaded backgrounds, configuration and saved content.
+- Do not invent products, pages, URLs, features or company claims.
+- Do not replace functional sections with static mockups.
+- Do not remove existing content simply to make the design cleaner.
+- Keep Ametesx branding distinct from the Ayatrisya product branding.
+- Avoid adding dependencies unless genuinely necessary.
+
+## 5. Responsive design and accessibility
+
+Test at:
+- Mobile: 360px and 390px
+- Tablet: 768px
+- Desktop: 1366px and 1920px
+
+Verify:
+- No horizontal overflow.
+- Readable text and sufficient contrast.
+- Keyboard navigation and visible focus states.
+- Accessible labels and semantic headings.
+- Reduced-motion preferences.
+- Functional mobile menus and forms.
+- Images and logos load correctly.
+
+## 6. Implementation and verification
+
+Before editing:
+1. Inspect the current project structure and all routes.
+2. Identify the existing shared header, footer, design tokens and page layouts.
+3. Record existing functionality that must remain unchanged.
+
+Then implement the redesign across all pages.
+
+After editing:
+1. Run the existing typecheck, lint and production build commands.
+2. Run the available automated tests.
+3. Visit every existing route in the browser.
+4. Test header/footer links and key interactions.
+5. Inspect the requested responsive widths.
+6. Fix broken assets, console errors and visual inconsistencies.
+7. Provide a concise report listing the pages changed, checks actually passed, and any remaining issues.
+
+Do not claim browser testing was completed if it was not performed.
+
+## Final quality target
+
+The complete Ametesx website should look like one cohesive, premium technology brand—not a mixture of unrelated templates. Match the reference's understated dark footer aesthetic and extend that design language consistently throughout the website.
+
+Start by auditing the existing project, then implement the smallest coherent set of changes needed to achieve this result.
