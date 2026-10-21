@@ -51,13 +51,14 @@ try {
   await wait(`document.querySelector('a[aria-label="Get Ayatrisya Desktop"]')`,'desktop download action');
   assert(await evaluate(`!/(maximum-scale\\s*=\\s*1|user-scalable\\s*=\\s*no)/i.test(document.querySelector('meta[name="viewport"]')?.content||'')`),'Mobile zoom must remain available');
   const faviconResponses=await evaluate(`Promise.all([...document.querySelectorAll('link[rel~="icon"]')].map(async link=>{const response=await fetch(link.href);return {path:new URL(link.href).pathname,ok:response.ok};}))`);
+  assert(faviconResponses.some(icon=>icon.path.endsWith('/favicon.ico')&&icon.ok),'ICO Ayatrisya favicon must load');
   assert(faviconResponses.some(icon=>icon.path.endsWith('/favicon.svg')&&icon.ok),'SVG Ayatrisya favicon must load');
   assert(faviconResponses.some(icon=>icon.path.endsWith('/ayatrisya-desktop.png')&&icon.ok),'PNG Ayatrisya favicon fallback must load');
   const wallpaperLayout=await evaluate(`(()=>{const root=document.documentElement,wasActive=root.dataset.wallpaperActive,previous=root.style.getPropertyValue('--workspace-wallpaper');root.dataset.wallpaperActive='true';root.style.setProperty('--workspace-wallpaper','url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 2 2%27%3E%3Crect width=%272%27 height=%272%27 fill=%27%237c6ceb%27/%3E%3C/svg%3E")');const shell=document.createElement('div'),main=document.createElement('main');shell.className='workspace-shell';shell.append(main);document.body.append(shell);const style=getComputedStyle(shell);const result={size:style.backgroundSize,position:style.backgroundPosition,repeat:style.backgroundRepeat,attachment:style.backgroundAttachment,mainBackground:getComputedStyle(main).backgroundColor};shell.remove();if(wasActive===undefined)delete root.dataset.wallpaperActive;else root.dataset.wallpaperActive=wasActive;if(previous)root.style.setProperty('--workspace-wallpaper',previous);else root.style.removeProperty('--workspace-wallpaper');return result;})()`);
   assert(wallpaperLayout.size.split(',').every(value=>value.trim()==='cover'),'Workspace wallpaper layers should cover the full shell');
   assert(wallpaperLayout.repeat.split(',').every(value=>value.trim()==='no-repeat'),'Workspace wallpaper layers should not tile');
   assert(wallpaperLayout.attachment.split(',').every(value=>value.trim()==='scroll'),'Workspace wallpaper should follow the shell on mobile');
-  passed.push('SVG and PNG brand icons load; wallpaper covers the shell without mobile fixed-background cropping');
+  passed.push('ICO, SVG, and PNG brand icons load; wallpaper covers the shell without mobile fixed-background cropping');
   for(const width of [320,390,768,1024,1440]){await setViewport(width,width<640?844:1000,width<1024);await assertNoHorizontalOverflow(`Landing at ${width}px`);}
   await setViewport(768,1000,true);
   const tabletHeroTracks=await evaluate(`getComputedStyle(document.querySelector('main > section')).gridTemplateColumns.split(' ').length`);

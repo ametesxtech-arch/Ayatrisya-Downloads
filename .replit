@@ -32,3 +32,15 @@ VITE_AYATRISYA_ENDPOINT = "http://127.0.0.1:8000"
 [nix]
 channel = "stable-25_05"
 packages = ["glib", "nspr", "nss", "atk", "at-spi2-atk", "cups", "dbus", "cairo", "gtk3", "pango", "xorg.libX11", "xorg.libXcomposite", "xorg.libXdamage", "xorg.libXext", "xorg.libXfixes", "xorg.libXrandr", "xorg.libxcb", "mesa", "libxkbcommon", "alsa-lib", "libgbm", "xorg.xorgserver", "gsettings-desktop-schemas", "hicolor-icon-theme"]
+
+[[ports]]
+localPort = 8080
+externalPort = 8080
+
+[[ports]]
+localPort = 8081
+externalPort = 80
+
+[[ports]]
+localPort = 25517
+externalPort = 3000
