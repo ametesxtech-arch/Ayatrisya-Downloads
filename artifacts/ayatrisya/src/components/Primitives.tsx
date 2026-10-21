@@ -4,8 +4,8 @@ import { X, Info, Sparkles } from 'lucide-react';
 export function Button({ children, onClick, variant = 'solid', className = '', type = 'button', disabled = false, autoFocus = false, ...rest }: { title?: string; 'data-testid'?: string; 'aria-label'?: string; autoFocus?: boolean; children: ReactNode; onClick?: () => void; variant?: 'solid' | 'quiet' | 'outline'; className?: string; type?: 'button' | 'submit'; disabled?: boolean }) {
   return <button {...rest} type={type} disabled={disabled} autoFocus={autoFocus} onClick={onClick} className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-lg px-4 font-semibold transition duration-200 disabled:cursor-not-allowed disabled:opacity-45 ${variant === 'solid' ? 'bg-violet-500 text-white hover:bg-violet-400 shadow-[0_6px_22px_rgba(117,98,222,.18)]' : variant === 'outline' ? 'border border-white/10 bg-white/[.025] text-slate-200 hover:border-white/20 hover:bg-white/[.06]' : 'text-slate-300 hover:bg-white/[.06]'} ${className}`}>{children}</button>;
 }
-export function IconButton({ children, label, onClick, className = '' }: { children: ReactNode; label: string; onClick?: () => void; className?: string }) {
-  return <button aria-label={label} data-tip={label} onClick={onClick} className={`grid size-9 place-items-center rounded-lg text-slate-400 transition active:scale-95 hover:bg-white/[.07] hover:text-white ${className}`}>{children}</button>;
+export function IconButton({ children, label, onClick, className = '', ...rest }: { children: ReactNode; label: string; onClick?: () => void; className?: string; 'data-testid'?: string }) {
+  return <button {...rest} aria-label={label} data-tip={label} onClick={onClick} className={`grid size-9 place-items-center rounded-lg text-slate-400 transition active:scale-95 hover:bg-white/[.07] hover:text-white ${className}`}>{children}</button>;
 }
 export function Panel({ children, className = '' }: { children: ReactNode; className?: string }) {
   return <section className={`rounded-xl border border-white/[.075] bg-[#15171e] ${className}`}>{children}</section>;

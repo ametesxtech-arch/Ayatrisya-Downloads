@@ -1,0 +1,188 @@
+AYATRISYA — Rebuild the Chat UI into a Premium, Production-Quality AI Chat Experience
+
+Redesign and implement the actual Ayatrisya chat interface to deliver the polished, intuitive experience of a leading AI assistant such as ChatGPT. Use ChatGPT as a usability reference, not as a pixel-for-pixel copy. Preserve Ayatrisya’s own branding, visual identity, and existing working features.
+
+IMPORTANT: Inspect the existing application and chat components before making changes. Modify the real chat system, not a separate mockup or demo screen. Preserve working model integration, streaming, cancellation, authentication, conversation persistence, desktop routing, and existing APIs.
+
+1. Design direction
+
+Create a clean, elegant, premium AI workspace.
+
+* Dark theme as the primary appearance, consistent with Ayatrisya’s existing brand.
+* Near-black or deep charcoal backgrounds, subtle borders, restrained purple accents, and readable text.
+* Comfortable typography, generous whitespace, and a centered conversation column.
+* Minimal visual clutter. Remove unnecessary decorative symbols, oversized icons, excessive emoji, redundant cards, and distracting glowing effects.
+* Use a consistent icon library already installed in the project. Use familiar, recognizable icons with accessible labels.
+* Do not replace every control with an icon. Important actions should have readable labels or tooltips.
+* Support desktop, tablet, and mobile layouts.
+* Respect reduced-motion preferences.
+
+2. Main chat layout
+
+Desktop
+
+* Left sidebar for new chat, search, conversation history, projects and settings.
+* Main conversation area with a centered readable message column.
+* Clear top bar with Ayatrisya branding and the actual available model selector.
+* Composer fixed near the bottom of the conversation area without covering messages.
+* Optional right-side panel only when a real feature requires it; do not force one into ordinary chat.
+
+Mobile and tablet
+
+* Collapsible navigation drawer.
+* Full-width conversation with sensible side padding.
+* Composer stays accessible above the keyboard and safe-area inset.
+* No horizontal overflow, clipped messages, or tiny touch targets.
+* Avoid desktop-only hover interactions for essential actions.
+
+3. First-use welcome screen
+
+When a conversation is empty, show a polished greeting such as:
+
+“Where should we start?”
+
+Below it, include a brief description of Ayatrisya and a few subtle suggestion chips, for example:
+
+* Explain a concept
+* Help me write
+* Debug my code
+* Brainstorm an idea
+
+Clicking a suggestion must populate or submit a genuine prompt. Do not display fake conversations or fabricated model results.
+
+The welcome screen should disappear naturally when the conversation begins.
+
+4. Message design
+
+User messages
+
+* Clear visual distinction without oversized colored bubbles.
+* Support multiline text, code and attachments.
+* Display attachments only when they actually exist.
+
+Assistant messages
+
+* Clean, readable text with appropriate line length.
+* Proper Markdown rendering: headings, paragraphs, lists, tables, links, blockquotes, inline code and fenced code blocks.
+* Syntax-highlighted code with a language label and working Copy button.
+* Correctly render mathematical expressions if the project already supports them.
+* Render lists and tables cleanly on mobile.
+* Preserve safe link handling and prevent unsafe HTML injection.
+
+Avoid placing every assistant response inside a separate giant card. The conversation should feel continuous and easy to read.
+
+5. Composer — the most important component
+
+Build a high-quality message composer with:
+
+* Multiline input that expands naturally as the user types.
+* Enter to send and Shift+Enter for a new line on desktop.
+* A clear send button that becomes a stop-generation button while a response is streaming.
+* Attach-file control only if the existing backend supports the corresponding upload and processing flow.
+* Optional model or tool controls in a compact menu instead of a row of confusing symbols.
+* Clear disabled, loading, error and retry states.
+* Correct mobile keyboard behavior.
+* Accessible keyboard navigation and screen-reader labels.
+
+The composer must call the existing real chat API. Do not simulate an AI response in the UI.
+
+6. Streaming and generation states
+
+Preserve the current streaming and cancellation implementation.
+
+* Display assistant output progressively when streaming is supported.
+* Show a subtle “Thinking” or generation indicator while waiting for the first token.
+* Stop must cancel the actual request when supported.
+* Handle empty responses, network failures, authentication expiry, timeouts and rate limits.
+* Offer a Retry action when appropriate.
+* Never show a completed state before generation actually finishes.
+* Do not fabricate typing effects or fake progress to conceal slow model responses.
+
+7. Conversation actions
+
+Provide simple, discoverable actions:
+
+* Copy response.
+* Retry or regenerate response where supported.
+* Edit and resubmit the user’s message if supported by the current architecture.
+* Delete a conversation with confirmation.
+* Rename a conversation.
+* Start a new chat.
+* Search chat history if the existing storage supports it.
+
+Show message actions on hover on desktop and through a clear accessible menu on mobile. Avoid a permanent row of unnecessary icons under every message.
+
+8. Model selector
+
+Use actual models returned by the configured model service or runtime capabilities.
+
+* Display the model name and availability accurately.
+* Do not invent model choices.
+* If the desktop local model is unavailable, explain that it is unavailable and do not silently switch to cloud.
+* Keep web/mobile gateway behavior and desktop local-only routing unchanged.
+* Make model switching predictable and visible.
+
+9. Sidebar and history
+
+* Clear New Chat action.
+* Searchable conversation history if feasible with existing data.
+* Group conversations by meaningful date ranges when supported by timestamps.
+* Show useful titles generated from the user’s first message, with a safe fallback.
+* Provide an accessible conversation menu for rename and delete.
+* Preserve existing conversation data during this redesign.
+* Do not add automatic cloud synchronization or change storage privacy behavior.
+
+10. Loading, empty and error states
+
+Design polished states for:
+
+* First use.
+* Loading conversation history.
+* Model unavailable.
+* Offline/network failure.
+* Authentication required.
+* Rate limit reached.
+* Failed response.
+* Empty search results.
+* Missing attachments.
+
+Messages must be specific and actionable. Never expose raw secrets, stack traces or internal configuration to users.
+
+11. Performance, accessibility and polish
+
+* Reuse the existing component framework and dependencies where possible.
+* Avoid unnecessary re-renders during streaming.
+* Keep scrolling stable when responses grow.
+* Auto-scroll only when the user is already near the bottom; do not force-scroll someone reading earlier messages.
+* Support keyboard focus, visible focus indicators, semantic HTML and accessible labels.
+* Verify light/dark compatibility if both themes currently exist.
+* Use subtle transitions only where they improve usability.
+
+12. Preserve the existing application
+
+Do not:
+
+* Replace real APIs with mock responses.
+* Remove existing model routing, authentication or streaming.
+* Break the desktop handshake or local-only inference.
+* Change backend contracts unnecessarily.
+* Delete user conversations or reset storage.
+* Add expensive paid services.
+* copy ChatGPT’s logo, name, or proprietary visual assets.
+
+13. Required testing
+
+After implementation:
+
+1. Test sending a real message and receiving a real model response.
+2. Test streaming, stop generation, retry and error handling.
+3. Test Markdown, code blocks, long responses and tables.
+4. Test conversation creation, history, rename and delete.
+5. Test desktop local routing and web/mobile authenticated routing.
+6. Test mobile widths, tablet widths and desktop layouts.
+7. Check keyboard navigation, console errors and horizontal overflow.
+8. Run typecheck, lint, existing tests and production build.
+
+Report exactly which files changed, which tests ran, their actual results, and any unverified behavior.
+
+The final result should feel like a cohesive, premium AI conversation product: clean, fast, readable, intuitive and distinctly Ayatrisya—not a dashboard overloaded with symbols.

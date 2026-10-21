@@ -33,19 +33,25 @@
       "output": "../../generated-artifacts/ayatrisya-desktop"
     },
     "linux": {
-      "target": ["AppImage"],
+      "target": [
+        "AppImage"
+      ],
       "category": "Development",
       "syncDesktopName": true,
       "icon": "public/ayatrisya-desktop.png"
     },
     "win": {
-      "target": ["nsis"],
+      "target": [
+        "nsis"
+      ],
       "icon": "public/ayatrisya-desktop.ico",
       "extraResources": [
         {
           "from": "war-mode-assets/windows-x64",
           "to": "war-mode",
-          "filter": ["**/*"]
+          "filter": [
+            "**/*"
+          ]
         }
       ]
     },
@@ -54,7 +60,9 @@
       "allowToChangeInstallationDirectory": true
     },
     "mac": {
-      "target": ["dmg"],
+      "target": [
+        "dmg"
+      ],
       "icon": "desktop/build/ayatrisya.icns",
       "category": "public.app-category.developer-tools"
     }
@@ -137,5 +145,8 @@
     "vitest": "^5.0.5",
     "wouter": "^3.3.5",
     "zod": "catalog:"
+  },
+  "dependencies": {
+    "remark-gfm": "^4.0.1"
   }
 }
