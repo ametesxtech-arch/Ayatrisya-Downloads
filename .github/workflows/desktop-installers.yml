@@ -50,6 +50,22 @@ jobs:
       - name: Build installer on native operating system
         run: pnpm --filter @workspace/ayatrisya run desktop:package:${{ matrix.target }}
 
+      - name: Record Windows installer and WAR MODE resource sizes
+        if: matrix.target == 'windows'
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem "generated-artifacts/ayatrisya-desktop/*.exe" | Select-Object -First 1
+          if (-not $installer) { throw "Windows installer was not produced." }
+          $resourceBytes = (Get-ChildItem "artifacts/ayatrisya/war-mode-assets/windows-x64" -File -Recurse | Measure-Object -Property Length -Sum).Sum
+          $reportDir = Join-Path $env:RUNNER_TEMP "AyatrisyaWarModeIntegration"
+          New-Item -ItemType Directory -Force -Path $reportDir | Out-Null
+          @(
+            "installer=$($installer.Name)"
+            "installerBytes=$($installer.Length)"
+            "warModeRawResourceBytes=$resourceBytes"
+          ) | Set-Content -Path (Join-Path $reportDir "war-mode-size-report.txt")
+          Get-Content (Join-Path $reportDir "war-mode-size-report.txt")
+
       - name: Install and launch Windows build
         if: matrix.target == 'windows'
         shell: pwsh
@@ -69,6 +85,58 @@ jobs:
           $process.Refresh()
           if ($process.HasExited) { throw "Installed Ayatrisya exited before the startup check completed." }
           Stop-Process -Id $process.Id -Force
+
+      - name: Test packaged WAR MODE scanner on Windows
+        if: matrix.target == 'windows'
+        shell: pwsh
+        run: |
+          $installDir = Join-Path $env:RUNNER_TEMP "AyatrisyaSmoke"
+          $testDir = Join-Path $env:RUNNER_TEMP "AyatrisyaWarModeIntegration"
+          $app = Join-Path $installDir "ayatrisya.exe"
+          if (-not (Test-Path $app)) { throw "Installed Ayatrisya executable was not found." }
+          New-Item -ItemType Directory -Force -Path $testDir | Out-Null
+          $env:AYATRISYA_WAR_MODE_TEST_MODE = "1"
+          $env:AYATRISYA_WAR_MODE_TEST_DIR = $testDir
+          $test = Start-Process -FilePath $app -ArgumentList @("--war-mode-integration-test") -Wait -PassThru
+          $reportPath = Join-Path $testDir "war-mode-report.json"
+          if (-not (Test-Path $reportPath)) { throw "Packaged WAR MODE test report was not written." }
+          Get-Content -Raw $reportPath
+          if ($test.ExitCode -ne 0) { throw "Packaged WAR MODE integration tests failed with exit code $($test.ExitCode)." }
+          $report = Get-Content -Raw $reportPath | ConvertFrom-Json
+          if (-not $report.passed) { throw "Packaged WAR MODE integration report is not successful." }
+          $report.tests | ForEach-Object {
+            if (-not $_.passed) { throw "WAR MODE test failed: $($_.name)" }
+          }
+
+      - name: Upload Windows WAR MODE integration report
+        if: always() && matrix.target == 'windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Ayatrisya-Windows-WAR-Mode-Test-Report
+          path: ${{ runner.temp }}/AyatrisyaWarModeIntegration/war-mode-report.json
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Upload Windows WAR MODE size report
+        if: always() && matrix.target == 'windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Ayatrisya-Windows-WAR-Mode-Size-Report
+          path: ${{ runner.temp }}/AyatrisyaWarModeIntegration/war-mode-size-report.txt
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Uninstall Windows build
+        if: matrix.target == 'windows'
+        shell: pwsh
+        run: |
+          $installDir = Join-Path $env:RUNNER_TEMP "AyatrisyaSmoke"
+          $uninstaller = Get-ChildItem -Path $installDir -Filter "Uninstall*.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $uninstaller) { throw "Ayatrisya uninstaller was not found." }
+          $result = Start-Process -FilePath $uninstaller.FullName -ArgumentList @("/S") -Wait -PassThru
+          if ($result.ExitCode -ne 0) { throw "Ayatrisya uninstaller exited with code $($result.ExitCode)." }
+          Start-Sleep -Seconds 2
+          if (Test-Path (Join-Path $installDir "ayatrisya.exe")) { throw "Ayatrisya remained installed after uninstall." }
 
       - uses: actions/upload-artifact@v4
         with:

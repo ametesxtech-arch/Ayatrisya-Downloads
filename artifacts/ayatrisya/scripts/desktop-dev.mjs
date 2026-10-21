@@ -1,4 +1,5 @@
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import process from 'node:process';
 import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
@@ -12,6 +13,16 @@ if (!Number.isInteger(port) || port < 1024 || port > 65535) {
 const pnpm = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
 const env = { ...process.env, PORT: String(port), BASE_PATH: '/' };
 delete env.REPL_ID;
+
+if (process.platform === 'win32' && !existsSync(path.join(root, 'war-mode-assets', 'windows-x64', 'yr.exe'))) {
+  const prepared = spawnSync(process.execPath, ['scripts/prepare-war-mode-assets.mjs'], {
+    cwd: root,
+    env,
+    stdio: 'inherit',
+  });
+  if (prepared.error) throw new Error(`Could not prepare WAR MODE assets: ${prepared.error.message}`);
+  if (prepared.status !== 0) throw new Error(`WAR MODE asset preparation failed with exit code ${prepared.status ?? 'unknown'}.`);
+}
 
 const vite = spawn(pnpm, [
   'exec', 'vite', '--config', 'vite.config.ts', '--host', 'localhost',

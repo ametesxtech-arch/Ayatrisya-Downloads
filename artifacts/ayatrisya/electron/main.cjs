@@ -1,7 +1,9 @@
 const { app, BrowserWindow, dialog, ipcMain, shell } = require("electron");
 const { spawn } = require("node:child_process");
+const fsSync = require("node:fs");
 const fs = require("node:fs/promises");
 const http = require("node:http");
+const os = require("node:os");
 const path = require("node:path");
 const { randomUUID } = require("node:crypto");
 const {
@@ -23,6 +25,7 @@ const {
   buildStatusScript,
   parseStatusOutput,
 } = require("./war-mode.cjs");
+const { createWarModeYaraService } = require("./war-mode-yara.cjs");
 
 const MAX_TEXT_FILE_BYTES = 1024 * 1024;
 const MAX_TERMINAL_OUTPUT_BYTES = 128 * 1024;
@@ -70,9 +73,33 @@ const localModelRequests = new Map();
 const warModeFolderGrants = new Map();
 let warModeScanRunning = false;
 let activeWarModeChild = null;
+let activeYaraScanId = null;
 
 app.setName("Ayatrisya");
 app.enableSandbox();
+
+const warModeIntegrationTestMode =
+  process.argv.includes("--war-mode-integration-test") &&
+  process.env.AYATRISYA_WAR_MODE_TEST_MODE === "1";
+const warModeTestDirectory = warModeIntegrationTestMode && process.env.AYATRISYA_WAR_MODE_TEST_DIR
+  ? path.resolve(process.env.AYATRISYA_WAR_MODE_TEST_DIR)
+  : null;
+if (warModeIntegrationTestMode) {
+  const tempRoot = path.resolve(process.env.RUNNER_TEMP || os.tmpdir());
+  if (
+    !app.isPackaged ||
+    !warModeTestDirectory ||
+    warModeTestDirectory === tempRoot ||
+    !path.relative(tempRoot, warModeTestDirectory) ||
+    path.relative(tempRoot, warModeTestDirectory) === ".." ||
+    path.relative(tempRoot, warModeTestDirectory).startsWith(`..${path.sep}`) ||
+    path.isAbsolute(path.relative(tempRoot, warModeTestDirectory))
+  ) {
+    throw new Error("Packaged WAR MODE integration tests must use a dedicated temporary directory.");
+  }
+  fsSync.mkdirSync(path.join(warModeTestDirectory, "app-user-data"), { recursive: true });
+  app.setPath("userData", path.join(warModeTestDirectory, "app-user-data"));
+}
 
 function safeError(error) {
   const code = error && typeof error === "object" ? error.code : null;
@@ -362,8 +389,12 @@ function registerIpc(channel, handler) {
   });
 }
 
-function runBoundedProcess(executable, args, timeoutMs, maxOutputBytes) {
+function runBoundedProcess(executable, args, timeoutMs, maxOutputBytes, signal = null) {
   return new Promise((resolve) => {
+    if (signal?.aborted) {
+      resolve({ code: null, stdout: "", stderr: "", timedOut: false, outputLimited: false, cancelled: true });
+      return;
+    }
     let child;
     try {
       child = spawn(executable, args, {
@@ -384,6 +415,7 @@ function runBoundedProcess(executable, args, timeoutMs, maxOutputBytes) {
     let bytes = 0;
     let timedOut = false;
     let outputLimited = false;
+    let cancelled = false;
     let settled = false;
     const append = (target, chunk) => {
       const remaining = Math.max(0, maxOutputBytes - bytes);
@@ -403,19 +435,50 @@ function runBoundedProcess(executable, args, timeoutMs, maxOutputBytes) {
       timedOut = true;
       child.kill();
     }, timeoutMs);
+    const abortChild = () => {
+      cancelled = true;
+      child.kill();
+    };
+    signal?.addEventListener("abort", abortChild, { once: true });
     const finish = (result) => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
+      signal?.removeEventListener("abort", abortChild);
       if (activeWarModeChild === child) activeWarModeChild = null;
-      resolve({ code: null, stdout, stderr, timedOut, outputLimited, ...result });
+      resolve({ code: null, stdout, stderr, timedOut, outputLimited, cancelled, ...result });
     };
     child.once("error", (error) => finish({ spawnError: error }));
     child.once("close", (code) => finish({ code }));
   });
 }
 
-async function readWarModeStatus() {
+const warModeYara = createWarModeYaraService({
+  platform: process.platform,
+  resourcesDir: app.isPackaged
+    ? path.join(process.resourcesPath, "war-mode")
+    : path.resolve(__dirname, "..", "war-mode-assets", "windows-x64"),
+  userDataDir: app.getPath("userData"),
+  runProcess: runBoundedProcess,
+  protectedPaths: [
+    process.env.SystemRoot || process.env.WINDIR || "",
+    process.env.ProgramFiles || "",
+    process.env["ProgramFiles(x86)"] || "",
+    process.env.ProgramData
+      ? path.join(process.env.ProgramData, "Microsoft", "Windows Defender")
+      : "",
+    app.getPath("userData"),
+    app.getAppPath(),
+    process.resourcesPath || "",
+    process.execPath ? path.dirname(process.execPath) : "",
+  ],
+  icaclsPath: path.join(process.env.SystemRoot || process.env.WINDIR || "C:\\Windows", "System32", "icacls.exe"),
+  userIdentity: process.env.USERDOMAIN && process.env.USERNAME
+    ? `${process.env.USERDOMAIN}\\${process.env.USERNAME}`
+    : process.env.USERNAME || "",
+});
+
+async function readDefenderStatus() {
   if (process.platform !== "win32") {
     return {
       state: "OFFLINE",
@@ -450,15 +513,37 @@ async function readWarModeStatus() {
 }
 
 async function getWarModeStatus() {
-  const publicStatus = await readWarModeStatus();
-  delete publicStatus.scanCommandPath;
-  return publicStatus;
+  const [yaraStatus, defenderStatus] = await Promise.all([
+    warModeYara.initialize(),
+    process.platform === "win32"
+      ? readDefenderStatus()
+      : Promise.resolve({
+        state: "OFFLINE",
+        canScan: false,
+        signatureVersion: null,
+        signatureUpdatedAt: null,
+        realTimeProtectionEnabled: false,
+        message: "Microsoft Defender integration is available only on Windows.",
+      }),
+  ]);
+  return {
+    ...yaraStatus,
+    defender: {
+      state: defenderStatus.state,
+      canScan: Boolean(defenderStatus.canScan),
+      signatureVersion: defenderStatus.signatureVersion ?? null,
+      signatureUpdatedAt: defenderStatus.signatureUpdatedAt ?? null,
+      realTimeProtectionEnabled: Boolean(defenderStatus.realTimeProtectionEnabled),
+      message: defenderStatus.message,
+    },
+    realTimeProtectionEnabled: Boolean(defenderStatus.realTimeProtectionEnabled),
+  };
 }
 
 async function chooseWarModeFolder() {
   if (process.platform !== "win32") throw new Error("War Mode scanning requires Ayatrisya Desktop on Windows.");
   const result = await dialog.showOpenDialog(mainWindow, {
-    title: "Choose a local folder to scan with Windows Defender",
+    title: "Choose a local folder to scan",
     properties: ["openDirectory"],
   });
   if (result.canceled || !result.filePaths[0]) return null;
@@ -525,10 +610,10 @@ async function scanWarModeFolder(folderId) {
   if (typeof folderId !== "string" || !/^[0-9a-f-]{36}$/i.test(folderId)) {
     throw new Error("Choose a folder before starting a scan.");
   }
-  if (warModeScanRunning) throw new Error("A War Mode scan is already running.");
+  if (warModeScanRunning || activeYaraScanId) throw new Error("A War Mode scan is already running.");
   const folder = warModeFolderGrants.get(folderId);
   if (!folder) throw new Error("Choose the folder again to authorize this scan.");
-  const status = await readWarModeStatus();
+  const status = await readDefenderStatus();
   if (!status.canScan || !status.scanCommandPath) throw new Error(status.message);
 
   const confirmation = await dialog.showMessageBox(mainWindow, {
@@ -592,10 +677,118 @@ async function scanWarModeFolder(folderId) {
   }
 }
 
+async function scanYaraFolder(folderId) {
+  if (process.platform !== "win32") throw new Error("YARA-X scanning requires Ayatrisya Desktop on Windows.");
+  if (typeof folderId !== "string" || !/^[0-9a-f-]{36}$/i.test(folderId)) {
+    throw new Error("Choose a folder before starting a scan.");
+  }
+  if (warModeScanRunning || activeYaraScanId) throw new Error("A War Mode scan is already running.");
+  const folder = warModeFolderGrants.get(folderId);
+  if (!folder) throw new Error("Choose the folder again to authorize this scan.");
+  const readiness = await warModeYara.initialize();
+  if (!readiness.canScan) throw new Error(readiness.message);
+
+  const confirmation = await dialog.showMessageBox(mainWindow, {
+    type: "warning",
+    title: "Start a YARA-X rule-based scan?",
+    message: "Scan only the folder you selected with the installed local rules.",
+    detail: `Folder:\n${folder.path}\n\nScanning runs locally with YARA-X and the installed baseline of 4,886 rule declarations in 711 licensed source files. Files are not uploaded or changed during scanning. Rule matches require your review; Ayatrisya will not automatically quarantine or delete files. This is not a full antivirus replacement.`,
+    buttons: ["Cancel", "Start local scan"],
+    defaultId: 0,
+    cancelId: 0,
+    noLink: true,
+  });
+  if (confirmation.response !== 1) return { cancelled: true, folderName: folder.name };
+
+  const scanId = randomUUID();
+  activeYaraScanId = scanId;
+  try {
+    return await warModeYara.scanFolder(folder.path, {
+      scanId,
+      onProgress: (progress) => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send("desktop:war-mode:yara-progress", progress);
+        }
+      },
+    });
+  } finally {
+    activeYaraScanId = null;
+    warModeFolderGrants.delete(folderId);
+  }
+}
+
+function cancelYaraScan(scanId) {
+  if (typeof scanId !== "string" || scanId !== activeYaraScanId) return false;
+  return warModeYara.cancelScan(scanId);
+}
+
+async function quarantineYaraFinding(detectionId) {
+  const finding = warModeYara.getFinding(detectionId);
+  if (!finding) throw new Error("That scan result is no longer available for review.");
+  const confirmation = await dialog.showMessageBox(mainWindow, {
+    type: "warning",
+    title: "Move this match to recoverable quarantine?",
+    message: "Review the matched rule and file path before continuing.",
+    detail: `File:\n${finding.relativePath}\n\nRule match: ${finding.rules.join(", ") || "Unspecified rule"}\nAttribution: ${finding.attribution.map((match) => `${match.rule}: ${match.authors.join(", ") || "author not supplied"}`).join("; ") || "No author metadata supplied"}\n\nAyatrisya will move the file to a hidden local quarantine folder on the same volume. The move is recoverable and does not delete the file. Only proceed if you recognize the result and want it moved.`,
+    buttons: ["Cancel", "Quarantine file"],
+    defaultId: 0,
+    cancelId: 0,
+    noLink: true,
+  });
+  if (confirmation.response !== 1) return { cancelled: true };
+  return warModeYara.quarantineDetection(detectionId);
+}
+
+async function restoreYaraQuarantine(itemId) {
+  const items = await warModeYara.listQuarantine();
+  const item = items.find((entry) => entry.id === itemId);
+  if (!item) throw new Error("That quarantined file is no longer available.");
+  const confirmation = await dialog.showMessageBox(mainWindow, {
+    type: "warning",
+    title: "Restore this file?",
+    message: "Restore the quarantined file to its original path?",
+    detail: `File: ${item.name}\nOriginal path:\n${item.originalPath}\n\nAyatrisya will not overwrite an existing file at that location.`,
+    buttons: ["Cancel", "Restore file"],
+    defaultId: 0,
+    cancelId: 0,
+    noLink: true,
+  });
+  if (confirmation.response !== 1) return { cancelled: true };
+  return warModeYara.restoreQuarantined(itemId);
+}
+
+async function applyYaraRuleUpdate(proposalId) {
+  const preview = warModeYara.getRulesUpdateProposal(proposalId);
+  if (!preview) throw new Error("That verified update is no longer waiting for review.");
+  const confirmation = await dialog.showMessageBox(mainWindow, {
+    type: "warning",
+    title: "Review official rule update",
+    message: `Switch from ${preview.fromVersion.slice(0, 12)} to ${preview.toVersion.slice(0, 12)}?`,
+    detail: `${preview.toRuleCount} rule declarations in ${preview.toRuleFileCount} licensed source files from the verified official source.\nChanges: ${preview.added} source files added, ${preview.changed} changed, ${preview.removed} removed.\n\nThe update was compiled and verified before this prompt. The current rules remain active unless you approve.`,
+    buttons: ["Keep current rules", "Apply update"],
+    defaultId: 0,
+    cancelId: 0,
+    noLink: true,
+  });
+  if (confirmation.response !== 1) {
+    await warModeYara.discardRulesUpdate(proposalId);
+    return { cancelled: true };
+  }
+  return warModeYara.activateRulesUpdate(proposalId);
+}
+
 registerIpc("desktop:war-mode:status", getWarModeStatus);
 registerIpc("desktop:war-mode:choose-folder", chooseWarModeFolder);
 registerIpc("desktop:war-mode:scan-folder", scanWarModeFolder);
 registerIpc("desktop:war-mode:audit-log", getWarModeAuditLog);
+registerIpc("desktop:war-mode:yara-scan-folder", scanYaraFolder);
+registerIpc("desktop:war-mode:yara-cancel-scan", cancelYaraScan);
+registerIpc("desktop:war-mode:yara-quarantine", quarantineYaraFinding);
+registerIpc("desktop:war-mode:yara-restore", restoreYaraQuarantine);
+registerIpc("desktop:war-mode:yara-quarantine-list", () => warModeYara.listQuarantine());
+registerIpc("desktop:war-mode:yara-audit-log", () => warModeYara.getAuditLog());
+registerIpc("desktop:war-mode:yara-update-prepare", () => warModeYara.prepareRulesUpdate());
+registerIpc("desktop:war-mode:yara-update-apply", applyYaraRuleUpdate);
 registerIpc("desktop:war-mode:open-windows-security", async () => {
   if (process.platform !== "win32") throw new Error("Windows Security is available only on Windows.");
   await shell.openExternal("ms-settings:windowsdefender");
@@ -847,6 +1040,7 @@ async function createMainWindow() {
     mainWindow = null;
     warModeFolderGrants.clear();
     activeWarModeChild?.kill();
+    if (activeYaraScanId) warModeYara.cancelScan(activeYaraScanId);
   });
   if (!app.isPackaged) {
     const devUrl = process.env.AYATRISYA_DESKTOP_DEV_URL;
@@ -875,6 +1069,32 @@ if (!hasSingleInstanceLock) {
   });
   app.whenReady().then(async () => {
     await loadGrants();
+    if (warModeIntegrationTestMode) {
+      const reportPath = path.join(warModeTestDirectory, "war-mode-report.json");
+      try {
+        const { runWarModePackagedIntegration } = require("./war-mode-integration.cjs");
+        const report = await runWarModePackagedIntegration({
+          service: warModeYara,
+          testRoot: path.join(warModeTestDirectory, "fixtures"),
+          userIdentity: process.env.USERDOMAIN && process.env.USERNAME
+            ? `${process.env.USERDOMAIN}\\${process.env.USERNAME}`
+            : process.env.USERNAME || "",
+          userDataDir: app.getPath("userData"),
+        });
+        await fs.writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`, { mode: 0o600 });
+        app.exit(report.passed ? 0 : 1);
+      } catch (error) {
+        const report = error?.warModeReport || {
+          passed: false,
+          error: error?.message || "Packaged WAR MODE integration test failed.",
+        };
+        report.passed = false;
+        report.finishedAt = new Date().toISOString();
+        await fs.writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`, { mode: 0o600 }).catch(() => {});
+        app.exit(1);
+      }
+      return;
+    }
     await createMainWindow();
     app.on("activate", () => {
       if (BrowserWindow.getAllWindows().length === 0) void createMainWindow();
@@ -887,6 +1107,8 @@ if (!hasSingleInstanceLock) {
 
 app.on("before-quit", () => {
   if (staticServer) staticServer.close();
+  if (activeYaraScanId) warModeYara.cancelScan(activeYaraScanId);
+  activeWarModeChild?.kill();
 });
 
 app.on("window-all-closed", () => {

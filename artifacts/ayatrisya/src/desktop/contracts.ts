@@ -40,9 +40,19 @@ export interface WarModeStatus {
   canScan: boolean;
   engine: string | null;
   signatureVersion: string | null;
+  ruleCount: number | null;
+  ruleFileCount: number | null;
   signatureUpdatedAt: string | null;
   realTimeProtectionEnabled: boolean;
   message: string;
+  defender: {
+    state: WarModeState;
+    canScan: boolean;
+    signatureVersion: string | null;
+    signatureUpdatedAt: string | null;
+    realTimeProtectionEnabled: boolean;
+    message: string;
+  };
 }
 export interface WarModeFolder {
   id: string;
@@ -58,6 +68,95 @@ export interface WarModeScanResult {
   outputLimited?: boolean;
   state?: "READY" | "ATTENTION_REQUIRED";
   message?: string;
+}
+export interface WarModeYaraFinding {
+  id: string;
+  scanId: string;
+  relativePath: string;
+  rules: string[];
+  attribution: Array<{ rule: string; authors: string[]; source: string | null }>;
+  detectedAt: string;
+  reviewRequired: true;
+}
+export interface WarModeYaraProgress {
+  scanId: string;
+  completed: number;
+  total: number;
+  currentPath: string;
+  counts: {
+    scanned: number;
+    detected: number;
+    skipped: number;
+    inaccessible: number;
+    failed: number;
+  };
+}
+export interface WarModeYaraScanResult {
+  scanId: string;
+  folderName: string;
+  startedAt: string;
+  finishedAt: string;
+  cancelled: boolean;
+  limitReached: boolean;
+  complete: boolean;
+  counts: WarModeYaraProgress['counts'];
+  findings: WarModeYaraFinding[];
+  findingsTruncated: boolean;
+  details: Array<{
+    path: string;
+    kind: string;
+    reason?: string;
+    rules?: string[];
+    attribution?: Array<{ rule: string; authors: string[]; source: string | null }>;
+  }>;
+  detailsTruncated: boolean;
+  rulesetVersion: string;
+  ruleCount: number;
+  ruleFileCount: number;
+  message: string;
+}
+export interface WarModeQuarantineItem {
+  id: string;
+  name: string;
+  originalPath: string;
+  quarantinedAt: string;
+  rules: string[];
+  attribution: Array<{ rule: string; authors: string[]; source: string | null }>;
+}
+export interface WarModeYaraAuditEntry {
+  at: string;
+  action: string;
+  folderName?: string;
+  counts?: WarModeYaraProgress['counts'];
+  complete?: boolean;
+  originalPath?: string;
+  id?: string;
+  reason?: string;
+  rules?: string[];
+  findings?: Array<{
+    path: string;
+    attribution: Array<{ rule: string; authors: string[]; source: string | null }>;
+  }>;
+  attribution?: Array<{ rule: string; authors: string[]; source: string | null }>;
+  fromVersion?: string;
+  toVersion?: string;
+  ruleCount?: number;
+  ruleFileCount?: number;
+}
+export interface WarModeRuleUpdatePreview {
+  available: boolean;
+  message?: string;
+  proposalId?: string;
+  fromVersion?: string;
+  toVersion?: string;
+  fromRuleCount?: number;
+  toRuleCount?: number;
+  fromRuleFileCount?: number;
+  toRuleFileCount?: number;
+  added?: number;
+  removed?: number;
+  changed?: number;
+  commitDate?: string;
 }
 export interface WarModeAuditEntry {
   at: string;
@@ -86,6 +185,15 @@ export interface AyatrisyaDesktopApi {
   scanWarModeFolder(folderId: string): Promise<WarModeScanResult>;
   getWarModeAuditLog(): Promise<WarModeAuditEntry[]>;
   openWindowsSecurity(): Promise<void>;
+  scanWarModeYaraFolder(folderId: string): Promise<WarModeYaraScanResult | { cancelled: true; folderName: string }>;
+  cancelWarModeYaraScan(scanId: string): Promise<boolean>;
+  quarantineWarModeFinding(findingId: string): Promise<{ cancelled: true } | { id: string; originalName: string; quarantinedAt: string }>;
+  restoreWarModeQuarantine(itemId: string): Promise<{ cancelled: true } | { id: string; name: string; restoredAt: string }>;
+  getWarModeQuarantine(): Promise<WarModeQuarantineItem[]>;
+  getWarModeYaraAuditLog(): Promise<WarModeYaraAuditEntry[]>;
+  prepareWarModeRuleUpdate(): Promise<WarModeRuleUpdatePreview>;
+  applyWarModeRuleUpdate(proposalId: string): Promise<WarModeStatus | { cancelled: true }>;
+  onWarModeYaraProgress(callback: (progress: WarModeYaraProgress) => void): () => void;
 }
 
 declare global {

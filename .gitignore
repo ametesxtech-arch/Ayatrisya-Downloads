@@ -9,6 +9,7 @@ out-tsc
 .expo
 .expo-shared
 artifacts/ayatrisya/desktop/build/
+artifacts/ayatrisya/war-mode-assets/
 
 # dependencies
 node_modules

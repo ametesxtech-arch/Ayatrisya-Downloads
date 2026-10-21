@@ -12,7 +12,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --config vitest.config.ts",
     "test:browser": "node scripts/browser-check.mjs",
-    "test:desktop:security": "node --test electron/path-policy.test.cjs electron/model-endpoint-policy.test.cjs electron/war-mode.test.cjs",
+    "test:desktop:security": "node --test electron/path-policy.test.cjs electron/model-endpoint-policy.test.cjs electron/war-mode.test.cjs electron/war-mode-assets.test.cjs",
     "desktop:dev": "node scripts/desktop-dev.mjs",
     "desktop:package:linux": "node scripts/desktop-package.mjs linux",
     "desktop:package:windows": "node scripts/desktop-package.mjs windows",
@@ -40,7 +40,14 @@
     },
     "win": {
       "target": ["nsis"],
-      "icon": "public/ayatrisya-desktop.ico"
+      "icon": "public/ayatrisya-desktop.ico",
+      "extraResources": [
+        {
+          "from": "war-mode-assets/windows-x64",
+          "to": "war-mode",
+          "filter": ["**/*"]
+        }
+      ]
     },
     "nsis": {
       "oneClick": false,

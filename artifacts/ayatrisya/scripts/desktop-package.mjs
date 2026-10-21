@@ -25,6 +25,9 @@ function run(args, label) {
 }
 
 if (target === 'mac') run(['exec', 'node', 'scripts/prepare-mac-icon.mjs'], 'macOS icon preparation');
+if (target === 'windows') {
+  run(['exec', 'node', 'scripts/prepare-war-mode-assets.mjs'], 'WAR MODE scanner asset preparation');
+}
 run(['exec', 'vite', 'build', '--config', 'vite.config.ts'], 'desktop web build');
 run(['exec', 'electron-builder', ...targets[target], '--publish', 'never'], `${target} installer build`);
 console.log(`Desktop package output: ../../generated-artifacts/ayatrisya-desktop`);

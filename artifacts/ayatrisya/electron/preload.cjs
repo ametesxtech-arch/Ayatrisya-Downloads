@@ -30,5 +30,28 @@ contextBridge.exposeInMainWorld(
     scanWarModeFolder: (folderId) => ipcRenderer.invoke("desktop:war-mode:scan-folder", folderId),
     getWarModeAuditLog: () => ipcRenderer.invoke("desktop:war-mode:audit-log"),
     openWindowsSecurity: () => ipcRenderer.invoke("desktop:war-mode:open-windows-security"),
+    scanWarModeYaraFolder: (folderId) => ipcRenderer.invoke("desktop:war-mode:yara-scan-folder", folderId),
+    cancelWarModeYaraScan: (scanId) => ipcRenderer.invoke("desktop:war-mode:yara-cancel-scan", scanId),
+    quarantineWarModeFinding: (findingId) => ipcRenderer.invoke("desktop:war-mode:yara-quarantine", findingId),
+    restoreWarModeQuarantine: (itemId) => ipcRenderer.invoke("desktop:war-mode:yara-restore", itemId),
+    getWarModeQuarantine: () => ipcRenderer.invoke("desktop:war-mode:yara-quarantine-list"),
+    getWarModeYaraAuditLog: () => ipcRenderer.invoke("desktop:war-mode:yara-audit-log"),
+    prepareWarModeRuleUpdate: () => ipcRenderer.invoke("desktop:war-mode:yara-update-prepare"),
+    applyWarModeRuleUpdate: (proposalId) => ipcRenderer.invoke("desktop:war-mode:yara-update-apply", proposalId),
+    onWarModeYaraProgress: (callback) => {
+      if (typeof callback !== "function") return () => {};
+      const listener = (_event, value) => {
+        if (
+          value &&
+          typeof value.scanId === "string" &&
+          Number.isInteger(value.completed) &&
+          Number.isInteger(value.total) &&
+          value.counts &&
+          typeof value.currentPath === "string"
+        ) callback(value);
+      };
+      ipcRenderer.on("desktop:war-mode:yara-progress", listener);
+      return () => ipcRenderer.removeListener("desktop:war-mode:yara-progress", listener);
+    },
   }),
 );

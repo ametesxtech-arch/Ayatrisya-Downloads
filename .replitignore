@@ -8,3 +8,4 @@
 !.env.example
 /generated-artifacts/
 artifacts/ayatrisya/desktop/build/
+artifacts/ayatrisya/war-mode-assets/

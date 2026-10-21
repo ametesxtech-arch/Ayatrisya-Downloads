@@ -2,6 +2,7 @@ const crypto = require("node:crypto");
 const { inflateRawSync } = require("node:zlib");
 
 const YARA_X_VERSION = "1.22.0";
+const WINDOWS_BASELINE_MANIFEST_SHA256 = "aafe6990a4e4e8830e7b922f3122057e4ea868bca1ca20709be09173ad49eae0";
 const YARA_X_WINDOWS_ZIP_SHA256 = "eac36a58699b94d3732a7fe1d8453fe89e0077bb18ac2c99b4c2ee102a431f2e";
 const YARA_X_WINDOWS_EXE_SHA256 = "e2e431175174158fc74c8709896c6d4a6667592bbb65a8132dea624ba125d76f";
 const YARA_X_LICENSE_SHA256 = "fdf05444c9178e662fa28810d94a1fa6ec32d7be798241c98094213317265880";
@@ -9,7 +10,8 @@ const SIGNATURE_REPOSITORY = "Neo23x0/signature-base";
 const SIGNATURE_BASELINE_COMMIT = "3ce6640c26046da8e6d8094af3eaaee3ee84e648";
 const SIGNATURE_LICENSE_SHA256 = "8a959b2413d0c83ca1b3ce9153076c649abf2e4bbfebbb493fb24c2074a1eb8a";
 const SIGNATURE_LICENSE_META = "Detection Rule License 1.1 https://github.com/Neo23x0/signature-base/blob/master/LICENSE";
-const SIGNATURE_BASELINE_RULES = 711;
+const SIGNATURE_BASELINE_RULE_FILES = 711;
+const SIGNATURE_BASELINE_RULES = 4886;
 const SIGNATURE_BASELINE_FILES = 752;
 const SIGNATURE_BASELINE_LICENSE_EXCLUSIONS = 29;
 const SIGNATURE_BASELINE_EXTERNAL_EXCLUSIONS = 13;
@@ -142,7 +144,7 @@ function readZipDirectory(buffer) {
   return entries;
 }
 
-function readZipEntryData(buffer, entry) {
+function readZipEntryData(buffer, entry, maxEntryBytes = MAX_RULE_FILE_BYTES) {
   const offset = entry.localOffset;
   if (offset + 30 > buffer.length || buffer.readUInt32LE(offset) !== 0x04034b50) {
     throw new Error("The archive entry header is malformed.");
@@ -160,7 +162,7 @@ function readZipEntryData(buffer, entry) {
     method !== entry.method ||
     Boolean(flags & 0x0001) ||
     dataEnd > buffer.length ||
-    entry.uncompressedSize > MAX_RULE_FILE_BYTES
+    entry.uncompressedSize > maxEntryBytes
   ) {
     throw new Error("The archive entry failed validation.");
   }
@@ -169,7 +171,7 @@ function readZipEntryData(buffer, entry) {
   try {
     data = entry.method === 0
       ? Buffer.from(compressed)
-      : inflateRawSync(compressed, { maxOutputLength: MAX_RULE_FILE_BYTES });
+      : inflateRawSync(compressed, { maxOutputLength: maxEntryBytes });
   } catch {
     throw new Error("The archive entry could not be decompressed safely.");
   }
@@ -179,7 +181,7 @@ function readZipEntryData(buffer, entry) {
   return data;
 }
 
-function extractZipPaths(buffer, requestedPaths, { stripTopLevel = false } = {}) {
+function extractZipPaths(buffer, requestedPaths, { stripTopLevel = false, maxEntryBytes = MAX_RULE_FILE_BYTES } = {}) {
   if (!(requestedPaths instanceof Set)) throw new Error("An explicit archive allowlist is required.");
   const entries = readZipDirectory(buffer);
   const files = entries.filter((entry) => !entry.name.endsWith("/"));
@@ -193,7 +195,7 @@ function extractZipPaths(buffer, requestedPaths, { stripTopLevel = false } = {})
       throw new Error("The repository archive has an unexpected root layout.");
     }
     if (requestedPaths.has(relativePath)) {
-      byRelativePath.set(relativePath, readZipEntryData(buffer, entry));
+      byRelativePath.set(relativePath, readZipEntryData(buffer, entry, maxEntryBytes));
     }
   }
   for (const requested of requestedPaths) {
@@ -281,6 +283,7 @@ function curateSignatureArchive({ archiveBuffer, tree, commitInfo, requireBaseli
   );
   const selectedRules = new Map();
   const ruleMetadata = [];
+  let ruleCount = 0;
   let licenseExclusions = 0;
   let externalExclusions = 0;
   let overlapExclusions = 0;
@@ -301,13 +304,15 @@ function curateSignatureArchive({ archiveBuffer, tree, commitInfo, requireBaseli
     selectedRules.set(relativePath, content);
     sourceBytes += content.length;
     ruleMetadata.push({ path: relativePath, sha256: sha256(content), bytes: content.length });
+    ruleCount += [...text.matchAll(/^\s*(?:(?:private|global)\s+)*rule\s+[A-Za-z_][A-Za-z0-9_]*/gim)].length;
   }
 
   if (!selectedRules.size) throw new Error("No license-cleared, compatible YARA rules were found.");
   if (requireBaseline && (
     commitInfo.sha !== SIGNATURE_BASELINE_COMMIT ||
     allRuleFiles.length !== SIGNATURE_BASELINE_FILES ||
-    selectedRules.size !== SIGNATURE_BASELINE_RULES ||
+    selectedRules.size !== SIGNATURE_BASELINE_RULE_FILES ||
+    ruleCount !== SIGNATURE_BASELINE_RULES ||
     licenseExclusions !== SIGNATURE_BASELINE_LICENSE_EXCLUSIONS ||
     externalExclusions !== SIGNATURE_BASELINE_EXTERNAL_EXCLUSIONS ||
     overlapExclusions !== SIGNATURE_BASELINE_OVERLAP ||
@@ -324,7 +329,8 @@ function curateSignatureArchive({ archiveBuffer, tree, commitInfo, requireBaseli
     signatureCommit: commitInfo.sha,
     signatureCommitDate: new Date(commitInfo.date).toISOString(),
     signatureLicense: "Detection Rule License 1.1",
-    ruleCount: selectedRules.size,
+    ruleCount,
+    ruleFileCount: selectedRules.size,
     sourceRuleFileCount: allRuleFiles.length,
     excludedLicenseFileCount: licenseExclusions,
     excludedExternalVariableFileCount: externalExclusions,
@@ -339,7 +345,9 @@ module.exports = {
   MAX_ARCHIVE_BYTES,
   SIGNATURE_BASELINE_COMMIT,
   SIGNATURE_LICENSE_META,
+  SIGNATURE_LICENSE_SHA256,
   SIGNATURE_REPOSITORY,
+  WINDOWS_BASELINE_MANIFEST_SHA256,
   YARA_X_LICENSE_SHA256,
   YARA_X_VERSION,
   YARA_X_WINDOWS_EXE_SHA256,
