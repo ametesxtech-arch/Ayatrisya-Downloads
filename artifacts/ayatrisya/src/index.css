@@ -114,24 +114,28 @@ html[data-hidden] .pend-dot{animation-play-state:paused}
 
 html[data-wallpaper-active="true"] .workspace-shell {
   background-color: #101116 !important;
-  background-image: linear-gradient(rgba(13,14,20,.70),rgba(13,14,20,.70)),var(--workspace-wallpaper) !important;
+  background-image: linear-gradient(rgba(13,14,20,.48),rgba(13,14,20,.55)),var(--workspace-wallpaper) !important;
   background-position: center;
   background-size: cover;
-  background-attachment: fixed;
+  background-repeat: no-repeat;
+  background-attachment: scroll;
 }
 html[data-wallpaper-active="true"] .workspace-sidebar {
   background-color: rgba(18,20,26,.88) !important;
   backdrop-filter: blur(18px);
 }
 html[data-wallpaper-active="true"] .workspace-shell main {
-  background-color: rgba(16,17,22,.42);
+  background-color: rgba(16,17,22,.18);
   backdrop-filter: blur(4px);
 }
 html[data-appearance="light"][data-wallpaper-active="true"] .workspace-shell {
-  background-image: linear-gradient(rgba(238,239,247,.76),rgba(238,239,247,.76)),var(--workspace-wallpaper) !important;
+  background-image: linear-gradient(rgba(238,239,247,.42),rgba(238,239,247,.54)),var(--workspace-wallpaper) !important;
 }
 html[data-appearance="light"][data-wallpaper-active="true"] .workspace-sidebar {
   background-color: rgba(244,244,249,.9) !important;
+}
+html[data-appearance="light"][data-wallpaper-active="true"] .workspace-shell main {
+  background-color: rgba(238,239,247,.24);
 }
 
 /* Route entrance, staggered lists, tooltips, control transitions */
