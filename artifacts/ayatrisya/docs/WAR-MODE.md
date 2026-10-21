@@ -5,9 +5,9 @@
 The first implementation uses Microsoft Defender already installed by Windows.
 Ayatrisya does not redistribute Defender binaries or signatures and does not
 install, disable, or change any Windows security setting. This avoids silently
-shipping a separate antivirus engine or redistributing signatures without a
-verified license. It does **not** meet the original requirement to bundle an
-engine and baseline signatures; that work remains open.
+shipping a separate antivirus engine. The Ayatrisya app still uses Defender
+only; the alternative below is a verified bundling candidate, not an integrated
+scanner.
 
 ## Bundled-engine candidate review
 
@@ -41,11 +41,87 @@ Sources reviewed:
 - [ClamAV official signature database documentation](https://github.com/Cisco-Talos/clamav-documentation/blob/main/src/manual/Signatures.md)
 - [ClamAV 1.5.4 Windows x64 release assets](https://github.com/Cisco-Talos/clamav/releases/tag/clamav-1.5.4)
 
-The safest current option is to retain the existing Windows Defender integration.
-For a bundled ClamAV option, first obtain clear redistribution permission for the
-official signature databases or choose a signature set with explicit
-redistribution terms. Do not substitute unsigned or unlicensed community rules
-and call them complete antivirus protection.
+ClamAV is not selected because the CVD redistribution terms could not be
+verified. The existing Windows Defender integration remains intact. The
+alternative below has explicit redistribution terms for a curated ruleset, but
+is not yet bundled or integrated.
+
+## Alternative candidate with explicit redistribution terms
+
+YARA-X plus a curated snapshot of Neo23x0's Signature-Base is a viable candidate
+for a redistributable offline baseline. It has **not** been integrated into the
+app or Windows installer.
+
+### Engine license and Windows package
+
+- YARA-X v1.22.0 is licensed under BSD-3-Clause. The license permits source and
+  binary redistribution if the copyright notice, conditions, and disclaimer are
+  retained in the documentation/materials.
+- The official Windows x64 release asset is
+  `yara-x-v1.22.0-x86_64-pc-windows-msvc.zip` (9,081,400 bytes). Its published
+  SHA-256, `eac36a58699b94d3732a7fe1d8453fe89e0077bb18ac2c99b4c2ee102a431f2e`,
+  matched the downloaded asset. The ZIP contains a single `yr.exe`
+  (26,424,320 bytes). Static PE inspection found Windows system-library imports;
+  the executable was not run on Windows, so runtime compatibility and any
+  environment-specific requirements remain unverified.
+
+### Signature license and baseline size
+
+- The official [Signature-Base repository](https://github.com/Neo23x0/signature-base)
+  README states that its signatures and IOC files use the custom Detection Rule
+  License (DRL) 1.1 except YARA rules that explicitly name another license.
+  DRL 1.1 expressly permits use, copying, modification, distribution,
+  sublicensing, and selling copies. It requires retaining rule-author
+  attribution where supplied, the source URI, and the license; attribution
+  supplied by a rule must also be retained in match messages.
+- Do **not** use the repository's old `v2.0` release: its README identifies that
+  release as the final one under the older CC-BY-NC terms. The reviewed snapshot
+  is commit
+  `3ce6640c26046da8e6d8094af3eaaee3ee84e648` (2026-10-17), after the license
+  switch.
+- A conservative baseline contains 711 `.yar` files. It excludes 29 files with
+  explicit license metadata other than the root DRL license and 13 files listed
+  by the repository as requiring LOKI/THOR external variables (one file
+  overlaps, so 41 files are excluded in total). The selected rule source is
+  5,194,627 bytes; a ZIP with those rules and the DRL license is 1,409,807
+  bytes. Any distributable bundle must also preserve the source URL, snapshot
+  commit, full license, and rule-author metadata.
+- The repository is actively updated, but it does not provide a current signed
+  signature-feed release. Future updates would need to come from this official
+  repository at a pinned commit and repeat the per-rule license and external
+  variable filtering. No updater is implemented.
+
+### Candidate validation and limits
+
+- The official YARA-X Linux x64 release was downloaded for local validation;
+  its GitHub-published SHA-256 matched, and it reported version 1.22.0.
+- YARA-X compiled all 711 selected rule files with no errors into a
+  4,961,790-byte database. A non-suppressed compile emitted 199 nonfatal
+  warnings, including duplicate patterns, deprecated PE fields, and
+  text-as-hex suggestions.
+- An offline scan of the harmless 68-byte EICAR test file matched the
+  repository's `SUSP_Just_EICAR` rule. A small benign text control produced no
+  matches. This is a Linux engine/rules smoke test, not a Windows test or a
+  false-positive-rate evaluation. The EICAR rule has score 40 and is a test
+  signature; it must not trigger quarantine.
+- The Windows executable archive plus compiled rules represent about 31.4 MB
+  of uncompressed files before notices and installer compression. Ayatrisya's
+  current installer is 111,298,546 bytes; a rebuilt installer's actual size has
+  not been measured.
+- No Windows installer, offline Windows scan, Windows EICAR run, update flow,
+  quarantine, restore, or permission-failure path has been tested. The rule
+  scores do not yet establish a validated high-confidence auto-quarantine
+  threshold. Defender remains unchanged and is still the only scanner wired
+  into Ayatrisya.
+
+Sources:
+
+- [YARA-X v1.22.0 source and BSD-3-Clause license](https://github.com/VirusTotal/yara-x/tree/v1.22.0)
+- [YARA-X v1.22.0 Windows and Linux release assets](https://github.com/VirusTotal/yara-x/releases/tag/v1.22.0)
+- [Signature-Base reviewed snapshot](https://github.com/Neo23x0/signature-base/tree/3ce6640c26046da8e6d8094af3eaaee3ee84e648)
+- [Signature-Base license at that snapshot](https://github.com/Neo23x0/signature-base/blob/3ce6640c26046da8e6d8094af3eaaee3ee84e648/LICENSE)
+- [Signature-Base README and license/external-variable policy](https://github.com/Neo23x0/signature-base/blob/3ce6640c26046da8e6d8094af3eaaee3ee84e648/README.md)
+- [Signature-Base external-variable rules](https://github.com/Neo23x0/signature-base/blob/3ce6640c26046da8e6d8094af3eaaee3ee84e648/yara/external-variable-rules.txt)
 
 ## How it works
 
