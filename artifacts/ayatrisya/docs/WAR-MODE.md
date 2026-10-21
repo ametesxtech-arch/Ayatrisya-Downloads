@@ -27,10 +27,9 @@ declarations**; the 711 count refers to source files, not individual rules.
   YARA-X's `--print-meta` output and shows the rule's supplied author in the
   review UI and native quarantine confirmation. The complete DRL license,
   YARA-X license, and notices ship beside the rules.
-- The generated Windows resource set is about 31.6 MB uncompressed, before
-  installer compression. The final Windows installer size is measured by the
-  native CI build and must be recorded from that run; Linux package sizes are
-  not a substitute.
+- The Windows resource set is 31,736,318 bytes uncompressed. Native Windows CI
+  measured the complete installer at 119,076,677 bytes; that figure includes
+  the whole app, so it is not the compressed size of WAR MODE alone.
 
 ClamAV was also reviewed. Its GPLv2 engine and Windows packages are available,
 but the reviewed official documentation did not establish redistribution terms
@@ -101,13 +100,30 @@ Local checks performed in this workspace:
 - ZIP traversal/duplicate-path checks, desktop security tests, and TypeScript
   type checking are run locally.
 
-The Windows installer workflow now installs and launches the packaged app,
-then runs its packaged YARA-X integration suite using a temporary app profile.
-That suite checks offline startup, the EICAR detection rule and benign control,
-progress/cancellation, recoverable quarantine and restore, failed-update
-retention, a Windows ACL permission denial, and uninstall. It writes a JSON
-test report. **Do not claim the Windows integration passed until that native
-runner report is available.**
+GitHub Actions run
+[39553261342](https://github.com/ametesxtech-arch/Ayatrisya-Ai-workspace/actions/runs/39553261342)
+completed successfully on commit
+`e943028fd4b92c52404873d60583c27601cc2ea4`. Its Windows runner produced the
+119,076,677-byte `Ayatrisya Setup 0.0.0.exe` and passed a fresh silent install,
+an installed-process launch check (the process remained open for 10 seconds),
+the packaged WAR MODE integration suite, and uninstall. The uploaded JSON
+report marks all six integration tests passed:
+
+- Packaged baseline loaded with YARA-X 1.22.0, 711 rule files, and 4,886
+  declarations from snapshot `3ce6640c26046da8e6d8094af3eaaee3ee84e648`.
+- EICAR test file matched `SUSP_Just_EICAR`; the benign control did not match.
+  Counts: 2 scanned, 1 detected, 0 skipped, 0 inaccessible, 0 failed.
+- Quarantine and restore preserved the EICAR file; cancellation reported all
+  six unprocessed files as skipped; a failed update retained the known-good
+  baseline; a Windows ACL denial was reported as inaccessible.
+
+The run also built the Linux AppImage (128,845,001 bytes) and universal macOS
+DMG (220,759,964 bytes). It did not run installation/launch smoke tests for
+those platforms. The Windows launch check is a process-start smoke test, not a
+full interactive UI test. Although the scanner test loads and scans with the
+bundled baseline, the runner did not physically disable networking; no
+successful signature-update test is included in this report. The Actions
+artifacts are private repository artifacts, not public download links.
 
 ## Sources
 

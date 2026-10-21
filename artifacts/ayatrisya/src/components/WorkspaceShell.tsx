@@ -70,10 +70,10 @@ export function Workspace() {
     return () => window.removeEventListener('keydown', key);
   }, []);
   const asideRef = useRef<HTMLElement>(null), mainRef = useRef<HTMLDivElement>(null), wasOpen = useRef(false);
-  const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 767px)').matches);
+  const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 1023px)').matches);
   const [creating, setCreating] = useState(false);
   useEffect(() => {
-    const mq = window.matchMedia('(max-width: 767px)');
+    const mq = window.matchMedia('(max-width: 1023px)');
     const f = () => setIsMobile(mq.matches);
     mq.addEventListener('change', f);
     return () => mq.removeEventListener('change', f);
@@ -175,12 +175,12 @@ export function Workspace() {
   return (
     <div className="app-noise workspace-shell flex h-[100dvh] min-h-0 overflow-hidden bg-[#101116] text-slate-100" data-workspace-mode={prefs.workspaceMode}>
       <a href="#main" className="skip-link">Skip to content</a>
-      {mobileOpen && <button aria-label="Close navigation overlay" tabIndex={-1} onClick={() => setMobileOpen(false)} className="fixed inset-0 z-30 bg-black/60 md:hidden" />}
-      <aside ref={asideRef} onKeyDown={trap} onClickCapture={(e) => { if ((e.target as HTMLElement).closest('a[href]') && !confirmDiscard()) { e.preventDefault(); e.stopPropagation(); } }} role={isMobile && mobileOpen ? 'dialog' : undefined} aria-modal={isMobile && mobileOpen ? true : undefined} aria-label="Workspace navigation" className={cx('workspace-sidebar safe-t fixed inset-y-0 left-0 z-40 flex w-[270px] flex-col border-r border-white/[.065] bg-[#12141a] transition-transform duration-200 md:relative md:translate-x-0', mobileOpen ? 'translate-x-0' : '-translate-x-full', collapsed && 'md:w-[72px]')}>
+      {mobileOpen && <button aria-label="Close navigation overlay" tabIndex={-1} onClick={() => setMobileOpen(false)} className="fixed inset-0 z-30 bg-black/60 lg:hidden" />}
+      <aside ref={asideRef} onKeyDown={trap} onClickCapture={(e) => { if ((e.target as HTMLElement).closest('a[href]') && !confirmDiscard()) { e.preventDefault(); e.stopPropagation(); } }} role={isMobile && mobileOpen ? 'dialog' : undefined} aria-modal={isMobile && mobileOpen ? true : undefined} aria-label="Workspace navigation" className={cx('workspace-sidebar safe-t fixed inset-y-0 left-0 z-40 flex w-[270px] flex-col border-r border-white/[.065] bg-[#12141a] transition-transform duration-200 lg:relative lg:translate-x-0', mobileOpen ? 'translate-x-0' : '-translate-x-full', collapsed && 'lg:w-[72px]')}>
         <div className="flex h-[66px] items-center justify-between px-4">
           <Link href="/workspace" onClick={() => setMobileOpen(false)} aria-label="Ayatrisya home"><Brand compact /></Link>
-          <button ref={closeBtn} aria-label="Close navigation" className="grid size-9 place-items-center rounded-lg text-slate-400 hover:bg-white/[.07] md:hidden" onClick={() => setMobileOpen(false)}><X size={16} /></button>
-          <IconButton label={collapsed ? 'Expand navigation' : 'Collapse navigation'} className="hidden md:grid" onClick={() => save({ sidebarCollapsed: !collapsed })}>{collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}</IconButton>
+          <button ref={closeBtn} aria-label="Close navigation" className="grid size-9 place-items-center rounded-lg text-slate-400 hover:bg-white/[.07] lg:hidden" onClick={() => setMobileOpen(false)}><X size={16} /></button>
+          <IconButton label={collapsed ? 'Expand navigation' : 'Collapse navigation'} className="hidden lg:grid" onClick={() => save({ sidebarCollapsed: !collapsed })}>{collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}</IconButton>
         </div>
         <div className="px-3">
           <Button className="w-full justify-start" onClick={() => void newChat()} disabled={creating} data-testid="button-new-chat"><Plus size={16} />{!collapsed && 'New chat'}</Button>
@@ -230,11 +230,11 @@ export function Workspace() {
       <div ref={mainRef} className="flex min-w-0 flex-1 flex-col">
         <header className="safe-t flex min-h-[66px] shrink-0 items-center justify-between gap-2 border-b border-white/[.06] px-3 sm:px-6">
           <div className="flex min-w-0 items-center gap-2">
-            <button ref={menuBtn} aria-label="Open navigation" className="grid size-9 place-items-center rounded-lg text-slate-400 hover:bg-white/[.07] md:hidden" onClick={() => setMobileOpen(true)}><Menu size={17} /></button>
+            <button ref={menuBtn} aria-label="Open navigation" className="grid size-9 place-items-center rounded-lg text-slate-400 hover:bg-white/[.07] lg:hidden" onClick={() => setMobileOpen(true)}><Menu size={17} /></button>
             <h1 className="truncate text-[13px] font-medium text-slate-200">{title}</h1>
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2">
-            <select aria-label="Workspace mode" value={prefs.workspaceMode} onChange={(e) => void save({ workspaceMode: e.target.value as WorkspaceMode })} className="hidden max-w-[126px] rounded-md border border-white/[.08] bg-[#171920] px-2 py-2 text-[11px] text-slate-200 md:block">
+            <select aria-label="Workspace mode" value={prefs.workspaceMode} onChange={(e) => void save({ workspaceMode: e.target.value as WorkspaceMode })} className="hidden max-w-[126px] rounded-md border border-white/[.08] bg-[#171920] px-2 py-2 text-[11px] text-slate-200 lg:block">
               {Object.entries(workspaceModeNames).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
             </select>
             {prefs.workspaceMode === 'developer' && <div className="hidden items-center gap-2 rounded-md border border-cyan-200/10 bg-cyan-200/[.035] px-2.5 py-1.5 text-[10px] text-cyan-100/75 xl:flex" role="status" aria-label="Developer diagnostics">

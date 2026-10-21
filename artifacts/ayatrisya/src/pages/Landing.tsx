@@ -31,13 +31,13 @@ export function Landing() {
   const { startGuest, user } = useAuth();
   return (
     <div className="app-noise min-h-[100dvh] overflow-hidden bg-[#101116] text-slate-100">
-      <header className="relative z-10 mx-auto flex max-w-[1240px] items-center justify-between px-5 py-5 md:px-9">
+      <header className="landing-header relative z-10 mx-auto flex max-w-[1240px] items-center justify-between gap-3 px-3 py-4 sm:px-5 sm:py-5 lg:px-9">
         <Link href="/" aria-label="Ayatrisya home">
           <Brand />
         </Link>
         <nav
           aria-label="Main navigation"
-          className="hidden items-center gap-8 text-[13px] text-slate-400 md:flex"
+          className="hidden items-center gap-8 text-[13px] text-slate-400 lg:flex"
         >
           <a href="#capabilities" className="hover:text-white">
             Product
@@ -52,26 +52,26 @@ export function Landing() {
             About
           </a>
         </nav>
-        <div className="flex items-center gap-2">
-          {!user && <button type="button" onClick={() => { startGuest(); setPath('/workspace/chat'); }} className="rounded-lg border border-white/10 px-3 py-2.5 text-xs text-slate-200 transition hover:bg-white/[.05]">
-            Try as guest
+        <div className="landing-header-actions flex shrink-0 items-center gap-1.5 sm:gap-2">
+          {!user && <button type="button" onClick={() => { startGuest(); setPath('/workspace/chat'); }} className="landing-guest-cta shrink-0 whitespace-nowrap rounded-lg border border-white/10 px-2.5 py-2.5 text-[10px] text-slate-200 transition hover:bg-white/[.05] sm:px-3 sm:text-xs">
+            <span className="landing-guest-label-long">Try as guest</span><span className="landing-guest-label-short">Guest</span>
           </button>}
           <Link
             href="/auth/sign-in"
-            className="hidden px-3 py-2 text-xs text-slate-300 hover:text-white sm:block"
+            className="hidden whitespace-nowrap px-3 py-2 text-xs text-slate-300 hover:text-white lg:block"
           >
             Sign in
           </Link>
           <Link
             href="/auth/create-account"
-            className="rounded-lg bg-[#7768db] px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-[#887be8]"
+            className="landing-account-cta inline-flex shrink-0 items-center whitespace-nowrap rounded-lg bg-[#7768db] px-2.5 py-2.5 text-[10px] font-semibold text-white transition hover:bg-[#887be8] sm:px-4 sm:text-xs"
           >
             Create account <ArrowRight size={14} className="ml-1 inline" />
           </Link>
         </div>
       </header>
       <main>
-        <section className="relative mx-auto grid max-w-[1240px] gap-14 px-5 pb-24 pt-14 md:grid-cols-[.95fr_1.05fr] md:items-center md:px-9 md:pb-32 md:pt-24">
+        <section className="relative mx-auto grid max-w-[1240px] gap-10 px-5 pb-16 pt-10 sm:pb-24 sm:pt-14 lg:grid-cols-[.95fr_1.05fr] lg:items-center lg:gap-14 lg:px-9 lg:pb-32 lg:pt-24">
           <div className="pointer-events-none absolute -left-24 top-16 h-80 w-80 rounded-full bg-violet-500/[.08] blur-[110px]" />
           <div className="relative reveal">
             <Eyebrow>Ametesx · a workspace for considered work</Eyebrow>
@@ -84,7 +84,7 @@ export function Landing() {
               Conversation, research, code, visuals and documents—brought
               together in a professional workspace built to grow with your work.
             </p>
-            <div className="mt-8 flex flex-wrap gap-3">
+            <div className="mt-8 flex flex-wrap gap-2.5 sm:gap-3">
               <Link
                 href="/auth/create-account"
                 className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-violet-500 px-5 font-semibold text-white shadow-[0_8px_30px_rgba(114,97,215,.2)] hover:bg-violet-400"
@@ -110,7 +110,7 @@ export function Landing() {
           className="border-y border-white/[.06] bg-[#13151b] px-5 py-20 md:px-9 md:py-24"
         >
           <div className="mx-auto max-w-[1160px]">
-            <div className="grid gap-4 md:grid-cols-[.8fr_1.2fr] md:items-end">
+            <div className="grid gap-4 lg:grid-cols-[.8fr_1.2fr] lg:items-end">
               <div>
                 <Eyebrow>One workspace, many kinds of work</Eyebrow>
                 <h2 className="display max-w-lg text-4xl font-semibold tracking-[-.055em] md:text-5xl">
@@ -182,7 +182,7 @@ export function Landing() {
         </section>
         <section
           id="desktop"
-          className="mx-auto grid max-w-[1160px] gap-12 px-5 py-20 md:grid-cols-2 md:items-center md:px-9 md:py-28"
+          className="mx-auto grid max-w-[1160px] gap-10 px-5 py-16 sm:py-20 lg:grid-cols-2 lg:items-center lg:gap-12 lg:px-9 lg:py-28"
         >
           <div>
             <Eyebrow>Ayatrisya Desktop</Eyebrow>
@@ -249,7 +249,7 @@ export function Landing() {
           id="about"
           className="border-y border-white/[.06] bg-[#13151b] px-5 py-20 md:px-9 md:py-24"
         >
-          <div className="mx-auto grid max-w-[1160px] gap-10 md:grid-cols-[.8fr_1.2fr]">
+          <div className="mx-auto grid max-w-[1160px] gap-8 lg:grid-cols-[.8fr_1.2fr] lg:gap-10">
             <div>
               <Eyebrow>Privacy, by design</Eyebrow>
               <h2 className="display max-w-md text-4xl font-semibold tracking-[-.06em] md:text-5xl">

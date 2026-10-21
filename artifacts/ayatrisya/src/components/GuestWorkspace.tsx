@@ -9,7 +9,7 @@ export function GuestWorkspace({ children, path, onNewChat, creating }: { childr
   const chats = useLocalQuery(() => repository.listConversations({ limit: 20, sort: 'newest' }), []);
   const activeChat = path === '/workspace/chat' || path.startsWith('/workspace/chat/');
   return <div className="guest-workspace app-noise flex h-[100dvh] min-h-0 overflow-hidden bg-[#101116] text-slate-100">
-    <aside className="hidden w-[260px] shrink-0 flex-col border-r border-white/[.065] bg-[#12141a] p-4 md:flex">
+    <aside className="hidden w-[260px] shrink-0 flex-col border-r border-white/[.065] bg-[#12141a] p-4 lg:flex">
       <Link href="/workspace/chat" aria-label="Ayatrisya guest workspace"><Brand compact /></Link>
       <button type="button" onClick={onNewChat} disabled={creating} className="mt-6 flex h-10 items-center justify-center gap-2 rounded-lg bg-violet-300 px-3 text-xs font-bold text-[#171523] disabled:opacity-50"><Plus size={15} />New chat</button>
       <nav className="mt-4 space-y-1" aria-label="Guest workspace">
@@ -28,11 +28,11 @@ export function GuestWorkspace({ children, path, onNewChat, creating }: { childr
     </aside>
     <div className="flex min-w-0 flex-1 flex-col">
       <header className="safe-t flex min-h-[60px] shrink-0 items-center justify-between gap-3 border-b border-white/[.06] px-4 sm:px-6">
-        <div className="md:hidden"><Brand compact /></div>
-        <span className="hidden truncate text-[13px] font-medium text-slate-200 md:block">{path === '/workspace/images' ? 'Image generation' : 'Chat'}</span>
+        <div className="lg:hidden"><Brand compact /></div>
+        <span className="hidden truncate text-[13px] font-medium text-slate-200 lg:block">{path === '/workspace/images' ? 'Image generation' : 'Chat'}</span>
         <Link href="/auth/create-account" className="ml-auto rounded-lg border border-violet-300/20 px-3 py-2 text-xs font-semibold text-violet-100 hover:bg-violet-300/[.06]">Create account</Link>
       </header>
-      <nav className="flex shrink-0 items-center gap-2 overflow-x-auto border-b border-white/[.06] px-3 py-2 md:hidden" aria-label="Guest workspace">
+      <nav className="flex shrink-0 items-center gap-2 overflow-x-auto border-b border-white/[.06] px-3 py-2 lg:hidden" aria-label="Guest workspace">
         <Link href="/workspace/chat" className={`flex h-9 shrink-0 items-center gap-2 rounded-lg px-3 text-xs ${activeChat ? 'bg-violet-300/[.1] text-violet-100' : 'text-slate-400'}`}><MessageSquare size={14} />Chat</Link>
         <button type="button" data-testid="guest-new-chat" onClick={onNewChat} disabled={creating} className="flex h-9 shrink-0 items-center gap-2 rounded-lg border border-white/10 px-3 text-xs text-slate-300 disabled:opacity-50"><Plus size={14} />New</button>
         <Link href="/workspace/images" className={`flex h-9 shrink-0 items-center gap-2 rounded-lg px-3 text-xs ${path === '/workspace/images' ? 'bg-violet-300/[.1] text-violet-100' : 'text-slate-400'}`}><Image size={14} />Images · 2</Link>

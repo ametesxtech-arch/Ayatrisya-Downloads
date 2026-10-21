@@ -42,16 +42,29 @@ try {
   const counts=()=>evaluate(`new Promise((resolve,reject)=>{const request=indexedDB.open('ayatrisya-local');request.onerror=()=>reject(request.error);request.onsuccess=async()=>{const db=request.result,names=['conversations','messages','projects','projectItems','attachments'];const values=await Promise.all(names.map(name=>new Promise((res,rej)=>{const query=db.transaction(name).objectStore(name).count();query.onsuccess=()=>res(query.result);query.onerror=()=>rej(query.error);})));db.close();resolve(Object.fromEntries(names.map((name,i)=>[name,values[i]])));};})`);
   const savedPreferences=()=>evaluate(`new Promise((resolve,reject)=>{const request=indexedDB.open('ayatrisya-local');request.onerror=()=>reject(request.error);request.onsuccess=()=>{const db=request.result,query=db.transaction('preferences').objectStore('preferences').getAll();query.onsuccess=()=>{db.close();resolve(query.result);};query.onerror=()=>reject(query.error);};})`);
   const setFile=async(selector,path)=>{const document=await call('DOM.getDocument');const node=await call('DOM.querySelector',{nodeId:document.root.nodeId,selector});await call('DOM.setFileInputFiles',{nodeId:node.nodeId,files:[path]});};
+  const setViewport=async(width,height,mobile)=>{await call('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile});await delay(160);};
+  const assertNoHorizontalOverflow=async(label)=>{const size=await evaluate(`({viewport:innerWidth,document:document.documentElement.scrollWidth,body:document.body.scrollWidth})`);if(size.document>size.viewport||size.body>size.viewport)throw Error(`${label} overflows horizontally: ${JSON.stringify(size)}`);};
   await call('Page.enable');await call('Runtime.enable');await call('Network.enable');
   await call('Page.setDownloadBehavior',{behavior:'allow',downloadPath:dir});
-  await call('Emulation.setDeviceMetricsOverride',{width:1440,height:1000,deviceScaleFactor:1,mobile:false});
+  await setViewport(1440,1000,false);
   await call('Page.navigate',{url:'http://127.0.0.1:80/'});
   await wait(`document.querySelector('a[aria-label="Get Ayatrisya Desktop"]')`,'desktop download action');
+  assert(await evaluate(`!/(maximum-scale\\s*=\\s*1|user-scalable\\s*=\\s*no)/i.test(document.querySelector('meta[name="viewport"]')?.content||'')`),'Mobile zoom must remain available');
+  for(const width of [320,390,768,1024,1440]){await setViewport(width,width<640?844:1000,width<1024);await assertNoHorizontalOverflow(`Landing at ${width}px`);}
+  await setViewport(768,1000,true);
+  const tabletHeroTracks=await evaluate(`getComputedStyle(document.querySelector('main > section')).gridTemplateColumns.split(' ').length`);
+  assert.equal(tabletHeroTracks,1,'Landing hero should stack at tablet width');
+  await setViewport(1024,1000,false);
+  const desktopHeroTracks=await evaluate(`getComputedStyle(document.querySelector('main > section')).gridTemplateColumns.split(' ').length`);
+  assert.equal(desktopHeroTracks,2,'Landing hero should use two columns on wide screens');
+  await setViewport(1440,1000,false);
+  passed.push('Landing layout adapts without horizontal overflow from 320px phones through desktop');
   const desktopUrl=await evaluate(`document.querySelector('a[aria-label="Get Ayatrisya Desktop"]').href`);
   if(new URL(desktopUrl).pathname==='/desktop'){
     await click('a[aria-label="Get Ayatrisya Desktop"]');
     await wait(`location.pathname==='/desktop'`,'desktop download page');
     assert(await evaluate(`document.body.innerText.includes('Installer status')`),'Desktop installer status is missing');
+     for(const width of [320,768,1440]){await setViewport(width,width<640?844:1000,width<1024);await assertNoHorizontalOverflow(`Desktop downloads at ${width}px`);}
   }else{
     assert.equal(new URL(desktopUrl).protocol,'https:','Desktop download links must use HTTPS');
   }
@@ -63,9 +76,13 @@ try {
     await call('Page.navigate',{url:'http://127.0.0.1:80/workspace'});
     await wait(`location.pathname==='/auth/sign-in'`,'workspace account gate');
     await wait(`document.querySelector('[data-testid="input-email"]')`,'email sign-in form');
+     for(const width of [320,768,1440]){await setViewport(width,width<640?844:1000,width<1024);await assertNoHorizontalOverflow(`Sign-in at ${width}px`);}
+     await setViewport(1440,1000,false);
      assert(await evaluate(`document.body.innerText.includes('Continue as guest')`),'Guest access option is missing');
     await call('Page.navigate',{url:'http://127.0.0.1:80/auth/create-account'});
     await wait(`document.querySelector('[data-testid="input-confirm"]')`,'email/password account form');
+     for(const width of [320,768,1440]){await setViewport(width,width<640?844:1000,width<1024);await assertNoHorizontalOverflow(`Create account at ${width}px`);}
+     await setViewport(1440,1000,false);
     assert(await evaluate(`[...document.querySelectorAll('button')].some(button=>button.textContent.includes('Continue with Google'))`),'Google sign-in button is missing');
     assert(await evaluate(`[...document.querySelectorAll('button')].some(button=>button.textContent.includes('Continue with GitHub'))`),'GitHub sign-in button is missing');
     await call('Page.navigate',{url:'http://127.0.0.1:80/intro'});
@@ -79,7 +96,21 @@ try {
      assert(await evaluate(`document.body.innerText.includes('unlimited chats')`),'Guest chat allowance is missing');
      assert(await evaluate(`document.body.innerText.includes('2 images')`),'Guest image allowance is missing');
      assert.equal(await evaluate(`!!document.querySelector('[aria-label="Workspace mode"]')`),false,'Guest mode selector must stay hidden');
-     await call('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
+      await setViewport(320,844,true);
+      await assertNoHorizontalOverflow('Guest workspace at 320px');
+      await setViewport(390,844,true);
+      await assertNoHorizontalOverflow('Guest workspace at 390px');
+      await setViewport(768,1024,true);
+      await assertNoHorizontalOverflow('Guest workspace at 768px');
+      assert.equal(await evaluate(`getComputedStyle(document.querySelector('.guest-workspace>aside')).display`),'none','Guest sidebar should stay collapsed on tablet');
+      assert.notEqual(await evaluate(`getComputedStyle(document.querySelector('.guest-workspace > div > nav[aria-label="Guest workspace"]')).display`),'none','Guest tab navigation should remain visible on tablet');
+      await setViewport(1024,900,false);
+      await assertNoHorizontalOverflow('Guest workspace at 1024px');
+      assert.notEqual(await evaluate(`getComputedStyle(document.querySelector('.guest-workspace>aside')).display`),'none','Guest sidebar should appear on wide screens');
+      assert.equal(await evaluate(`getComputedStyle(document.querySelector('.guest-workspace > div > nav[aria-label="Guest workspace"]')).display`),'none','Guest mobile tabs should hide on wide screens');
+      await setViewport(1440,1000,false);
+      await assertNoHorizontalOverflow('Guest workspace at 1440px');
+      await setViewport(390,844,true);
      await wait(`document.querySelector('[data-testid="guest-new-chat"]')`,'mobile guest new-chat control');
      await click('[data-testid="guest-new-chat"]');
      await wait(`location.pathname.startsWith('/workspace/chat/')`,'mobile guest chat creation');
@@ -88,7 +119,7 @@ try {
      await wait(`location.pathname==='/workspace/chat'`,'guest feature restriction');
      await call('Page.navigate',{url:'http://127.0.0.1:80/workspace/images'});
      await wait(`document.body.innerText.includes('Two image generations')`,'guest image allowance page');
-     assert(await evaluate(`document.body.innerText.includes('Image generation is not connected yet')`),'Unavailable image generation is not explained');
+      assert(await evaluate(`document.querySelector('[data-testid="status-image"]')?.textContent.includes('No Ayatrisya image model is connected')`),'Unavailable image generation is not explained');
      await call('Page.reload');
      await wait(`document.querySelector('.guest-workspace')`,'persisted guest session');
     assert.deepEqual(uploads,[]);
@@ -189,7 +220,7 @@ await go('/workspace');await click('[data-testid="button-new-chat"]');
   await evaluate(`(()=>{const label=[...document.querySelectorAll('label')].find(x=>x.textContent.trim().startsWith('Theme'));const select=label.querySelector('select');select.value='Light';select.dispatchEvent(new Event('change',{bubbles:true}));})()`);
   await wait(`document.documentElement.dataset.appearance==='light'`);
   await fs.writeFile(`${dir}/light.png`,Buffer.from((await call('Page.captureScreenshot',{format:'png'})).data,'base64'));
-  await go(chatPath);await call('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});await delay(200);
+   await go(chatPath);await setViewport(390,844,true);
   await click('[aria-label="Open navigation"]');await wait(`document.querySelector('aside[role="dialog"]')`);
   assert(await evaluate(`document.querySelector('aside').contains(document.activeElement)`));
   await call('Input.dispatchKeyEvent',{type:'keyDown',key:'Escape',code:'Escape'});
@@ -199,6 +230,11 @@ await go('/workspace');await click('[data-testid="button-new-chat"]');
   assert(await evaluate(`document.documentElement.scrollWidth<=innerWidth && document.querySelector('[data-testid="input-message"]').getBoundingClientRect().bottom<=innerHeight`));
   await fs.writeFile(`${dir}/mobile.png`,Buffer.from((await call('Page.captureScreenshot',{format:'png'})).data,'base64'));
   passed.push('Light theme, mobile drawer focus/Escape/inert, no overflow and visible composer');
+   await setViewport(768,1024,true);await assertNoHorizontalOverflow('Workspace shell at 768px');
+   assert.notEqual(await evaluate(`getComputedStyle(document.querySelector('[aria-label="Open navigation"]')).display`),'none','Workspace drawer control should remain available on tablet');
+   await setViewport(1024,900,false);await assertNoHorizontalOverflow('Workspace shell at 1024px');
+   assert.equal(await evaluate(`getComputedStyle(document.querySelector('[aria-label="Open navigation"]')).display`),'none','Workspace drawer control should hide on wide screens');
+   assert.equal(await evaluate(`getComputedStyle(document.querySelector('.workspace-sidebar')).position`),'relative','Workspace sidebar should become part of the wide-screen layout');
   assert.deepEqual(uploads,[]);assert.deepEqual(errors,[]);
   console.log(JSON.stringify({passed,counts:before,privateUploads:uploads.length,browserErrors:errors,screenshots:[`${dir}/light.png`,`${dir}/mobile.png`]},null,2));
   }

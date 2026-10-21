@@ -63,7 +63,7 @@ export function AuthPage() {
 }
 
 export function AuthFrame({ children }: { children: ReactNode }) {
-  return <main className="app-noise flex min-h-[100dvh] items-center justify-center bg-[radial-gradient(ellipse_at_50%_12%,rgba(94,79,179,.13),transparent_38%),#101116] p-5">
+  return <main className="app-noise flex min-h-[100dvh] items-start justify-center overflow-y-auto bg-[radial-gradient(ellipse_at_50%_12%,rgba(94,79,179,.13),transparent_38%),#101116] px-4 py-16 sm:items-center sm:p-5">
     <Link href="/" className="absolute left-6 top-6 text-xs text-slate-400 hover:text-slate-100"><span className="sr-only">Back to </span>Ayatrisya home</Link>
     <div className="w-full max-w-[430px] rounded-2xl border border-white/[.075] bg-[#15171e]/95 p-6 shadow-2xl sm:p-9"><div className="mb-6"><Brand compact /></div>{children}</div>
   </main>;

@@ -156,7 +156,7 @@ html[data-motion="reduced"] .route-in,html[data-motion="reduced"] .stagger>*,htm
 
 /* Workspace modes change usable space and density without hiding the mode control. */
 .workspace-sidebar{transition:width var(--dur-base) var(--ease-out),opacity var(--dur-base) var(--ease-out),border-color var(--dur-base) var(--ease-out)}
-@media(min-width:768px){
+@media(min-width:1024px){
   .workspace-shell[data-workspace-mode="focus"] .workspace-sidebar{display:none}
 }
 .workspace-shell[data-workspace-mode="compact"] .workspace-nav-link{min-height:2rem;margin-block:.1rem;padding-block:.3rem;font-size:11px}
@@ -164,3 +164,31 @@ html[data-motion="reduced"] .route-in,html[data-motion="reduced"] .stagger>*,htm
 html[data-appearance="light"] .workspace-home{background:#f2f2f7;color:#1b1d2a}
 html[data-appearance="light"] .workspace-home [class*="bg-[#14"],html[data-appearance="light"] .workspace-home [class*="bg-[#15"]{background-color:#fff}
 html[data-appearance="light"] .workspace-home [class*="border-white/"]{border-color:rgba(40,40,90,.15)}
+
+/* Fluid layout foundation shared by the marketing, auth, and workspace routes. */
+html{ -webkit-text-size-adjust:100%; scroll-padding-top:1rem; }
+body{ min-width:320px; }
+#root{ min-height:100dvh; }
+img,video,canvas,iframe{ max-width:100%; }
+button,input,textarea,select{ min-width:0; }
+.workspace-shell,.guest-workspace{ width:100%; max-width:100vw; }
+.workspace-main-content{ min-width:0; overflow-x:hidden; }
+.workspace-main-content :where(.grid,.flex)>*{ min-width:0; }
+.workspace-main-content :where(pre,textarea){ max-width:100%; }
+.workspace-main-content pre{ overflow-x:auto; overscroll-behavior-inline:contain; }
+.landing-guest-label-short{ display:none; }
+@media(max-width:1023px){
+  .landing-header{ min-width:0; }
+  .landing-header nav{ display:none; }
+}
+@media(max-width:360px){
+  .landing-header{ gap:.5rem; padding-inline:.75rem; }
+  .landing-header-actions{ gap:.35rem; }
+  .landing-guest-label-long{ display:none; }
+  .landing-guest-label-short{ display:inline; }
+  .landing-guest-cta,.landing-account-cta{ padding-inline:.6rem; font-size:10px; }
+}
+@media(max-width:639px){
+  .workspace-main-content :where(input,select,textarea){ max-width:100%; }
+  .workspace-main-content :where(button,a){ overflow-wrap:anywhere; }
+}
