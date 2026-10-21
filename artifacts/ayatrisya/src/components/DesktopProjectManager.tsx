@@ -302,10 +302,9 @@ export function DesktopProjectManager() {
       directory={directory}
       files={files}
       onPatchApplied={(relativePath, content) => {
-        if (selectedFile === relativePath) {
-          setDraft(content);
-          setDirty(false);
-        }
+        setSelectedFile(relativePath);
+        setDraft(content);
+        setDirty(false);
         setRefreshKey((key) => key + 1);
       }}
     />}

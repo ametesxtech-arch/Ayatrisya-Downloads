@@ -131,6 +131,34 @@ server-side credential boundary rather than putting secrets in the browser.
 - `POST /transcribe` multipart audio -> `{ "text": "..." }`
 - `POST /speech` JSON `{ "text": "..." }` -> `audio/*` bytes.
 
+### Ayatrisya-owned image, 3D, and music generation
+
+The configured Ayatrisya model endpoint may additionally declare `image`, `3d`,
+or `music` in a model's `modalities`. A capability is considered available only
+when the endpoint reports it; the UI never fabricates output while unavailable.
+Prompts are sent only after the user confirms each generation action. Web
+requests go to the configured HTTPS Ayatrisya-owned endpoint; desktop-local
+requests use the fixed loopback paths through Electron IPC.
+
+- `POST /generate/image` JSON
+  `{ "prompt", "model", "format": "PNG" | "JPEG", "aspectRatio",
+  "width", "height" }`
+- `POST /generate/3d` JSON
+  `{ "prompt", "model", "format": "GLB" }`
+- `POST /generate/music` JSON
+  `{ "prompt", "model", "format": "WAV" | "MP3", "durationSeconds" }`
+- Each returns JSON `{ "fileName", "mimeType", "dataBase64" }`. Ayatrisya
+  checks the declared media type, payload size, and basic file signature before
+  showing or saving the result.
+
+The local bridge permits only these fixed routes, loopback hosts, bounded
+request fields, and JSON responses. The renderer cannot choose arbitrary URLs
+or paths. Generation response bodies are limited to 24 MB; decoded asset files
+are limited to 18 MB. `GLB` is the supported generated 3D delivery format.
+This protocol is an integration contract, not a bundled model: the desktop
+adapter, model weights, and suitable compute must be supplied and operated by
+the Ayatrisya owner. No third-party inference provider is included.
+
 Text-only chat transport deliberately does not upload local attachments.
 Generation supports network/format/status errors, 120-second timeout, AbortSignal
 and stop cancellation. STT/TTS calls are gated by declared actual capability.

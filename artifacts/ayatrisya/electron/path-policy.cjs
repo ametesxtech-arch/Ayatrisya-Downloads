@@ -1,4 +1,12 @@
 const path = require("node:path");
+const CODING_EXTENSIONS = new Set([
+  ".c", ".cc", ".cpp", ".cs", ".css", ".go", ".h", ".hpp", ".html", ".java", ".js", ".jsx",
+  ".json", ".kt", ".md", ".mjs", ".py", ".rb", ".rs", ".scss", ".sql", ".svelte", ".swift",
+  ".ts", ".tsx", ".vue", ".xml", ".yaml", ".yml",
+]);
+const EXCLUDED_CODING_SEGMENTS = new Set([
+  ".git", ".ssh", ".aws", ".config", "node_modules", "vendor", "dist", "build", "coverage",
+]);
 
 function validateProjectId(value) {
   if (typeof value !== "string" || !/^[0-9a-f-]{36}$/i.test(value)) {
@@ -24,6 +32,24 @@ function cleanRelativePath(value, allowRoot = false) {
   const parts = normalized.split("/").filter(Boolean);
   if (!parts.length) throw new Error("Choose a file inside the project folder.");
   return parts.join(path.sep);
+}
+
+function validateNewTextFilePath(value) {
+  const clean = cleanRelativePath(value).replaceAll("\\", "/");
+  const parts = clean.split("/");
+  const filename = parts.at(-1)?.toLowerCase() ?? "";
+  const extension = path.posix.extname(filename);
+  if (
+    parts.some((part) => EXCLUDED_CODING_SEGMENTS.has(part.toLowerCase())) ||
+    filename === ".env" ||
+    filename.startsWith(".env.") ||
+    /(^|[._-])(secret|secrets|credential|credentials|private-key)([._-]|$)/i.test(filename) ||
+    /\.(pem|key|p12|pfx|jks|keystore|crt|cer)$/i.test(filename) ||
+    !CODING_EXTENSIONS.has(extension)
+  ) {
+    throw new Error("Ayatrisya can only create supported, non-sensitive text source files.");
+  }
+  return clean.split("/").join(path.sep);
 }
 
 function isWithin(root, candidate) {
@@ -88,6 +114,7 @@ module.exports = {
   isWithin,
   resolveExistingPath,
   resolveWritableFile,
+  validateNewTextFilePath,
   validateCommand,
   validateProjectId,
 };

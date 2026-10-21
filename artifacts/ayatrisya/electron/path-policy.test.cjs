@@ -8,6 +8,7 @@ const {
   isWithin,
   resolveExistingPath,
   resolveWritableFile,
+  validateNewTextFilePath,
   validateCommand,
   validateProjectId,
 } = require("./path-policy.cjs");
@@ -69,4 +70,18 @@ test("only accepts a single bounded command line", () => {
   assert.throws(() => validateCommand(""));
   assert.throws(() => validateCommand("echo one\nrm -rf ."));
   assert.throws(() => validateCommand("x".repeat(2001)));
+});
+
+test("new agent files must be supported, non-sensitive text files within the granted folder", () => {
+  assert.equal(validateNewTextFilePath("src/App.tsx"), path.join("src", "App.tsx"));
+  for (const file of [
+    "../outside.js",
+    ".env",
+    "config/client-secret.json",
+    "node_modules/pkg/index.js",
+    "src/private-key.pem",
+    "public/image.png",
+  ]) {
+    assert.throws(() => validateNewTextFilePath(file));
+  }
 });

@@ -89,11 +89,15 @@ generation is unavailable until a compatible model endpoint is connected.
 - `cancelGeneration(): void`
 - `transcribeAudio(blob, {signal?}): Promise<string>`
 - `synthesizeSpeech(text, {signal?}): Promise<Blob>`
+- `generateAsset(kind, prompt, options): Promise<{blob:Blob;fileName:string}>` for capability-reported image, GLB 3D, or music generation.
 
 No endpoint is configured now; capabilities are unavailable, no fake replies.
 Save the user's message locally even when inference unavailable; clearly show not sent.
-Ask for explicit consent before sending to configured remote inference. Attachments
-must not silently upload; transport currently supports text only.
+Ask for explicit consent before sending prompts to the configured Ayatrisya
+model server. Attachments and project files must not silently upload. Local
+desktop generation uses only fixed loopback routes and validates returned media.
+Real output requires the Ayatrisya owner to provide the model runtime and weights;
+the app does not bundle or pretend to train a foundation model.
 
 ## Drive
 

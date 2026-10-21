@@ -9,6 +9,7 @@ const {
   isWithin,
   resolveExistingPath,
   resolveWritableFile,
+  validateNewTextFilePath,
   validateCommand,
   validateProjectId,
 } = require("./path-policy.cjs");
@@ -24,7 +25,7 @@ const GRANTS_FILE = "authorized-project-folders.json";
 const SERVER_FILE = "desktop-server.json";
 const LOCAL_MODEL_FILE = "local-model-endpoint.json";
 const LOCAL_MODEL_TIMEOUT_MS = 120_000;
-const LOCAL_MODEL_RESPONSE_BYTES = 2 * 1024 * 1024;
+const LOCAL_MODEL_RESPONSE_BYTES = 24 * 1024 * 1024;
 const MIME_TYPES = {
   ".css": "text/css; charset=utf-8",
   ".html": "text/html; charset=utf-8",
@@ -248,7 +249,7 @@ async function readLocalModelJson(response) {
     total += value.byteLength;
     if (total > LOCAL_MODEL_RESPONSE_BYTES) {
       await reader.cancel();
-      throw new Error("The local model response is larger than 2 MB.");
+      throw new Error("The local model response is larger than 24 MB.");
     }
     chunks.push(Buffer.from(value));
   }
@@ -412,6 +413,15 @@ registerIpc("desktop:files:create", async (projectId, relativePath) => {
   const target = await resolveWritableFile(fs, project.path, relativePath);
   const handle = await fs.open(target, "wx", 0o600);
   await handle.close();
+});
+registerIpc("desktop:files:create-with-content", async (projectId, relativePath, content) => {
+  if (typeof content !== "string" || Buffer.byteLength(content, "utf8") > MAX_TEXT_FILE_BYTES) {
+    throw new Error("New text files are limited to 1 MB.");
+  }
+  const project = requireProject(projectId);
+  const safePath = validateNewTextFilePath(relativePath);
+  const target = await resolveWritableFile(fs, project.path, safePath);
+  await fs.writeFile(target, content, { encoding: "utf8", flag: "wx", mode: 0o600 });
 });
 registerIpc("desktop:files:write", async (projectId, relativePath, content) => {
   if (typeof content !== "string" || Buffer.byteLength(content, "utf8") > MAX_TEXT_FILE_BYTES) {

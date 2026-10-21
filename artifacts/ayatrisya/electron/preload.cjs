@@ -13,6 +13,8 @@ contextBridge.exposeInMainWorld(
       ipcRenderer.invoke("desktop:files:read", projectId, relativePath),
     createFile: (projectId, relativePath) =>
       ipcRenderer.invoke("desktop:files:create", projectId, relativePath),
+    createFileWithContent: (projectId, relativePath, content) =>
+      ipcRenderer.invoke("desktop:files:create-with-content", projectId, relativePath, content),
     writeFile: (projectId, relativePath, content) =>
       ipcRenderer.invoke("desktop:files:write", projectId, relativePath, content),
     runCommand: (projectId, command) =>

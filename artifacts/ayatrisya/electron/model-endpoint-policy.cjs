@@ -1,6 +1,19 @@
 const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
-const MODEL_PATHS = new Set(["/health", "/capabilities", "/chat"]);
+const MODEL_PATHS = new Set([
+  "/health",
+  "/capabilities",
+  "/chat",
+  "/generate/image",
+  "/generate/3d",
+  "/generate/music",
+]);
 const MAX_CHAT_BYTES = 1024 * 1024;
+const MAX_GENERATION_REQUEST_BYTES = 64 * 1024;
+const GENERATION_FORMATS = {
+  "/generate/image": new Set(["PNG", "JPEG"]),
+  "/generate/3d": new Set(["GLB"]),
+  "/generate/music": new Set(["WAV", "MP3"]),
+};
 
 function validateLocalModelEndpoint(raw) {
   if (typeof raw !== "string" || raw.length > 512 || !raw.trim()) {
@@ -34,6 +47,41 @@ function validateLocalModelRequest(requestPath, method, body) {
   }
   if (method !== "POST" || !body || typeof body !== "object" || Array.isArray(body)) {
     throw new Error("The local chat request is invalid.");
+  }
+  if (requestPath.startsWith("/generate/")) {
+    const allowedKeys = requestPath === "/generate/image"
+      ? new Set(["prompt", "model", "format", "aspectRatio", "width", "height"])
+      : requestPath === "/generate/3d"
+        ? new Set(["prompt", "model", "format"])
+        : new Set(["prompt", "model", "format", "durationSeconds"]);
+    if (
+      Object.keys(body).some((key) => !allowedKeys.has(key)) ||
+      typeof body.prompt !== "string" ||
+      !body.prompt.trim() ||
+      body.prompt.length > 4000 ||
+      !["v1-fast", "v2-best"].includes(body.model) ||
+      !GENERATION_FORMATS[requestPath].has(body.format) ||
+      Buffer.byteLength(JSON.stringify(body), "utf8") > MAX_GENERATION_REQUEST_BYTES
+    ) {
+      throw new Error("The local generation request is invalid.");
+    }
+    if (requestPath === "/generate/image" && (
+      !["1:1", "4:3", "3:2", "16:9", "3:4", "9:16"].includes(body.aspectRatio) ||
+      !Number.isInteger(body.width) ||
+      !Number.isInteger(body.height) ||
+      body.width < 128 || body.width > 2048 ||
+      body.height < 128 || body.height > 2048
+    )) {
+      throw new Error("The local image generation options are invalid.");
+    }
+    if (requestPath === "/generate/music" && (
+      !Number.isInteger(body.durationSeconds) ||
+      body.durationSeconds < 5 ||
+      body.durationSeconds > 60
+    )) {
+      throw new Error("The local music generation options are invalid.");
+    }
+    return { path: requestPath, method: "POST", body };
   }
   const allowedKeys = new Set(["messages", "model", "mode", "stream"]);
   if (Object.keys(body).some((key) => !allowedKeys.has(key))) throw new Error("The local chat request contains unsupported options.");

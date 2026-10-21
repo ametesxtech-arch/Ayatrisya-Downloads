@@ -67,12 +67,17 @@ separate per-project/export synchronization are not implemented.
 
 ## 7. AI integration
 **Implemented:** V1 Fast/V2 Best Result capability states, Normal/Savage/Joke
-configuration, text-only explicit-consent generation, JSON/NDJSON/SSE responses,
-timeout/error/cancel handling and capability-gated STT/TTS endpoints.
-No third-party inference fallback exists. Attachments stay local.
-**Unit-tested:** absent/invalid capabilities, streaming request/response and stop.
-**Live integration-tested:** no; the team's model endpoint was not supplied.
-Image/3D/music generation is not falsely enabled.
+configuration, explicit-consent chat and planner requests, JSON/NDJSON/SSE
+responses, timeout/error/cancel handling, capability-gated STT/TTS, and
+capability-gated image/GLB/music generation routes with bounded output validation.
+The desktop coding agent supports approved edits and exclusive creation of safe
+source files, plus separately confirmed checks. No third-party inference
+fallback exists.
+**Unit-tested:** local protocol validation, generated file shape/signature,
+planner parsing, guest image quota, and desktop file path protections.
+**Live integration-tested:** no; the Ayatrisya-owned inference runtime and model
+weights are not supplied in this workspace. The generation UI remains honestly
+unavailable until that runtime reports the matching modality.
 
 ## 8. Responsive and accessibility checks
 Desktop and 390×844 mobile screenshots inspected. Real Chromium verified mobile

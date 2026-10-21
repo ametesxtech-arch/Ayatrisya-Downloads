@@ -3,6 +3,7 @@ import {
   hasLikelySecret,
   isAllowedAgentCommand,
   isEligibleCodingFile,
+  isSafeNewFileName,
   parseCodingAgentProposal,
 } from "../desktop/coding-agent";
 
@@ -13,6 +14,9 @@ describe("approval-based coding agent", () => {
     expect(isEligibleCodingFile("config/client-secret.json")).toBe(false);
     expect(isEligibleCodingFile("node_modules/pkg/index.js")).toBe(false);
     expect(isEligibleCodingFile("assets/logo.png")).toBe(false);
+    expect(isEligibleCodingFile("../App.tsx")).toBe(false);
+    expect(isSafeNewFileName("index.html")).toBe(true);
+    expect(isSafeNewFileName("../.env")).toBe(false);
   });
 
   it("detects common inline credential and private-key patterns", () => {
@@ -32,15 +36,23 @@ describe("approval-based coding agent", () => {
     const proposal = parseCodingAgentProposal(JSON.stringify({
       summary: "Update the selected component.",
       edits: [{ path: "src/App.tsx", content: "export const app = true;\n", reason: "Add the requested behavior." }],
+      newFiles: [{ path: "index.html", content: "<main>Game</main>", reason: "Create the application entry page." }],
       commands: [{ command: "pnpm test", reason: "Run project tests." }],
-    }), ["src/App.tsx"]);
+    }), ["src/App.tsx"], ["App.tsx", "src"]);
     expect(proposal.edits[0]).toMatchObject({ path: "src/App.tsx", applied: false });
+    expect(proposal.newFiles[0]).toMatchObject({ path: "index.html", created: false });
     expect(proposal.commands[0].runnable).toBe(true);
     expect(() => parseCodingAgentProposal(JSON.stringify({
       summary: "Unexpected file.",
       edits: [{ path: ".env", content: "SECRET=example", reason: "No." }],
       commands: [],
     }), ["src/App.tsx"])).toThrow();
+    expect(() => parseCodingAgentProposal(JSON.stringify({
+      summary: "Collision.",
+      edits: [],
+      newFiles: [{ path: "App.tsx", content: "export {};", reason: "No." }],
+      commands: [],
+    }), [], ["App.tsx"])).toThrow(/already exists/);
     expect(() => parseCodingAgentProposal(JSON.stringify({
       summary: "Secret included.",
       edits: [{ path: "src/App.tsx", content: 'const token = "1234567890abcdefghijkl";', reason: "No." }],

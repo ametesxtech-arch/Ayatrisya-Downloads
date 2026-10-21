@@ -8,6 +8,7 @@ import { repository } from '@/storage/repository';
 import { useLocalQuery } from '@/storage/hooks';
 import { downloadText, errMsg, safeName } from '@/lib/format';
 import { DesktopProjectManager } from '@/components/DesktopProjectManager';
+import { CodingPlanner } from '@/components/CodingPlanner';
 
 export function CodingPage({ notify }: { notify: (m: string) => void }) {
   const list = useLocalQuery(() => repository.listItems({ kind: 'code', sort: 'date', limit: 300 }), []);
@@ -18,6 +19,7 @@ export function CodingPage({ notify }: { notify: (m: string) => void }) {
   const items = list.data ?? [];
   return <div className="mx-auto max-w-[1000px] p-4 sm:p-8">
     <PageHeading eyebrow="Coding" title="Build with an AI coding agent." description="Create coding specifications in the browser, or open a local project in Ayatrisya Desktop for an approval-based coding agent." actions={<><DesktopButton /><Button onClick={() => setOpen(true)}><Plus size={15} />New task</Button></>} />
+    <CodingPlanner notify={notify} />
     <DesktopProjectManager />
     <Notice>Coding specifications are stored in this browser and exported as Markdown. Desktop project folders remain local and are never exposed to the website.</Notice>
     <div className="mt-6">

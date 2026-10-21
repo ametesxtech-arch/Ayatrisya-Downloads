@@ -20,7 +20,7 @@ export function FeaturePage({ path, goto, notify }: { path: string; goto: (href:
   const seg = path.split('/');
   let body;
   if (path === '/workspace/chat' || path === '/workspace/chat/' || (path.startsWith('/workspace/chat/') && seg.length === 4)) return <ChatPage path={path} goto={goto} notify={notify} />;
-  if (guest && path === '/workspace/images') body = <GuestImageAccess />;
+  if (guest && path === '/workspace/images') body = <GuestImageAccess notify={notify} />;
   else if (path === '/workspace/research') body = <Research notify={notify} />;
   else if (path === '/workspace/coding' || path === '/workspace/coding/desktop-preview') body = <Coding notify={notify} />;
   else if (path === '/workspace/images') body = <Studios kind="image" />;
@@ -39,11 +39,11 @@ export function FeaturePage({ path, goto, notify }: { path: string; goto: (href:
   return <Suspense fallback={<div className="mx-auto max-w-[1000px] space-y-3 p-8"><Skeleton className="h-10 w-1/2" /><Skeleton className="h-40" /></div>}>{body}</Suspense>;
 }
 
-function GuestImageAccess() {
-  return <section className="mx-auto max-w-2xl p-5 sm:p-10">
+function GuestImageAccess({ notify }: { notify: (message: string) => void }) {
+  return <section className="mx-auto max-w-5xl p-5 sm:p-10">
     <p className="text-[10px] font-bold uppercase tracking-[.18em] text-violet-200">Guest image allowance</p>
     <h2 className="display mt-3 text-3xl font-semibold tracking-tight">Two image generations</h2>
-    <p className="mt-3 text-sm leading-6 text-slate-400">Guest access includes up to two generated images. Image generation is not connected yet, so no images or guest allowance have been used.</p>
-    <div className="mt-6 rounded-xl border border-amber-300/15 bg-amber-300/[.04] p-4 text-sm leading-6 text-amber-100/90" role="status">Image generation will be available after an Ayatrisya image model is connected. Your chats remain saved in this browser.</div>
+    <p className="mt-3 text-sm leading-6 text-slate-400">Guest access is limited to chat and up to two image generations. Images can be downloaded; other studios, local files, and project tools require an account.</p>
+    <Studios kind="image" notify={notify} guestLimited />
   </section>;
 }

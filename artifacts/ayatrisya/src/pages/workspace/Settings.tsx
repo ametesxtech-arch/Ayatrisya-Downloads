@@ -168,7 +168,7 @@ function DesktopLocalModel({ onRefresh }: { onRefresh: () => void }) {
     {!desktop
       ? <p className="py-3 text-xs leading-5 text-slate-400">Local model URLs are available only in Ayatrisya Desktop. A browser cannot reach localhost on your computer.</p>
       : <div className="py-3">
-        <p className="text-xs leading-5 text-slate-400">Connect an Ayatrisya model adapter running on this computer. Only localhost, 127.0.0.1, or [::1] is accepted. The address is saved on this desktop and is not synced. The adapter must provide JSON responses for /health, /capabilities, and non-streaming /chat.</p>
+        <p className="text-xs leading-5 text-slate-400">Connect an Ayatrisya model adapter running on this computer. Only localhost, 127.0.0.1, or [::1] is accepted. The address is saved on this desktop and is not synced. It can expose chat, planning, and image/3D/music generation through the documented Ayatrisya protocol. No vendor AI API is called.</p>
         <label htmlFor="desktop-local-model-url" className="mt-3 block text-xs font-medium text-slate-400">Local adapter URL</label>
         <input id="desktop-local-model-url" type="url" value={endpoint} onChange={(event) => setEndpoint(event.target.value)} placeholder="http://127.0.0.1:1234" autoComplete="off" spellCheck={false} className={`${inputCls} mt-1.5 max-w-xl`} disabled={loading || busy} />
         <p className="mt-1 text-[10px] text-slate-500">{savedEndpoint ? "A local endpoint is saved on this desktop." : "No local endpoint is saved."} This setting does not store API credentials.</p>
