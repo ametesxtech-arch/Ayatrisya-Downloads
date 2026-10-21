@@ -79,6 +79,22 @@ planner parsing, guest image quota, and desktop file path protections.
 weights are not supplied in this workspace. The generation UI remains honestly
 unavailable until that runtime reports the matching modality.
 
+## War Mode (Windows MVP)
+**Implemented:** a desktop-only Settings panel checks Microsoft Defender through
+local PowerShell, verifies the installed signature version and scan executable,
+lets the user choose a local folder, asks for confirmation, invokes the Defender
+scanner without a shell, and records a bounded local activity log. The UI never
+reports a percentage or claims a clean scan; Windows Security remains the source
+for findings and restore actions.
+**Not complete:** Defender and its signatures are provided by Windows and are not
+bundled in the installer. This is an on-demand folder scan, not Ayatrisya-owned
+real-time protection. Per-file scanned/skipped counts, app-controlled quarantine,
+restore, scheduled/monitored scans, and user cancellation are not implemented.
+**Verified here:** defensive IPC/path/argument and status-parser tests on Linux.
+Native Windows Defender scans, offline Windows behavior, installation,
+quarantine/restore, performance, and Windows 10/11 remain unverified because the
+available build host is Linux.
+
 ## 8. Responsive and accessibility checks
 Desktop and 390×844 mobile screenshots inspected. Real Chromium verified mobile
 drawer focus entry, Escape dismissal, focus restoration, inert closed navigation,

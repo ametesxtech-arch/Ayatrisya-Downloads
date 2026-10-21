@@ -1,0 +1,77 @@
+AYATRISYA WAR MODE — FAST, OFFLINE-FIRST LOCAL DEFENSE
+
+Implement War Mode as a real defensive security engine bundled with Ayatrisya Desktop.
+
+Core requirements
+
+1. Offline-first operation
+
+* War Mode must run locally without internet access.
+* Bundle all required runtime dependencies, the local detection engine, and baseline licensed threat signatures/rules with the desktop installer.
+* Do not require cloud AI, external APIs, sign-in, or internet connectivity to perform the core offline scan.
+* Keep other Ayatrisya AI features independently unavailable when offline.
+* Clearly indicate that offline detection uses the locally installed signature and rule versions, which may become outdated.
+
+2. Fast activation
+
+* Start the local engine as soon as the user activates War Mode.
+* Display a cinematic activation animation driven by real initialization events.
+* Perform actual health checks before showing READY/PROTECTED.
+* Optimize startup, model/rule loading and memory use.
+* Use parallel scanning with safe resource limits.
+* Cache file hashes and metadata for later incremental scans.
+* Prioritize high-risk locations first while continuing toward a complete scan.
+* Do not skip files silently or report 100% when errors or inaccessible locations remain.
+
+3. Initial full scan
+
+* Scan accessible local files and supported archives where safe.
+* Use an established, legally compatible malware detection engine and signature format where feasible.
+* Add hash/signature matching, file metadata checks and reliable heuristic detections.
+* Record scanned, skipped, inaccessible and failed files.
+* Handle large files, encrypted archives, symbolic links, reparse points and permission errors safely.
+* Avoid recursion loops and archive-extraction attacks.
+* Never execute suspicious samples to test them.
+* Never treat an AI-generated suspicion score alone as proof of malware.
+
+4. Threat response
+
+* Contain high-confidence malicious detections immediately using a recoverable quarantine mechanism.
+* Verify file identity before moving it; preserve integrity metadata and original location.
+* Prevent duplicate processing and handle locked files safely.
+* Protect operating-system critical files, signed system components and essential Ayatrisya files from automated deletion.
+* For uncertain or potentially false-positive detections, alert the user and request review.
+* Permanent deletion must require an explicit user confirmation or a documented, narrowly scoped policy for independently verified threats. Never permanently delete arbitrary files simply because a heuristic or AI flagged them.
+* Maintain a local audit log and provide safe restore controls.
+
+5. Protection and readiness
+
+* Implement accurate states: STARTING, READY, SCANNING, THREAT CONTAINED, ATTENTION REQUIRED, OFFLINE and ERROR.
+* READY means the engine and required local signatures loaded successfully.
+* Display the signature/rule version and last successful update.
+* If the engine fails, show protection unavailable rather than pretending to be protected.
+* Add optional approved-folder monitoring and scheduled scans only after the scanning MVP is reliable.
+* Do not claim kernel-level or real-time protection unless the required OS-specific components are actually implemented and tested.
+
+6. Security, privacy and performance
+
+* Keep file scanning, findings and logs local by default.
+* Do not upload scanned files, prompts, filenames or detection results without explicit consent.
+* Use least privilege. Request administrator access only for specific operations that need it.
+* Never expose an unrestricted shell or privileged service interface to the renderer.
+* Authenticate local IPC/API requests and validate paths to prevent traversal and symlink attacks.
+* Use bounded worker pools, cancellation, timeouts and safe shutdown.
+* Do not interfere with other antivirus products or disable operating-system security controls.
+* Keep all private service secrets out of source control and client bundles.
+
+7. Verification
+
+* Test offline startup with network access disabled.
+* Test harmless, known detection test files such as the EICAR test file; do not download or execute live malware.
+* Test quarantine, integrity verification, restore, cancellation, locked files, false-positive handling, protected system files and permission failures.
+* Measure real startup time, throughput, memory use and CPU use on supported hardware.
+* Test clean installation and uninstallation on Windows 10/11.
+* Report the actual files scanned, detection results, skipped files, test outcomes and limitations.
+* Do not report zero threats or full protection unless the real scan supports that statement.
+
+Start by auditing the existing desktop application and selecting an appropriate local detection engine. Implement and test the Windows offline-scanning MVP first, then expand carefully. Preserve existing application functionality and create a checkpoint before major changes.

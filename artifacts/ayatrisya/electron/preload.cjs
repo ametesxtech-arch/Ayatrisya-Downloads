@@ -25,5 +25,10 @@ contextBridge.exposeInMainWorld(
       ipcRenderer.invoke("desktop:model-endpoint:request", path, method, body, requestId),
     cancelLocalModelRequest: (requestId) =>
       ipcRenderer.invoke("desktop:model-endpoint:cancel", requestId),
+    getWarModeStatus: () => ipcRenderer.invoke("desktop:war-mode:status"),
+    chooseWarModeFolder: () => ipcRenderer.invoke("desktop:war-mode:choose-folder"),
+    scanWarModeFolder: (folderId) => ipcRenderer.invoke("desktop:war-mode:scan-folder", folderId),
+    getWarModeAuditLog: () => ipcRenderer.invoke("desktop:war-mode:audit-log"),
+    openWindowsSecurity: () => ipcRenderer.invoke("desktop:war-mode:open-windows-security"),
   }),
 );

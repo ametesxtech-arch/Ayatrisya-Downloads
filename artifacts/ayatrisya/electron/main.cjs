@@ -17,6 +17,12 @@ const {
   validateLocalModelEndpoint,
   validateLocalModelRequest,
 } = require("./model-endpoint-policy.cjs");
+const {
+  buildPowerShellArgs,
+  buildScanArgs,
+  buildStatusScript,
+  parseStatusOutput,
+} = require("./war-mode.cjs");
 
 const MAX_TEXT_FILE_BYTES = 1024 * 1024;
 const MAX_TERMINAL_OUTPUT_BYTES = 128 * 1024;
@@ -26,6 +32,10 @@ const SERVER_FILE = "desktop-server.json";
 const LOCAL_MODEL_FILE = "local-model-endpoint.json";
 const LOCAL_MODEL_TIMEOUT_MS = 120_000;
 const LOCAL_MODEL_RESPONSE_BYTES = 24 * 1024 * 1024;
+const WAR_MODE_AUDIT_FILE = "war-mode-audit.jsonl";
+const WAR_MODE_STATUS_TIMEOUT_MS = 15_000;
+const WAR_MODE_SCAN_TIMEOUT_MS = 2 * 60 * 60 * 1000;
+const WAR_MODE_OUTPUT_BYTES = 128 * 1024;
 const MIME_TYPES = {
   ".css": "text/css; charset=utf-8",
   ".html": "text/html; charset=utf-8",
@@ -57,6 +67,9 @@ let uiOrigin = null;
 let staticServer = null;
 let projectGrants = [];
 const localModelRequests = new Map();
+const warModeFolderGrants = new Map();
+let warModeScanRunning = false;
+let activeWarModeChild = null;
 
 app.setName("Ayatrisya");
 app.enableSandbox();
@@ -349,6 +362,245 @@ function registerIpc(channel, handler) {
   });
 }
 
+function runBoundedProcess(executable, args, timeoutMs, maxOutputBytes) {
+  return new Promise((resolve) => {
+    let child;
+    try {
+      child = spawn(executable, args, {
+        windowsHide: true,
+        shell: false,
+        stdio: ["ignore", "pipe", "pipe"],
+      });
+    } catch (error) {
+      resolve({ code: null, stdout: "", stderr: "", timedOut: false, outputLimited: false, spawnError: error });
+      return;
+    }
+    if (path.basename(executable).toLowerCase() === "mpcmdrun.exe") {
+      activeWarModeChild = child;
+    }
+
+    let stdout = "";
+    let stderr = "";
+    let bytes = 0;
+    let timedOut = false;
+    let outputLimited = false;
+    let settled = false;
+    const append = (target, chunk) => {
+      const remaining = Math.max(0, maxOutputBytes - bytes);
+      const buffer = Buffer.from(chunk);
+      bytes += buffer.length;
+      const text = buffer.subarray(0, remaining).toString("utf8");
+      if (target === "stdout") stdout += text;
+      else stderr += text;
+      if (buffer.length > remaining && !outputLimited) {
+        outputLimited = true;
+        child.kill();
+      }
+    };
+    child.stdout.on("data", (chunk) => append("stdout", chunk));
+    child.stderr.on("data", (chunk) => append("stderr", chunk));
+    const timer = setTimeout(() => {
+      timedOut = true;
+      child.kill();
+    }, timeoutMs);
+    const finish = (result) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      if (activeWarModeChild === child) activeWarModeChild = null;
+      resolve({ code: null, stdout, stderr, timedOut, outputLimited, ...result });
+    };
+    child.once("error", (error) => finish({ spawnError: error }));
+    child.once("close", (code) => finish({ code }));
+  });
+}
+
+async function readWarModeStatus() {
+  if (process.platform !== "win32") {
+    return {
+      state: "OFFLINE",
+      canScan: false,
+      engine: null,
+      signatureVersion: null,
+      signatureUpdatedAt: null,
+      realTimeProtectionEnabled: false,
+      scanCommandPath: null,
+      message: "War Mode scanning is available only in Ayatrisya Desktop on Windows.",
+    };
+  }
+  const result = await runBoundedProcess(
+    "powershell.exe",
+    buildPowerShellArgs(buildStatusScript()),
+    WAR_MODE_STATUS_TIMEOUT_MS,
+    32 * 1024,
+  );
+  if (result.timedOut || result.outputLimited || result.spawnError) {
+    return {
+      state: "ERROR",
+      canScan: false,
+      engine: "Microsoft Defender",
+      signatureVersion: null,
+      signatureUpdatedAt: null,
+      realTimeProtectionEnabled: false,
+      scanCommandPath: null,
+      message: "Windows Defender did not return a usable status. War Mode is not ready.",
+    };
+  }
+  return parseStatusOutput(result.stdout);
+}
+
+async function getWarModeStatus() {
+  const publicStatus = await readWarModeStatus();
+  delete publicStatus.scanCommandPath;
+  return publicStatus;
+}
+
+async function chooseWarModeFolder() {
+  if (process.platform !== "win32") throw new Error("War Mode scanning requires Ayatrisya Desktop on Windows.");
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: "Choose a local folder to scan with Windows Defender",
+    properties: ["openDirectory"],
+  });
+  if (result.canceled || !result.filePaths[0]) return null;
+  const realPath = await fs.realpath(result.filePaths[0]);
+  const stat = await fs.stat(realPath);
+  if (!stat.isDirectory() || !path.win32.isAbsolute(realPath) || realPath.startsWith("\\\\")) {
+    throw new Error("Choose a local Windows folder, not a network share.");
+  }
+  const id = randomUUID();
+  const name = path.basename(realPath) || realPath;
+  warModeFolderGrants.clear();
+  warModeFolderGrants.set(id, { path: realPath, name });
+  return { id, name };
+}
+
+async function appendWarModeAudit(record) {
+  const directory = app.getPath("userData");
+  const file = path.join(directory, WAR_MODE_AUDIT_FILE);
+  await fs.mkdir(directory, { recursive: true });
+  let records = [];
+  try {
+    const existing = await fs.readFile(file, "utf8");
+    records = existing.split("\n").filter(Boolean).slice(-199).map((line) => JSON.parse(line));
+  } catch (error) {
+    if (error.code !== "ENOENT") throw new Error("The local War Mode audit log could not be read.");
+  }
+  records.push(record);
+  const temp = `${file}.tmp`;
+  await fs.writeFile(temp, `${records.map((item) => JSON.stringify(item)).join("\n")}\n`, { mode: 0o600 });
+  await fs.rename(temp, file);
+}
+
+async function getWarModeAuditLog() {
+  const file = path.join(app.getPath("userData"), WAR_MODE_AUDIT_FILE);
+  let content;
+  try {
+    content = await fs.readFile(file, "utf8");
+  } catch (error) {
+    if (error.code === "ENOENT") return [];
+    throw new Error("The local War Mode audit log could not be read.");
+  }
+  try {
+    return content.split("\n").filter(Boolean).slice(-50).map((line) => {
+      const value = JSON.parse(line);
+      if (
+        !value || typeof value.at !== "string" || typeof value.folderName !== "string" ||
+        !["started", "completed", "failed", "timed-out"].includes(value.result) ||
+        !(value.exitCode === null || Number.isInteger(value.exitCode))
+      ) throw new Error("Invalid audit record.");
+      return {
+        at: value.at,
+        folderName: value.folderName,
+        result: value.result,
+        exitCode: value.exitCode,
+      };
+    });
+  } catch {
+    throw new Error("The local War Mode audit log is invalid. Ayatrisya did not change it.");
+  }
+}
+
+async function scanWarModeFolder(folderId) {
+  if (process.platform !== "win32") throw new Error("War Mode scanning requires Ayatrisya Desktop on Windows.");
+  if (typeof folderId !== "string" || !/^[0-9a-f-]{36}$/i.test(folderId)) {
+    throw new Error("Choose a folder before starting a scan.");
+  }
+  if (warModeScanRunning) throw new Error("A War Mode scan is already running.");
+  const folder = warModeFolderGrants.get(folderId);
+  if (!folder) throw new Error("Choose the folder again to authorize this scan.");
+  const status = await readWarModeStatus();
+  if (!status.canScan || !status.scanCommandPath) throw new Error(status.message);
+
+  const confirmation = await dialog.showMessageBox(mainWindow, {
+    type: "warning",
+    title: "Scan this local folder?",
+    message: "Windows Defender will scan the folder you selected.",
+    detail: `Folder:\n${folder.path}\n\nAyatrisya runs the local Windows Defender scanner and does not upload files itself. Defender may take actions according to its existing settings. Ayatrisya does not delete or quarantine files. Review Protection history for findings and actions.`,
+    buttons: ["Cancel", "Scan with Defender"],
+    defaultId: 0,
+    cancelId: 0,
+    noLink: true,
+  });
+  if (confirmation.response !== 1) return { cancelled: true, folderName: folder.name };
+
+  warModeScanRunning = true;
+  const startedAt = new Date().toISOString();
+  try {
+    await appendWarModeAudit({
+      at: startedAt,
+      folderName: folder.name,
+      result: "started",
+      exitCode: null,
+    });
+    const result = await runBoundedProcess(
+      status.scanCommandPath,
+      buildScanArgs(folder.path),
+      WAR_MODE_SCAN_TIMEOUT_MS,
+      WAR_MODE_OUTPUT_BYTES,
+    );
+    const finishedAt = new Date().toISOString();
+    const successful = result.code === 0 && !result.timedOut && !result.outputLimited && !result.spawnError;
+    const auditResult = result.timedOut ? "timed-out" : successful ? "completed" : "failed";
+    await appendWarModeAudit({
+      at: finishedAt,
+      folderName: folder.name,
+      result: auditResult,
+      exitCode: Number.isInteger(result.code) ? result.code : null,
+    });
+    return {
+      cancelled: false,
+      folderName: folder.name,
+      startedAt,
+      finishedAt,
+      exitCode: Number.isInteger(result.code) ? result.code : null,
+      timedOut: result.timedOut,
+      outputLimited: result.outputLimited,
+      state: successful ? "READY" : "ATTENTION_REQUIRED",
+      message: successful
+        ? "Windows Defender reports that its scan command completed. This integration cannot verify per-file totals or confirm that every file was accessible. Review Windows Security Protection history for findings and actions."
+        : result.timedOut
+          ? "Ayatrisya stopped waiting after the scan time limit. The Defender scan may still be running; check Windows Security Protection history."
+          : result.outputLimited
+            ? "Defender output exceeded the safety limit. The scan result is incomplete; check Windows Security Protection history."
+            : result.spawnError
+              ? "Ayatrisya could not start the Windows Defender scan command."
+              : `Windows Defender reported that the scan did not complete successfully${Number.isInteger(result.code) ? ` (exit code ${result.code})` : ""}. No clean result is claimed.`,
+    };
+  } finally {
+    warModeScanRunning = false;
+    warModeFolderGrants.delete(folderId);
+  }
+}
+
+registerIpc("desktop:war-mode:status", getWarModeStatus);
+registerIpc("desktop:war-mode:choose-folder", chooseWarModeFolder);
+registerIpc("desktop:war-mode:scan-folder", scanWarModeFolder);
+registerIpc("desktop:war-mode:audit-log", getWarModeAuditLog);
+registerIpc("desktop:war-mode:open-windows-security", async () => {
+  if (process.platform !== "win32") throw new Error("Windows Security is available only on Windows.");
+  await shell.openExternal("ms-settings:windowsdefender");
+});
+
 registerIpc("desktop:model-endpoint:get", getLocalModelEndpoint);
 registerIpc("desktop:model-endpoint:set", setLocalModelEndpoint);
 registerIpc("desktop:model-endpoint:request", requestLocalModel);
@@ -591,7 +843,11 @@ async function createMainWindow() {
     },
   });
   mainWindow.once("ready-to-show", () => mainWindow?.show());
-  mainWindow.on("closed", () => { mainWindow = null; });
+  mainWindow.on("closed", () => {
+    mainWindow = null;
+    warModeFolderGrants.clear();
+    activeWarModeChild?.kill();
+  });
   if (!app.isPackaged) {
     const devUrl = process.env.AYATRISYA_DESKTOP_DEV_URL;
     if (!devUrl || !/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/?$/i.test(devUrl)) {

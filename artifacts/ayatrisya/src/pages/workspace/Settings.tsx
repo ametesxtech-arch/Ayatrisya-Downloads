@@ -12,9 +12,10 @@ import { driveSync } from '@/integrations/google-drive/sync';
 import { errMsg, formatBytes } from '@/lib/format';
 import type { ChatMode, ModelId, Preferences } from '@/storage/types';
 import { modelClient } from '@/ai/client';
+import { WarModePanel } from '@/components/WarModePanel';
 
-type Section = 'appearance' | 'personalization' | 'models' | 'privacy' | 'storage';
-const sections: Array<[Section, string]> = [['appearance', 'Appearance'], ['personalization', 'Personalization'], ['models', 'Models'], ['privacy', 'Privacy'], ['storage', 'Storage and backup']];
+type Section = 'appearance' | 'personalization' | 'models' | 'war-mode' | 'privacy' | 'storage';
+const sections: Array<[Section, string]> = [['appearance', 'Appearance'], ['personalization', 'Personalization'], ['models', 'Models'], ['war-mode', 'War Mode'], ['privacy', 'Privacy'], ['storage', 'Storage and backup']];
 const MAX_BACKUP = 100 * 1024 * 1024;
 
 export function SettingsPage({ notify, goto, initial = 'appearance' }: { notify: (m: string) => void; goto: (h: string) => void; initial?: Section }) {
@@ -28,6 +29,7 @@ export function SettingsPage({ notify, goto, initial = 'appearance' }: { notify:
     {section === 'appearance' && <Appearance />}
     {section === 'personalization' && <PersonalizationPage />}
     {section === 'models' && <Models />}
+    {section === 'war-mode' && <WarModePanel />}
     {section === 'privacy' && <Privacy goStorage={() => setSection('storage')} goto={goto} />}
     {section === 'storage' && <Storage notify={notify} />}
     <p className="mt-8 text-xs text-slate-500">Profile and sign-in details are on the <Link href="/workspace/account" className="underline">Account</Link> page. <button className="underline" onClick={() => goto('/onboarding')}>Run setup again</button></p>

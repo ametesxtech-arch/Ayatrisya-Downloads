@@ -34,6 +34,38 @@ export interface LocalModelResponse {
   body: unknown;
 }
 
+export type WarModeState = "STARTING" | "READY" | "SCANNING" | "THREAT CONTAINED" | "ATTENTION_REQUIRED" | "OFFLINE" | "ERROR";
+export interface WarModeStatus {
+  state: WarModeState;
+  canScan: boolean;
+  engine: string | null;
+  signatureVersion: string | null;
+  signatureUpdatedAt: string | null;
+  realTimeProtectionEnabled: boolean;
+  message: string;
+}
+export interface WarModeFolder {
+  id: string;
+  name: string;
+}
+export interface WarModeScanResult {
+  cancelled: boolean;
+  folderName: string;
+  startedAt?: string;
+  finishedAt?: string;
+  exitCode?: number | null;
+  timedOut?: boolean;
+  outputLimited?: boolean;
+  state?: "READY" | "ATTENTION_REQUIRED";
+  message?: string;
+}
+export interface WarModeAuditEntry {
+  at: string;
+  folderName: string;
+  result: "started" | "completed" | "failed" | "timed-out";
+  exitCode: number | null;
+}
+
 export interface AyatrisyaDesktopApi {
   readonly isDesktop: true;
   listProjects(): Promise<DesktopProject[]>;
@@ -49,6 +81,11 @@ export interface AyatrisyaDesktopApi {
   setLocalModelEndpoint(endpoint: string): Promise<string>;
   requestLocalModel(path: LocalModelPath, method: LocalModelMethod, body: unknown, requestId: string): Promise<LocalModelResponse>;
   cancelLocalModelRequest(requestId: string): Promise<void>;
+  getWarModeStatus(): Promise<WarModeStatus>;
+  chooseWarModeFolder(): Promise<WarModeFolder | null>;
+  scanWarModeFolder(folderId: string): Promise<WarModeScanResult>;
+  getWarModeAuditLog(): Promise<WarModeAuditEntry[]>;
+  openWindowsSecurity(): Promise<void>;
 }
 
 declare global {
