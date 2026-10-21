@@ -3,4 +3,4 @@
 - [Ayatrisya desktop boundaries](ayatrisya-desktop-boundaries.md) — browser stays sandboxed; local capabilities require consent; Windows/macOS installers need native runners.
 - [Ayatrisya model ownership](ayatrisya-model-ownership.md) — AI inference and generation must use Ayatrisya-operated models; do not call other companies' AI APIs.
 - [Ayatrisya preview delivery](ayatrisya-preview-delivery.md) — confirm UI fixes against the active preview and surface that preview when the user's browser may be stale.
-- [Ayatrisya hosted model gateway](ayatrisya-model-gateway.md) — server-only API keys, Firebase-authenticated hosted inference, per-user limits, and separate desktop-local models.
+- [Ayatrisya model connection](ayatrisya-model-gateway.md) — current inference is desktop-local on loopback; hosted calls remain Firebase-authenticated and server-keyed.

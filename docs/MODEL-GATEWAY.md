@@ -2,6 +2,16 @@
 
 Hosted model requests go through the Ayatrisya API server. The browser never receives the model API key. Desktop localhost inference is a separate transport and does not use these server credentials.
 
+## Desktop-only local inference
+
+The current model connection choice is desktop-only on the same computer. In Ayatrisya Desktop, open **Settings → Models → Desktop-only local model** and set the endpoint to a loopback URL such as `http://127.0.0.1:1234` or `http://localhost:1234`. Saving it runs a health, capabilities, and live-inference check.
+
+- The desktop bridge accepts only `localhost`, `127.0.0.1`, and `::1` loopback endpoints. HTTP is allowed on loopback; LAN/private IP addresses and public hosts are rejected.
+- The bridge sends no API key. The local model service must be available on the same computer and accept the app's model API requests without a bearer key.
+- The bridge validates permitted routes and request bodies, applies a timeout and response-size limit, and uses context-isolated IPC. It does not expose Node.js, filesystem, or shell access to the renderer.
+- A local/private service on a different computer is not supported by this connection. Do not enter a LAN address or expose an unauthenticated model port to the internet.
+- The website cannot reach localhost on the user's computer. Hosted web inference requires the separate authenticated HTTPS gateway described below.
+
 ## Configure securely
 
 - Set `AYATRISYA_MODEL_ENDPOINT` as a shared, non-secret Replit environment variable. It must be an HTTPS base URL for an Ayatrisya-operated service, with no embedded credentials, query, or fragment.
