@@ -33,10 +33,15 @@ export function CodingPlanner({ notify }: { notify: (message: string) => void })
     setError("");
     setPlan(null);
     try {
-      const raw = await modelClient.generateResponse([{
-        role: "user",
-        content: `${plannerInstructions}\n\nProject type: ${kind}\n\nUser brief:\n${idea.trim()}`,
-      }], { model: prefs.model, mode: prefs.mode });
+      const job = modelClient.submitJob({
+        kind: "chat",
+        messages: [{
+          role: "user",
+          content: `${plannerInstructions}\n\nProject type: ${kind}\n\nUser brief:\n${idea.trim()}`,
+        }],
+        options: { model: prefs.model, mode: prefs.mode },
+      });
+      const raw = await job.result;
       setPlan(parseCodingPlan(raw));
     } catch (cause) {
       setError(errMsg(cause, "The Ayatrisya planner could not create a plan."));

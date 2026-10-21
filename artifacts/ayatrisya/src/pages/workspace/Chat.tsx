@@ -43,8 +43,11 @@ export function ChatPage({ path, goto, notify }: { path: string; goto: (h: strin
   const [consent, setConsent] = useState(false), [ask, setAsk] = useState<{ cid: string; history: Turn; after?: () => Promise<void> } | null>(null), [remember, setRemember] = useState(false);
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null), [confirmDel, setConfirmDel] = useState(false), [renaming, setRenaming] = useState<string | null>(null), [delMsg, setDelMsg] = useState<Message | null>(null), [resubmit, setResubmit] = useState<{ m: Message; text: string } | null>(null), [copied, setCopied] = useState<string | null>(null), [atBottom, setAtBottom] = useState(true);
   const acts = useConvActions({ notify, goto, onDeleted: () => goto('/workspace') });
-  const abortRef = useRef<AbortController | null>(null), retryRef = useRef<{ cid: string; history: Turn } | null>(null), endRef = useRef<HTMLDivElement>(null), fileRef = useRef<HTMLInputElement>(null), taRef = useRef<HTMLTextAreaElement>(null);
-  useEffect(() => () => { abortRef.current?.abort(); modelClient.cancelGeneration(); }, [uid]);
+  const abortRef = useRef<AbortController | null>(null), jobIdRef = useRef<string | null>(null), retryRef = useRef<{ cid: string; history: Turn } | null>(null), endRef = useRef<HTMLDivElement>(null), fileRef = useRef<HTMLInputElement>(null), taRef = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => () => {
+    abortRef.current?.abort();
+    if (jobIdRef.current) modelClient.cancelJob(jobIdRef.current);
+  }, [uid]);
   const list = msgs.data ?? [];
   useEffect(() => {
     const main = document.getElementById('main'); if (!main) return;
@@ -71,13 +74,22 @@ export function ChatPage({ path, goto, notify }: { path: string; goto: (h: strin
     abortRef.current = ac; retryRef.current = { cid, history };
     setBusy(true); setStreamFor(cid); setStream(''); setError('');
     try {
-      const out = await modelClient.generateResponse(applyPersonalization(history, prefs.personalization), { model: prefs.model, mode: prefs.mode, signal: ac.signal, onToken: (t: string) => setStream((s) => s + t) });
+      const job = modelClient.submitJob({
+        kind: "chat",
+        messages: applyPersonalization(history, prefs.personalization),
+        options: { model: prefs.model, mode: prefs.mode, signal: ac.signal, onToken: (t: string) => setStream((s) => s + t) },
+      });
+      jobIdRef.current = job.id;
+      const out = await job.result;
       if (out.trim() && !ac.signal.aborted) await repository.addMessage(cid, out, 'assistant');
       retryRef.current = null;
     } catch (e) { setError(ac.signal.aborted ? 'Generation stopped. Your message is saved.' : errMsg(e, 'The model request failed.')); }
-    finally { runningRef.current = false; setBusy(false); setStream(''); setStreamFor(null); abortRef.current = null; }
+    finally { runningRef.current = false; setBusy(false); setStream(''); setStreamFor(null); abortRef.current = null; jobIdRef.current = null; }
   }
-  function stop() { abortRef.current?.abort(); modelClient.cancelGeneration(); }
+  function stop() {
+    if (jobIdRef.current) modelClient.cancelJob(jobIdRef.current);
+    abortRef.current?.abort();
+  }
 
   async function send() {
     const body = text.trim();

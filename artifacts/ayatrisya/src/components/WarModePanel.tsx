@@ -21,6 +21,7 @@ import type {
   WarModeYaraProgress,
   WarModeYaraScanResult,
 } from '@/desktop/contracts';
+import { useDesktopRuntime } from '@/desktop/use-runtime';
 
 function stateTone(state: WarModeStatus['state']) {
   if (state === 'READY') return 'border-emerald-300/20 bg-emerald-300/[.06] text-emerald-200';
@@ -64,9 +65,9 @@ function yaraAuditLabel(entry: WarModeYaraAuditEntry) {
 }
 
 export function WarModePanel() {
-  const desktop = typeof window !== 'undefined' ? window.ayatrisyaDesktop : undefined;
+  const { desktop, checking } = useDesktopRuntime();
   const [status, setStatus] = useState<WarModeStatus>({
-    state: desktop ? 'STARTING' : 'OFFLINE',
+    state: 'STARTING',
     canScan: false,
     engine: null,
     signatureVersion: null,
@@ -74,7 +75,7 @@ export function WarModePanel() {
     ruleFileCount: null,
     signatureUpdatedAt: null,
     realTimeProtectionEnabled: false,
-    message: desktop ? 'Checking the bundled local scanner…' : 'Local scanning requires Ayatrisya Desktop on Windows.',
+    message: 'Verifying the Ayatrisya desktop bridge…',
     defender: {
       state: 'OFFLINE',
       canScan: false,
@@ -140,7 +141,16 @@ export function WarModePanel() {
   }, [desktop]);
 
   useEffect(() => {
-    if (!desktop) return;
+    if (checking) return;
+    if (!desktop) {
+      setStatus((previous) => ({
+        ...previous,
+        state: 'OFFLINE',
+        canScan: false,
+        message: 'Local scanning requires the verified Ayatrisya Desktop bridge on Windows.',
+      }));
+      return;
+    }
     void refreshStatus();
     void refreshActivity();
     void refreshQuarantine();
@@ -154,7 +164,7 @@ export function WarModePanel() {
       window.removeEventListener('online', online);
       window.removeEventListener('offline', offline);
     };
-  }, [desktop, refreshActivity, refreshQuarantine, refreshStatus]);
+  }, [checking, desktop, refreshActivity, refreshQuarantine, refreshStatus]);
 
   async function chooseFolder() {
     if (!desktop) return;

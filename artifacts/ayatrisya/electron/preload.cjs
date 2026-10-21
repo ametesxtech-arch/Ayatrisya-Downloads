@@ -4,6 +4,7 @@ contextBridge.exposeInMainWorld(
   "ayatrisyaDesktop",
   Object.freeze({
     isDesktop: true,
+    getRuntimeInfo: () => ipcRenderer.invoke("desktop:bridge:handshake"),
     listProjects: () => ipcRenderer.invoke("desktop:projects:list"),
     chooseProjectFolder: () => ipcRenderer.invoke("desktop:projects:choose"),
     removeProjectFolder: (projectId) => ipcRenderer.invoke("desktop:projects:remove", projectId),

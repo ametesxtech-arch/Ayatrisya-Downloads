@@ -135,13 +135,19 @@ function GenerativeStudio({ kind, notify, guestLimited }: { kind: Exclude<Kind, 
         releaseGuestQuota = reserveGuestImageGeneration();
         setGuestImagesUsed(getGuestImageGenerationCount());
       }
-      const output = await modelClient.generateAsset(kind, prompt, {
-        model: prefs.model,
-        format: fmt as 'PNG' | 'JPEG' | 'GLB' | 'WAV' | 'MP3',
-        ...(kind === 'image' ? { aspectRatio: ratio, width: dimsFor(ratio, base).split(' × ').map(Number)[0], height: dimsFor(ratio, base).split(' × ').map(Number)[1] } : {}),
-        ...(kind === 'music' ? { durationSeconds: duration } : {}),
-        signal: controller.signal,
+      const job = modelClient.submitJob({
+        kind: "asset",
+        assetKind: kind,
+        prompt,
+        options: {
+          model: prefs.model,
+          format: fmt as 'PNG' | 'JPEG' | 'GLB' | 'WAV' | 'MP3',
+          ...(kind === 'image' ? { aspectRatio: ratio, width: dimsFor(ratio, base).split(' × ').map(Number)[0], height: dimsFor(ratio, base).split(' × ').map(Number)[1] } : {}),
+          ...(kind === 'music' ? { durationSeconds: duration } : {}),
+          signal: controller.signal,
+        },
       });
+      const output = await job.result;
       if (generatedUrl) URL.revokeObjectURL(generatedUrl);
       setGenerated(output);
       setGeneratedUrl(URL.createObjectURL(output.blob));
@@ -210,7 +216,7 @@ function VoiceStudio({ notify }: { notify: (m: string) => void }) {
   const supported = typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia && typeof MediaRecorder !== 'undefined';
   const [recording, setRecording] = useState(false), [blob, setBlob] = useState<Blob | null>(null), [url, setUrl] = useState(''), [name, setName] = useState('recording'), [err, setErr] = useState(''), [secs, setSecs] = useState(0);
   const recRef = useRef<MediaRecorder | null>(null), streamRef = useRef<MediaStream | null>(null), timer = useRef<number | undefined>(undefined);
-  const [consent, setConsent] = useState(false), [transcript, setTranscript] = useState(''), [tts, setTts] = useState(''), [speech, setSpeech] = useState<Blob | null>(null), [speechUrl, setSpeechUrl] = useState(''), [busy, setBusy] = useState(''), [svcErr, setSvcErr] = useState('');
+  const [consent, setConsent] = useState(false), [transcript, setTranscript] = useState(''), [tts, setTts] = useState(''), [speech, setSpeech] = useState<Blob | null>(null), [speechUrl, setSpeechUrl] = useState(''), [busy, setBusy] = useState(''), [activeJobId, setActiveJobId] = useState<string | null>(null), [svcErr, setSvcErr] = useState('');
   const file = useRef<HTMLInputElement>(null);
   const { caps } = useCaps();
   useEffect(() => () => { streamRef.current?.getTracks().forEach((t) => t.stop()); window.clearInterval(timer.current); }, []);
@@ -233,11 +239,21 @@ function VoiceStudio({ notify }: { notify: (m: string) => void }) {
   const ext = (b: Blob) => (b.type.includes('ogg') ? 'ogg' : b.type.includes('wav') ? 'wav' : b.type.includes('mp4') ? 'm4a' : b.type.includes('mpeg') ? 'mp3' : 'webm');
   async function transcribe() {
     if (!blob) return; setBusy('stt'); setSvcErr('');
-    try { setTranscript(await modelClient.transcribeAudio(blob, {})); } catch (e) { setSvcErr(errMsg(e, 'Transcription is unavailable.')); } finally { setBusy(''); }
+    try {
+      const job = modelClient.submitJob({ kind: "transcribe", audio: blob });
+      setActiveJobId(job.id);
+      setTranscript(await job.result);
+    } catch (e) { setSvcErr(errMsg(e, 'Transcription is unavailable.')); } finally { setBusy(''); setActiveJobId(null); }
   }
   async function speak() {
     setBusy('tts'); setSvcErr('');
-    try { const b = await modelClient.synthesizeSpeech(tts, {}); setSpeech(b); setSpeechUrl(URL.createObjectURL(b)); } catch (e) { setSvcErr(errMsg(e, 'Speech synthesis is unavailable.')); } finally { setBusy(''); }
+    try {
+      const job = modelClient.submitJob({ kind: "speech", text: tts });
+      setActiveJobId(job.id);
+      const b = await job.result;
+      setSpeech(b);
+      setSpeechUrl(URL.createObjectURL(b));
+    } catch (e) { setSvcErr(errMsg(e, 'Speech synthesis is unavailable.')); } finally { setBusy(''); setActiveJobId(null); }
   }
   const sttReady = caps.some((c) => c.available && c.modalities.includes('stt')), ttsReady = caps.some((c) => c.available && c.modalities.includes('tts'));
   return <div className="mx-auto max-w-[1000px] p-4 sm:p-8">
@@ -262,11 +278,11 @@ function VoiceStudio({ notify }: { notify: (m: string) => void }) {
       <div className="rounded-xl border border-white/[.075] bg-[#15171e] p-5"><h2 className="text-sm font-semibold">Transcription</h2>
         <p className="mt-1 text-xs text-slate-500" data-testid="status-stt">{sttReady ? 'A model reports speech-to-text capability.' : 'Speech-to-text model not connected.'}</p>
         <label className="mt-3 block"><span className="sr-only">Transcript</span><textarea value={transcript} onChange={(e) => setTranscript(e.target.value)} placeholder="Transcript appears here; you can also type notes." className={`${areaCls} min-h-28`} /></label>
-        <Button className="mt-3 mr-2" variant="outline" disabled={!transcript} onClick={() => navigator.clipboard.writeText(transcript).then(() => notify('Transcript copied.'), () => notify('Copy was blocked by the browser.'))}>Copy transcript</Button><Button className="mt-3 mr-2" variant="outline" disabled={!transcript} onClick={() => setTranscript('')}>Clear transcript</Button><Button className="mt-3" variant="outline" disabled={!sttReady || !blob || !consent || busy === 'stt'} onClick={transcribe}>{busy === 'stt' ? 'Transcribing…' : 'Transcribe with Ayatrisya'}</Button></div>
+        <Button className="mt-3 mr-2" variant="outline" disabled={!transcript} onClick={() => navigator.clipboard.writeText(transcript).then(() => notify('Transcript copied.'), () => notify('Copy was blocked by the browser.'))}>Copy transcript</Button><Button className="mt-3 mr-2" variant="outline" disabled={!transcript} onClick={() => setTranscript('')}>Clear transcript</Button><Button className="mt-3" variant="outline" disabled={!sttReady || !blob || !consent || Boolean(busy)} onClick={transcribe}>{busy === 'stt' ? 'Transcribing…' : 'Transcribe with Ayatrisya'}</Button>{busy === 'stt' && activeJobId && <Button className="mt-3 ml-2" variant="outline" onClick={() => modelClient.cancelJob(activeJobId)}>Cancel</Button>}</div>
       <div className="rounded-xl border border-white/[.075] bg-[#15171e] p-5"><h2 className="text-sm font-semibold">Text to speech</h2>
         <p className="mt-1 text-xs text-slate-500" data-testid="status-tts">{ttsReady ? 'A model reports text-to-speech capability.' : 'Text-to-speech model not connected.'}</p>
         <label className="mt-3 block"><span className="sr-only">Text to speak</span><textarea value={tts} onChange={(e) => setTts(e.target.value)} placeholder="Text to speak" className={`${areaCls} min-h-28`} /></label>
-        <Button className="mt-3" variant="outline" disabled={!ttsReady || !tts.trim() || !consent || busy === 'tts'} onClick={speak}><Volume2 size={14} />{busy === 'tts' ? 'Generating…' : 'Generate speech'}</Button>
+        <Button className="mt-3" variant="outline" disabled={!ttsReady || !tts.trim() || !consent || Boolean(busy)} onClick={speak}><Volume2 size={14} />{busy === 'tts' ? 'Generating…' : 'Generate speech'}</Button>{busy === 'tts' && activeJobId && <Button className="mt-3 ml-2" variant="outline" onClick={() => modelClient.cancelJob(activeJobId)}>Cancel</Button>}
         {speech && speechUrl && <div className="mt-3"><audio src={speechUrl} controls className="w-full" aria-label="Generated speech" /><Button className="mt-2" variant="outline" onClick={() => downloadBlob(speech, 'speech.' + ext(speech))}><Download size={14} />Download</Button></div>}</div>
     </section>
     <label className="mt-4 flex items-start gap-2 text-xs text-slate-400"><input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5 accent-violet-500" />I agree that audio or text for a transcription or speech action is sent to the configured Ayatrisya model server.</label>

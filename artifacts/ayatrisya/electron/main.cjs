@@ -274,7 +274,7 @@ async function setLocalModelEndpoint(raw) {
   return endpoint;
 }
 
-async function readLocalModelJson(response) {
+async function readLocalModelJson(response, maxBytes = LOCAL_MODEL_RESPONSE_BYTES) {
   const contentType = response.headers.get("content-type") ?? "";
   if (!/(?:application|text)\/[^;]*json/i.test(contentType)) {
     throw new Error("The local model adapter must return JSON.");
@@ -287,9 +287,9 @@ async function readLocalModelJson(response) {
     const { value, done } = await reader.read();
     if (done) break;
     total += value.byteLength;
-    if (total > LOCAL_MODEL_RESPONSE_BYTES) {
+    if (total > maxBytes) {
       await reader.cancel();
-      throw new Error("The local model response is larger than 24 MB.");
+      throw new Error("The local model response is larger than the supported limit.");
     }
     chunks.push(Buffer.from(value));
   }
@@ -338,6 +338,65 @@ async function requestLocalModel(requestPath, method, body, requestId) {
     clearTimeout(timer);
     localModelRequests.delete(requestId);
   }
+}
+
+async function getDesktopRuntimeInfo() {
+  let endpointConfigured = false;
+  let models = [];
+  try {
+    const endpoint = await getLocalModelEndpoint();
+    endpointConfigured = Boolean(endpoint);
+    if (endpoint) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 4_000);
+      try {
+        const response = await fetch(`${endpoint}/capabilities`, {
+          method: "GET",
+          headers: { Accept: "application/json" },
+          redirect: "error",
+          signal: controller.signal,
+        });
+        if (response.ok) {
+          const value = await readLocalModelJson(response, 256 * 1024);
+          if (value && Array.isArray(value.models)) {
+            models = value.models.slice(0, 16).flatMap((model) => {
+              if (!model || typeof model !== "object" ||
+                  !["v1-fast", "v2-best"].includes(model.id) ||
+                  typeof model.available !== "boolean") return [];
+              return [{
+                id: model.id,
+                available: model.available,
+                ...(typeof model.reason === "string" ? { reason: model.reason.slice(0, 200) } : {}),
+                modalities: Array.isArray(model.modalities)
+                  ? [...new Set(model.modalities.filter((item) =>
+                    typeof item === "string" && ["chat", "image", "3d", "music", "stt", "tts"].includes(item)))].slice(0, 12)
+                  : [],
+              }];
+            });
+          }
+        } else {
+          await response.body?.cancel().catch(() => undefined);
+        }
+      } finally {
+        clearTimeout(timeout);
+      }
+    }
+  } catch {
+    // Handshake remains valid when the local model is unavailable; it reports no engines.
+  }
+  return {
+    bridgeName: "ayatrisya-desktop",
+    apiVersion: 1,
+    appVersion: app.getVersion(),
+    platform: process.platform,
+    capabilities: [
+      "local-model-ipc",
+      "local-project-files",
+      "confirmed-command-runner",
+      ...(process.platform === "win32" ? ["war-mode-yara", "microsoft-defender"] : []),
+    ],
+    localModel: { endpointConfigured, models },
+  };
 }
 
 function cancelLocalModelRequest(requestId) {

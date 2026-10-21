@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { pushNotice } from '@/lib/notify';
 import { useLocalQuery } from '@/storage/hooks';
 import { repository } from '@/storage/repository';
@@ -19,5 +19,9 @@ export function usePrefs() {
 
 export function useCaps() {
   const q = useLocalQuery(() => modelClient.getModelCapabilities(), []);
+  useEffect(() => {
+    window.addEventListener('ayatrisya:desktop-runtime-changed', q.refresh);
+    return () => window.removeEventListener('ayatrisya:desktop-runtime-changed', q.refresh);
+  }, [q.refresh]);
   return { caps: q.data ?? [], loading: q.loading, error: q.error, refresh: q.refresh };
 }

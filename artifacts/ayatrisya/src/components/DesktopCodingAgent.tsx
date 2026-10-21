@@ -142,10 +142,12 @@ export function DesktopCodingAgent({
         `Selected source files (read-only context; may be empty for a new app):\n${projectContext || "(none selected)"}`,
         "New files, if any, must be safe supported source files directly inside the current folder. Do not create folders.",
       ].join("\n\n");
-      const raw = await modelClient.generateResponse([{ role: "user", content: request }], {
-        model: prefs.model,
-        mode: prefs.mode,
+      const job = modelClient.submitJob({
+        kind: "chat",
+        messages: [{ role: "user", content: request }],
+        options: { model: prefs.model, mode: prefs.mode },
       });
+      const raw = await job.result;
       const parsed = parseCodingAgentProposal(raw, prepared.map((file) => file.path), files.map((file) => file.name));
       const originals = new Map(prepared.map((file) => [file.path, file.content]));
       setProposal({

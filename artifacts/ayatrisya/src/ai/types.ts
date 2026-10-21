@@ -17,9 +17,35 @@ export interface AssetGenerationOptions {
   durationSeconds?: number;
   signal?: AbortSignal;
 }
+export type ModelJobRequest =
+  | { kind: "chat"; messages: ModelMessage[]; options: GenerationOptions }
+  | { kind: "asset"; assetKind: AssetGenerationKind; prompt: string; options: AssetGenerationOptions }
+  | { kind: "transcribe"; audio: Blob; options?: { signal?: AbortSignal } }
+  | { kind: "speech"; text: string; options?: { signal?: AbortSignal } };
+export type ModelJobResult = string | { blob: Blob; fileName: string } | Blob;
+export interface ModelJobHandle<T extends ModelJobResult = ModelJobResult> {
+  id: string;
+  result: Promise<T>;
+}
+export interface ModelJobStatus {
+  id: string;
+  kind: ModelJobRequest["kind"];
+  state: "running" | "completed" | "cancelled" | "failed";
+  startedAt: string;
+  finishedAt?: string;
+  error?: string;
+}
 export interface ModelTransport {
+  listModels():Promise<ModelCapability[]>;
+  getModelStatus(modelId:ModelId):Promise<ModelCapability | null>;
   getModelCapabilities():Promise<ModelCapability[]>;
   getConnectionHealth():Promise<{configured:boolean;connected:boolean;message:string}>;
+  submitJob(request: Extract<ModelJobRequest, { kind: "chat" }>): ModelJobHandle<string>;
+  submitJob(request: Extract<ModelJobRequest, { kind: "asset" }>): ModelJobHandle<{ blob: Blob; fileName: string }>;
+  submitJob(request: Extract<ModelJobRequest, { kind: "transcribe" }>): ModelJobHandle<string>;
+  submitJob(request: Extract<ModelJobRequest, { kind: "speech" }>): ModelJobHandle<Blob>;
+  getJobStatus(jobId:string):ModelJobStatus | null;
+  cancelJob(jobId:string):boolean;
   generateResponse(messages:ModelMessage[],options:GenerationOptions):Promise<string>;
   cancelGeneration():void;
   transcribeAudio(audio:Blob,options?:{signal?:AbortSignal}):Promise<string>;

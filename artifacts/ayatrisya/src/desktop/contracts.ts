@@ -34,6 +34,24 @@ export interface LocalModelResponse {
   body: unknown;
 }
 
+export interface DesktopModelRuntime {
+  id: "v1-fast" | "v2-best";
+  available: boolean;
+  reason?: string;
+  modalities: string[];
+}
+export interface DesktopRuntimeInfo {
+  bridgeName: "ayatrisya-desktop";
+  apiVersion: 1;
+  appVersion: string;
+  platform: "win32" | "darwin" | "linux";
+  capabilities: string[];
+  localModel: {
+    endpointConfigured: boolean;
+    models: DesktopModelRuntime[];
+  };
+}
+
 export type WarModeState = "STARTING" | "READY" | "SCANNING" | "THREAT CONTAINED" | "ATTENTION_REQUIRED" | "OFFLINE" | "ERROR";
 export interface WarModeStatus {
   state: WarModeState;
@@ -167,6 +185,7 @@ export interface WarModeAuditEntry {
 
 export interface AyatrisyaDesktopApi {
   readonly isDesktop: true;
+  getRuntimeInfo(): Promise<unknown>;
   listProjects(): Promise<DesktopProject[]>;
   chooseProjectFolder(): Promise<DesktopProject | null>;
   removeProjectFolder(projectId: string): Promise<void>;

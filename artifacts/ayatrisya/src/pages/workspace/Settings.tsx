@@ -12,6 +12,7 @@ import { driveSync } from '@/integrations/google-drive/sync';
 import { errMsg, formatBytes } from '@/lib/format';
 import type { ChatMode, ModelId, Preferences } from '@/storage/types';
 import { modelClient } from '@/ai/client';
+import { useDesktopRuntime } from '@/desktop/use-runtime';
 import { WarModePanel } from '@/components/WarModePanel';
 
 type Section = 'appearance' | 'personalization' | 'models' | 'war-mode' | 'privacy' | 'storage';
@@ -68,7 +69,7 @@ function Models() {
   const { caps, loading, error, refresh } = useCaps();
   const [demoOpen, setDemoOpen] = useState(false);
   return <>
-    <DesktopLocalModel onRefresh={refresh} />
+    <DesktopLocalModel />
     <Card title="Defaults">
       <label className="block py-3 text-xs font-medium text-slate-400">Default model<select value={prefs.model} onChange={(e) => void save({ model: e.target.value as ModelId })} className={`${inputCls} mt-1.5 max-w-xs`}><option value="v1-fast">V1 Fast</option><option value="v2-best">V2 Best Result</option></select></label>
       <label className="block py-3 text-xs font-medium text-slate-400">Default chat mode<select value={prefs.mode} onChange={(e) => void save({ mode: e.target.value as ChatMode })} className={`${inputCls} mt-1.5 max-w-xs`}><option>Normal</option><option>Savage</option><option>Joke</option></select><span className="mt-1 block text-[11px] text-slate-500">Mode is passed to the model as configuration. It does not change anything without a connected model.</span></label>
@@ -104,10 +105,12 @@ function LiveModelTest({ model }: { model: ModelId }) {
     setError("");
     setStatus("");
     try {
-      const result = await modelClient.generateResponse(
-        [{ role: "user", content: "Reply with a short greeting to confirm this live inference test." }],
-        { model, mode: "Normal" },
-      );
+      const job = modelClient.submitJob({
+        kind: "chat",
+        messages: [{ role: "user", content: "Reply with a short greeting to confirm this live inference test." }],
+        options: { model, mode: "Normal" },
+      });
+      const result = await job.result;
       if (!result.trim()) throw new Error("The model returned an empty response.");
       setStatus(`${model === "v1-fast" ? "V1 Fast" : "V2 Best Result"} completed a live inference test. The test prompt and response were not saved.`);
     } catch (cause) {
@@ -125,17 +128,21 @@ function LiveModelTest({ model }: { model: ModelId }) {
   </Card>;
 }
 
-function DesktopLocalModel({ onRefresh }: { onRefresh: () => void }) {
-  const desktop = typeof window !== "undefined" ? window.ayatrisyaDesktop : undefined;
+function DesktopLocalModel() {
+  const { desktop, runtime, checking, refresh: refreshDesktopRuntime } = useDesktopRuntime();
   const [endpoint, setEndpoint] = useState("");
   const [savedEndpoint, setSavedEndpoint] = useState("");
-  const [loading, setLoading] = useState(Boolean(desktop));
+  const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [status, setStatus] = useState("");
 
   useEffect(() => {
-    if (!desktop) return;
+    if (checking) return;
+    if (!desktop) {
+      setLoading(false);
+      return;
+    }
     let active = true;
     desktop.getLocalModelEndpoint().then((saved) => {
       if (!active) return;
@@ -147,7 +154,7 @@ function DesktopLocalModel({ onRefresh }: { onRefresh: () => void }) {
       if (active) setLoading(false);
     });
     return () => { active = false; };
-  }, [desktop]);
+  }, [checking, desktop]);
 
   async function saveEndpoint() {
     if (!desktop) return;
@@ -158,11 +165,11 @@ function DesktopLocalModel({ onRefresh }: { onRefresh: () => void }) {
       const saved = await desktop.setLocalModelEndpoint(endpoint.trim());
       setSavedEndpoint(saved);
       setEndpoint(saved);
+      await refreshDesktopRuntime();
       const [health, capabilities] = await Promise.all([
         modelClient.getConnectionHealth(),
         modelClient.getModelCapabilities(),
       ]);
-      onRefresh();
       const available = capabilities.filter((cap) => cap.available).length;
       setStatus(`${health.message}. ${available} model${available === 1 ? "" : "s"} reported available.`);
     } catch (cause) {
@@ -181,7 +188,7 @@ function DesktopLocalModel({ onRefresh }: { onRefresh: () => void }) {
       await desktop.setLocalModelEndpoint("");
       setSavedEndpoint("");
       setEndpoint("");
-      onRefresh();
+      await refreshDesktopRuntime();
       setStatus("Local model endpoint removed from this desktop.");
     } catch (cause) {
       setError(errMsg(cause));
@@ -191,10 +198,13 @@ function DesktopLocalModel({ onRefresh }: { onRefresh: () => void }) {
   }
 
   return <Card title="Desktop-only local model">
-    {!desktop
+    {checking
+      ? <p className="py-3 text-xs text-slate-400" role="status">Verifying the Ayatrisya desktop bridge…</p>
+      : !desktop
       ? <p className="py-3 text-xs leading-5 text-slate-400">Local model URLs are available only in Ayatrisya Desktop. A browser cannot reach localhost on your computer.</p>
       : <div className="py-3">
-      <p className="text-xs leading-5 text-slate-400">Connect an Ayatrisya model adapter running on this computer. Only localhost, 127.0.0.1, or [::1] is accepted. The address is saved on this desktop and is not synced. It uses a separate local transport; hosted API credentials are never sent to your computer. No vendor AI API is called.</p>
+      <p className="text-xs leading-5 text-slate-400">Verified desktop bridge v{runtime?.info.apiVersion} · app {runtime?.info.appVersion} · {runtime?.info.platform}. Connect an Ayatrisya model adapter running on this computer. Only localhost, 127.0.0.1, or [::1] is accepted. The address is saved on this desktop and is not synced. Desktop requests never fall back to hosted inference.</p>
+        <p className="mt-2 text-[11px] text-slate-500">Local engines reported: {runtime?.info.localModel.models.filter((model) => model.available).map((model) => model.id).join(", ") || (runtime?.info.localModel.endpointConfigured ? "none available" : "none configured")}</p>
         <label htmlFor="desktop-local-model-url" className="mt-3 block text-xs font-medium text-slate-400">Local adapter URL</label>
         <input id="desktop-local-model-url" type="url" value={endpoint} onChange={(event) => setEndpoint(event.target.value)} placeholder="http://127.0.0.1:1234" autoComplete="off" spellCheck={false} className={`${inputCls} mt-1.5 max-w-xl`} disabled={loading || busy} />
         <p className="mt-1 text-[10px] text-slate-500">{savedEndpoint ? "A local endpoint is saved on this desktop." : "No local endpoint is saved."} This setting does not store API credentials.</p>

@@ -7,7 +7,13 @@ import type {
   ModelMessage,
   ModelTransport,
   GenerationOptions,
+  ModelJobRequest,
+  ModelJobResult,
+  ModelJobStatus,
+  ModelJobHandle,
 } from "./types";
+import type { AyatrisyaDesktopApi } from "@/desktop/contracts";
+import { getVerifiedDesktopRuntime, type VerifiedDesktopRuntime } from "@/desktop/runtime";
 
 const capabilitySchema = z.object({
   models:z.array(z.object({id:z.enum(["v1-fast","v2-best"]),available:z.boolean(),reason:z.string().optional(),streaming:z.boolean().default(false),attachments:z.boolean().default(false),modalities:z.array(z.string()).default(["chat"])})),
@@ -28,6 +34,7 @@ const localModelPaths = new Set([
 ]);
 const MAX_GENERATION_RESPONSE_BYTES = 24 * 1024 * 1024;
 type TokenProvider = () => Promise<string>;
+type DesktopProvider = () => Promise<VerifiedDesktopRuntime | null>;
 
 async function getFirebaseModelToken(): Promise<string> {
   if (!firebaseConfigured) {
@@ -117,17 +124,31 @@ function decodeGeneratedAsset(
   const extension = spec[1];
   return { blob: new Blob([bytes], { type: spec[0] }), fileName: `${rawBase || `ayatrisya-${kind}`}${extension}` };
 }
+function throwIfAborted(signal?: AbortSignal): void {
+  if (signal?.aborted) throw new DOMException("Model request cancelled.", "AbortError");
+}
 export class AyatrisyaModelClient implements ModelTransport {
   private generation?:AbortController;
   private localRequestId?:string;
-  constructor(private readonly tokenProvider: TokenProvider = getFirebaseModelToken) {
+  private localRequestApi?: AyatrisyaDesktopApi;
+  private readonly jobs = new Map<string, { status: ModelJobStatus; controller: AbortController }>();
+  constructor(
+    private readonly tokenProvider: TokenProvider = getFirebaseModelToken,
+    private readonly desktopProvider: DesktopProvider = getVerifiedDesktopRuntime,
+  ) {
   }
   private async request(path:string,init:RequestInit={},signal?:AbortSignal) {
-    const desktop = typeof window !== "undefined" ? window.ayatrisyaDesktop : undefined;
-    const localEndpoint = desktop ? await desktop.getLocalModelEndpoint() : "";
-    if (desktop && localEndpoint) {
+    throwIfAborted(signal);
+    const runtime = await this.desktopProvider();
+    throwIfAborted(signal);
+    const desktop = runtime?.api;
+    if (desktop) {
+      const localEndpoint = await desktop.getLocalModelEndpoint();
+      if (!localEndpoint) {
+        throw new Error("No local model is configured in Ayatrisya Desktop. Add a loopback model in Settings. Prompts are not sent to the cloud.");
+      }
       if (!localModelPaths.has(path)) {
-        throw new Error("This operation is not supported by the desktop local model adapter.");
+        throw new Error("This operation is not supported by the desktop local model adapter. It will not be sent to the cloud.");
       }
       if (signal?.aborted) throw new DOMException("Model request cancelled.", "AbortError");
       let body: unknown;
@@ -137,6 +158,7 @@ export class AyatrisyaModelClient implements ModelTransport {
       }
       const requestId = crypto.randomUUID();
       this.localRequestId = requestId;
+      this.localRequestApi = desktop;
       const cancel = () => { void desktop.cancelLocalModelRequest(requestId).catch(() => undefined); };
       signal?.addEventListener("abort", cancel, { once: true });
       if (signal?.aborted) cancel();
@@ -155,7 +177,10 @@ export class AyatrisyaModelClient implements ModelTransport {
         return { response, dispose: () => undefined };
       } finally {
         signal?.removeEventListener("abort", cancel);
-        if (this.localRequestId === requestId) this.localRequestId = undefined;
+        if (this.localRequestId === requestId) {
+          this.localRequestId = undefined;
+          this.localRequestApi = undefined;
+        }
       }
     }
     const token = await this.tokenProvider();
@@ -175,12 +200,94 @@ export class AyatrisyaModelClient implements ModelTransport {
       return {response,dispose};
     } catch(e) {dispose();throw e;}
   }
+  async listModels():Promise<ModelCapability[]> {
+    return this.getModelCapabilities();
+  }
+  async getModelStatus(modelId: ModelCapability["id"]):Promise<ModelCapability | null> {
+    return (await this.getModelCapabilities()).find((model) => model.id === modelId) ?? null;
+  }
+  submitJob(request: Extract<ModelJobRequest, { kind: "chat" }>): ModelJobHandle<string>;
+  submitJob(request: Extract<ModelJobRequest, { kind: "asset" }>): ModelJobHandle<{ blob: Blob; fileName: string }>;
+  submitJob(request: Extract<ModelJobRequest, { kind: "transcribe" }>): ModelJobHandle<string>;
+  submitJob(request: Extract<ModelJobRequest, { kind: "speech" }>): ModelJobHandle<Blob>;
+  submitJob(request: ModelJobRequest): ModelJobHandle<ModelJobResult> {
+    const activeJobs = [...this.jobs.values()].filter(({ status }) => status.state === "running").length;
+    if (activeJobs >= 1) throw new Error("Ayatrisya supports one active model request at a time. Wait or cancel the current request first.");
+    const id = crypto.randomUUID();
+    const controller = new AbortController();
+    const status: ModelJobStatus = {
+      id,
+      kind: request.kind,
+      state: "running",
+      startedAt: new Date().toISOString(),
+    };
+    this.jobs.set(id, { status, controller });
+    this.pruneJobs();
+    const externalSignal = request.options?.signal;
+    const abortFromCaller = () => controller.abort(externalSignal?.reason);
+    if (externalSignal?.aborted) abortFromCaller();
+    else externalSignal?.addEventListener("abort", abortFromCaller, { once: true });
+    const result = this.runJob(request, controller.signal)
+      .then((value) => {
+        this.finishJob(id, "completed");
+        return value;
+      })
+      .catch((error: unknown) => {
+        const cancelled = controller.signal.aborted;
+        this.finishJob(id, cancelled ? "cancelled" : "failed");
+        throw error;
+      })
+      .finally(() => externalSignal?.removeEventListener("abort", abortFromCaller));
+    return { id, result };
+  }
+  getJobStatus(jobId: string): ModelJobStatus | null {
+    const status = this.jobs.get(jobId)?.status;
+    return status ? { ...status } : null;
+  }
+  cancelJob(jobId: string): boolean {
+    const job = this.jobs.get(jobId);
+    if (!job || job.status.state !== "running") return false;
+    job.controller.abort(new DOMException("Model request cancelled.", "AbortError"));
+    return true;
+  }
+  private async runJob(request: ModelJobRequest, signal: AbortSignal): Promise<ModelJobResult> {
+    switch (request.kind) {
+      case "chat":
+        return this.generateResponse(request.messages, { ...request.options, signal });
+      case "asset":
+        return this.generateAsset(request.assetKind, request.prompt, { ...request.options, signal });
+      case "transcribe":
+        return this.transcribeAudio(request.audio, { ...request.options, signal });
+      case "speech":
+        return this.synthesizeSpeech(request.text, { ...request.options, signal });
+    }
+  }
+  private finishJob(jobId: string, state: ModelJobStatus["state"]): void {
+    const job = this.jobs.get(jobId);
+    if (!job) return;
+    job.status = {
+      ...job.status,
+      state,
+      finishedAt: new Date().toISOString(),
+    };
+  }
+  private pruneJobs(): void {
+    if (this.jobs.size <= 100) return;
+    for (const [id, job] of this.jobs) {
+      if (job.status.state !== "running") this.jobs.delete(id);
+      if (this.jobs.size <= 100) break;
+    }
+  }
   async getModelCapabilities():Promise<ModelCapability[]> {
     const unavailable=(reason:string):ModelCapability[] => Object.entries(labels).map(([id,label])=>({id:id as ModelCapability["id"],label,available:false,reason,streaming:false,attachments:false,modalities:[]}));
-    const desktop = typeof window !== "undefined" ? window.ayatrisyaDesktop : undefined;
+    const runtime = await this.desktopProvider();
+    const desktop = runtime?.api;
     let localEndpoint = "";
     try { localEndpoint = desktop ? await desktop.getLocalModelEndpoint() : ""; }
-    catch { return unavailable("Could not read the desktop local model setting."); }
+    catch { return unavailable("The saved desktop model endpoint is invalid. Update it in Ayatrisya Settings."); }
+    if (desktop && !localEndpoint) {
+      return unavailable("No local model is configured. Desktop prompts stay on this device; hosted inference is not used.");
+    }
     try {
       const {response,dispose}=await this.request("/capabilities");
       try {
@@ -196,9 +303,13 @@ export class AyatrisyaModelClient implements ModelTransport {
     }
   }
   async getConnectionHealth() {
-    let localEndpoint: string;
-    try { localEndpoint = typeof window !== "undefined" && window.ayatrisyaDesktop ? await window.ayatrisyaDesktop.getLocalModelEndpoint() : ""; }
-    catch { return {configured:true,connected:false,message:"Could not read the desktop local model setting"}; }
+    const runtime = await this.desktopProvider();
+    let localEndpoint = "";
+    try { localEndpoint = runtime ? await runtime.api.getLocalModelEndpoint() : ""; }
+    catch { return {configured:true,connected:false,message:"The saved desktop model endpoint is invalid. Update it in Ayatrisya Settings."}; }
+    if (runtime && !localEndpoint) {
+      return {configured:false,connected:false,message:"No local model is configured. Desktop prompts are not sent to the cloud."};
+    }
     try {
       const {response,dispose}=await this.request("/health");
       let health: unknown;
@@ -221,7 +332,9 @@ export class AyatrisyaModelClient implements ModelTransport {
     }
   }
   async generateResponse(messages:ModelMessage[],options:GenerationOptions):Promise<string> {
+    throwIfAborted(options.signal);
     const capability=(await this.getModelCapabilities()).find(m=>m.id===options.model);
+    throwIfAborted(options.signal);
     if(!capability?.available)throw new Error(capability?.reason||"Selected model is unavailable.");
     this.cancelGeneration();this.generation=new AbortController();
     const abort=()=>this.generation?.abort(); options.signal?.addEventListener("abort",abort,{once:true});
@@ -251,23 +364,27 @@ export class AyatrisyaModelClient implements ModelTransport {
   }
   cancelGeneration(){
     this.generation?.abort();
-    if(this.localRequestId && typeof window !== "undefined") {
-      void window.ayatrisyaDesktop?.cancelLocalModelRequest(this.localRequestId).catch(()=>undefined);
+    if(this.localRequestId && this.localRequestApi) {
+      void this.localRequestApi.cancelLocalModelRequest(this.localRequestId).catch(()=>undefined);
     }
   }
   async transcribeAudio(audio:Blob,options:{signal?:AbortSignal}={}):Promise<string>{
-    const models=await this.getModelCapabilities();if(!models.some(m=>m.available&&m.modalities.includes("stt")))throw new Error("Ayatrisya speech-to-text is unavailable.");
+    throwIfAborted(options.signal);
+    const models=await this.getModelCapabilities();throwIfAborted(options.signal);if(!models.some(m=>m.available&&m.modalities.includes("stt")))throw new Error("Ayatrisya speech-to-text is unavailable.");
     const body=new FormData();body.append("audio",audio,"recording.webm");
     const {response,dispose}=await this.request("/transcribe",{method:"POST",body},options.signal);
     try{return z.object({text:z.string()}).parse(await response.json()).text;}finally{dispose();}
   }
   async synthesizeSpeech(text:string,options:{signal?:AbortSignal}={}):Promise<Blob>{
-    const models=await this.getModelCapabilities();if(!models.some(m=>m.available&&m.modalities.includes("tts")))throw new Error("Ayatrisya text-to-speech is unavailable.");
+    throwIfAborted(options.signal);
+    const models=await this.getModelCapabilities();throwIfAborted(options.signal);if(!models.some(m=>m.available&&m.modalities.includes("tts")))throw new Error("Ayatrisya text-to-speech is unavailable.");
     const {response,dispose}=await this.request("/speech",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text})},options.signal);
     try{if(!response.headers.get("content-type")?.startsWith("audio/"))throw new Error("Invalid speech audio response.");return await response.blob();}finally{dispose();}
   }
   async generateAsset(kind:AssetGenerationKind,prompt:string,options:AssetGenerationOptions):Promise<{blob:Blob;fileName:string}> {
+    throwIfAborted(options.signal);
     const capability=(await this.getModelCapabilities()).find((model)=>model.id===options.model);
+    throwIfAborted(options.signal);
     if(!capability?.available||!capability.modalities.includes(kind)) {
       throw new Error(capability?.reason||`The selected Ayatrisya model does not report ${kind} generation.`);
     }

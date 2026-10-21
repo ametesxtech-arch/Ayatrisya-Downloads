@@ -1,0 +1,104 @@
+# AYATRISYA — UNIFIED CROSS-PLATFORM UI AND INTELLIGENT INFERENCE ROUTING
+
+Act as the senior frontend and application integration engineer for Ayatrisya. Work inside the existing repository. Preserve the current UI, branding, features and working integrations. Do not rebuild the application from scratch.
+
+## PRIMARY OBJECTIVE
+
+Integrate the entire Ayatrisya UI with the correct inference backend based on the execution platform:
+
+- Website running in a browser → authenticated private cloud model API.
+- Mobile browser or tablet browser → authenticated private cloud model API.
+- Installed Ayatrisya Desktop → local inference runtime by default.
+- Desktop with a model unavailable locally → show an explicit unavailable/download option. Do not silently send prompts to the cloud.
+- Optional desktop cloud inference may be added only as an explicitly enabled user setting, with a clear privacy disclosure.
+
+Do not use user-agent detection alone. Detect the execution environment using the actual desktop bridge and its versioned capability handshake. If the desktop bridge is unavailable, treat the application as a web client.
+
+## 1. AUDIT BEFORE EDITING
+
+Inspect the existing project, routes, components, API clients, authentication, environment variables, desktop bridge, model screens and War Mode UI.
+
+Identify existing working functionality and reuse it. Create `docs/CLIENT_INTEGRATION_AUDIT.md`.
+
+Do not create fake model endpoints, duplicate screens or mock successful generation.
+
+## 2. CREATE A SHARED INFERENCE CLIENT
+
+Implement a typed interface that supports:
+- `getCapabilities()`
+- `listModels()`
+- `getModelStatus(modelId)`
+- `submitJob(request)`
+- `getJobStatus(jobId)`
+- `cancelJob(jobId)`
+- Streaming where the backend genuinely supports it.
+
+Implement separate adapters:
+
+### WebCloudAdapter
+- Used by the website, mobile web and tablet web.
+- Calls only the configured HTTPS API gateway.
+- Uses the existing authentication system and short-lived identity tokens.
+- Handles streaming, queued jobs, timeouts, cancellation and recoverable errors.
+- Never contains server API keys or provider secrets.
+- Never calls an external model provider directly from browser code.
+
+### DesktopLocalAdapter
+- Used only when a trusted desktop bridge is present and verified.
+- Communicates through secure, typed desktop IPC to the local inference runtime.
+- Obtains actual model capabilities and readiness from the local runtime.
+- Keeps prompts, local projects, source code and generated files on the device by default.
+- Never silently falls back to cloud inference.
+
+## 3. CONNECT THE COMPLETE UI
+
+Integrate:
+- Chat and planning.
+- Coding workspace and local project tools.
+- Image Studio.
+- Music Studio.
+- 3D Studio.
+- Game creation.
+- Speech recognition and speech synthesis where supported.
+- Model Manager and hardware status.
+- Project/assets management.
+- War Mode status and desktop controls.
+- Settings, privacy, download management and diagnostics.
+
+All screens must use the shared inference/job contracts. Preserve the existing visual design where possible and provide consistent navigation, loading states, progress, cancellation, errors and results.
+
+Clearly distinguish actual model inference from procedural generation. Never report an engine as ready solely because the API returns HTTP 200.
+
+## 4. DESKTOP DETECTION AND PRIVACY
+
+Use a versioned, authenticated-by-context desktop bridge handshake that exposes supported capabilities, runtime version and locally available engines.
+
+Do not trust arbitrary websites to invoke privileged desktop operations. Validate IPC senders, use context isolation, disable renderer Node integration and enforce strict content security policies.
+
+Do not expose unrestricted filesystem, shell, process-management or antivirus commands to the UI.
+
+Cloud inference must never occur because of an automatic timeout or missing local model. If optional cloud use is implemented, require explicit opt-in and show which data will be transmitted.
+
+## 5. WAR MODE UI
+
+Integrate the existing desktop War Mode functionality without exposing privileged scanning operations to ordinary browser clients.
+
+The web UI may show an explanatory page, but it must not claim to scan the user's computer or kill local malware.
+
+The desktop UI should display:
+- Actual scanner and signature-engine status.
+- Last successful signature update, if applicable.
+- Scan progress and scanned-item count.
+- Threat classification and confidence where available.
+- Quarantine, restore and remediation status.
+- Errors and unsupported operations.
+
+Use the real local scanner API. Do not fabricate threats, scan results or progress.
+
+## 6. TESTS AND DELIVERABLES
+
+Test web versus desktop routing, mobile/tablet web behavior, missing models, unavailable cloud services, authentication failures, cancellation, offline desktop operation and privacy settings.
+
+Run the available type checks, lint, tests and production build. Document exact files changed, actual results and remaining blockers in `docs/CLIENT_INTEGRATION_REPORT.md`.
+
+Do not claim successful inference or War Mode functionality without testing the real underlying implementation.

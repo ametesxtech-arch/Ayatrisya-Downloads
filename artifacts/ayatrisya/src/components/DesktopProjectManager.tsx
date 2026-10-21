@@ -7,9 +7,10 @@ import { Button, areaCls, inputCls } from '@/components/Primitives';
 import { formatBytes } from '@/lib/format';
 import type { DesktopFile, DesktopProject } from '@/desktop/contracts';
 import { DesktopCodingAgent } from './DesktopCodingAgent';
+import { useDesktopRuntime } from '@/desktop/use-runtime';
 
 export function DesktopProjectManager() {
-  const desktop = typeof window !== 'undefined' ? window.ayatrisyaDesktop : undefined;
+  const { desktop, checking } = useDesktopRuntime();
   const [projects, setProjects] = useState<DesktopProject[]>([]);
   const [activeId, setActiveId] = useState('');
   const [files, setFiles] = useState<DesktopFile[]>([]);
@@ -55,6 +56,10 @@ export function DesktopProjectManager() {
     }).finally(() => { if (!cancelled) setBusy(false); });
     return () => { cancelled = true; };
   }, [desktop, active?.id, active?.available, directory, refreshKey]);
+
+  if (checking) return <section className="mb-7 rounded-2xl border border-white/10 bg-[#13151c] p-4 sm:p-5" role="status">
+    <p className="text-xs text-slate-400">Verifying the Ayatrisya desktop bridge…</p>
+  </section>;
 
   if (!desktop) return <section className="mb-7 rounded-2xl border border-white/10 bg-[#13151c] p-4 sm:p-5">
     <div className="flex items-start gap-3">
