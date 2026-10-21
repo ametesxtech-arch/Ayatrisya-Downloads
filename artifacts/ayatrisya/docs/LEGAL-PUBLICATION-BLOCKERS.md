@@ -34,6 +34,8 @@ These are implementation and owner-review blockers, not public contact details.
 - [ ] Confirm the root `package.json` MIT declaration scope. No root `LICENSE`
   text was found in the checked repository; do not treat the manifest alone as
   proof that all product materials are MIT-licensed.
+- [ ] Review the internal asset/provenance inventory at `../../../docs/IP-INVENTORY.md`
+  and resolve unknown creators, evidence, licenses, and ownership actions.
 - [ ] Confirm package-level license declarations, repository notices, and
   third-party attributions for each published web/desktop build.
 - [ ] Inventory authorship of code and creative work, including founder,

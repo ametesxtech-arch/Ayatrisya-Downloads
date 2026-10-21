@@ -1,0 +1,22 @@
+# Ametesx — Protect All Original Intellectual Property Without Trademark Registration
+
+My goal is to protect all original intellectual property that I can lawfully own and control now, without applying for trademark registration or falsely claiming rights over third-party materials.
+
+Audit the Ametesx and Ayatrisya repositories and implement the following:
+
+1. Add accurate copyright notices to original website content, original software and other eligible original materials, using `© 2026 Ametesx. All rights reserved.` where appropriate.
+2. Do not claim that Ametesx legally owns every asset merely because it appears on an Ametesx website. Distinguish work I created, work created by other contributors, and third-party materials.
+3. Inspect the root MIT licence and determine its scope. Do not assume it applies only to dependencies or only to application code without checking. Flag any conflict between the existing licence and the intention to keep original Ametesx materials proprietary.
+4. Preserve all mandatory open-source notices, model licences, dataset terms, font licences, icon licences and other third-party obligations.
+5. Create an internal IP inventory listing each major asset, its creator if known, creation evidence, applicable licence, current ownership status and any action needed to establish ownership.
+6. Include original source code, website designs, graphics, documentation, product branding, original model code and other eligible original works in the inventory.
+7. Identify any contractor, collaborator, generated asset or platform-related terms that could affect ownership. Do not claim an assignment has occurred without evidence.
+8. Do not add trademark-registration claims, patent claims, fake legal entities or invented contact details.
+9. Do not require trademark registration as a condition for documenting copyright in eligible original works.
+10. Keep unresolved legal questions in an internal owner-review checklist. Do not publish unsupported legal claims.
+
+I am under 18. Do not ask me to bypass age restrictions, falsify my age or sign a document that may require adult involvement. Separate actions I can take now, such as preserving evidence and adding accurate notices, from contracts, assignments or other legal steps that may require a parent/guardian or professional advice.
+
+Keep the website functional, preserve the current design, run the existing tests and production build, and report the verified results and unresolved issues.
+
+The objective is to protect all original rights I can lawfully hold and control, without trademark registration and without misrepresenting third-party ownership.

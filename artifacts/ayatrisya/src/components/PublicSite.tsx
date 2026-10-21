@@ -63,7 +63,7 @@ export function PublicSiteFooter() {
             {footerLinks.map((item) => <Link key={item.href} href={item.href} className="rounded-sm transition hover:text-white focus-visible:outline-2 focus-visible:outline-violet-300">{item.label}</Link>)}
           </nav>
           <div className="text-[11px] text-slate-500 lg:text-right">
-            <p>© {new Date().getFullYear()} Ametesx · All rights reserved.</p>
+            <p>© {new Date().getFullYear()} Ametesx. All rights reserved.</p>
             <p className="mt-1">This notice applies only to material Ametesx owns or is authorized to protect.</p>
             <p className="mt-1">Local-first storage where supported; model use may involve remote processing.</p>
           </div>

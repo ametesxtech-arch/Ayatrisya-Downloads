@@ -446,7 +446,7 @@ export const publicLegalPages: PublicLegalPage[] = [
       {
         heading: 'Rights requests and publication status',
         paragraphs: [
-          'Ametesx may enforce rights it owns or is authorized to enforce, subject to applicable law. Rights-request contact: pending owner configuration; no verified, monitored contact channel was found in the checked project. This page remains a draft until the contact channel, repository license scope, and creator/contributor ownership records are reviewed. The intended notice format for verified Ayatrisya materials is “© [current year] Ametesx · Ayatrisya. All rights reserved.”',
+          'Ametesx may enforce rights it owns or is authorized to enforce, subject to applicable law. Rights-request contact: pending owner configuration; no verified, monitored contact channel was found in the checked project. This page remains a draft until the contact channel, repository license scope, and creator/contributor ownership records are reviewed. The intended notice for verified Ametesx-owned or authorized materials is “© [current year] Ametesx. All rights reserved.”',
         ],
       },
     ],
