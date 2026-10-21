@@ -9,6 +9,44 @@ shipping a separate antivirus engine or redistributing signatures without a
 verified license. It does **not** meet the original requirement to bundle an
 engine and baseline signatures; that work remains open.
 
+## Bundled-engine candidate review
+
+ClamAV was reviewed as the leading candidate. Its current upstream release at the
+time of review is 1.5.4 (2026-08-07). The upstream source includes `COPYING.txt`
+with the GNU GPL version 2 license. The source README documents Windows MSI and
+portable ZIP packages, including x64. The official GitHub release lists the
+Windows x64 MSI at 224,457,050 bytes and ZIP at 225,774,978 bytes. Ayatrisya's
+existing Windows installer is 111,298,546 bytes. Those are standalone release
+assets, not a measured combined installer; including a scanner would
+substantially increase download size, and the bundled signature size was not
+measurable in this environment.
+
+ClamAV documentation identifies FreshClam as the official signature updater and
+says the database is typically updated once or twice daily. It documents private
+mirrors for deployments and local database files for scanning. The official
+documentation reviewed does not state clear permission to redistribute the
+official CVD signature files inside a public/commercial installer. Direct
+database requests from this environment returned HTTP 403, so the database
+package size and redistribution terms could not be independently verified.
+Therefore ClamAV is **not selected for bundling** until the signature
+redistribution rights are confirmed. This is an unresolved permission/terms
+question, not a claim that redistribution is prohibited.
+
+Sources reviewed:
+
+- [ClamAV source and license](https://github.com/Cisco-Talos/clamav/tree/clamav-1.5.4)
+- [ClamAV official Windows package documentation](https://github.com/Cisco-Talos/clamav/blob/clamav-1.5.4/README.md)
+- [ClamAV official CVD FAQ](https://github.com/Cisco-Talos/clamav-documentation/blob/main/src/faq/faq-cvd.md)
+- [ClamAV official private-mirror guidance](https://github.com/Cisco-Talos/clamav-documentation/blob/main/src/appendix/CvdPrivateMirror.md)
+- [ClamAV official signature database documentation](https://github.com/Cisco-Talos/clamav-documentation/blob/main/src/manual/Signatures.md)
+- [ClamAV 1.5.4 Windows x64 release assets](https://github.com/Cisco-Talos/clamav/releases/tag/clamav-1.5.4)
+
+The safest current option is to retain the existing Windows Defender integration.
+For a bundled ClamAV option, first obtain clear redistribution permission for the
+official signature databases or choose a signature set with explicit
+redistribution terms. Do not substitute unsigned or unlicensed community rules
+and call them complete antivirus protection.
+
 ## How it works
 
 - Available only in Ayatrisya Desktop on Windows.
