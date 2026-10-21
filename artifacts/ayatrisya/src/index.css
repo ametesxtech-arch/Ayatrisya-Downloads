@@ -114,7 +114,7 @@ html[data-hidden] .pend-dot{animation-play-state:paused}
 
 html[data-wallpaper-active="true"] .workspace-shell {
   background-color: #101116 !important;
-  background-image: linear-gradient(rgba(13,14,20,.48),rgba(13,14,20,.55)),var(--workspace-wallpaper) !important;
+  background-image: linear-gradient(rgba(13,14,20,.38),rgba(13,14,20,.46)),var(--workspace-wallpaper) !important;
   background-position: center;
   background-size: cover;
   background-repeat: no-repeat;
@@ -125,17 +125,17 @@ html[data-wallpaper-active="true"] .workspace-sidebar {
   backdrop-filter: blur(18px);
 }
 html[data-wallpaper-active="true"] .workspace-shell main {
-  background-color: rgba(16,17,22,.18);
+  background-color: rgba(16,17,22,.06);
   backdrop-filter: blur(4px);
 }
 html[data-appearance="light"][data-wallpaper-active="true"] .workspace-shell {
-  background-image: linear-gradient(rgba(238,239,247,.42),rgba(238,239,247,.54)),var(--workspace-wallpaper) !important;
+  background-image: linear-gradient(rgba(238,239,247,.40),rgba(238,239,247,.48)),var(--workspace-wallpaper) !important;
 }
 html[data-appearance="light"][data-wallpaper-active="true"] .workspace-sidebar {
   background-color: rgba(244,244,249,.9) !important;
 }
 html[data-appearance="light"][data-wallpaper-active="true"] .workspace-shell main {
-  background-color: rgba(238,239,247,.24);
+  background-color: rgba(238,239,247,.10);
 }
 
 /* Route entrance, staggered lists, tooltips, control transitions */
