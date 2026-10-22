@@ -77,7 +77,7 @@ export function ChatPage({ path, goto, notify }: { path: string; goto: (h: strin
   const [consent, setConsent] = useState(false), [ask, setAsk] = useState<{ cid: string; history: Turn; after?: () => Promise<void> } | null>(null), [remember, setRemember] = useState(false);
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null), [confirmDel, setConfirmDel] = useState(false), [renaming, setRenaming] = useState<string | null>(null), [delMsg, setDelMsg] = useState<Message | null>(null), [resubmit, setResubmit] = useState<{ m: Message; text: string } | null>(null), [copied, setCopied] = useState<string | null>(null), [atBottom, setAtBottom] = useState(true);
   const acts = useConvActions({ notify, goto, onDeleted: () => goto('/workspace') });
-  const abortRef = useRef<AbortController | null>(null), jobIdRef = useRef<string | null>(null), retryRef = useRef<{ cid: string; history: Turn } | null>(null), endRef = useRef<HTMLDivElement>(null), fileRef = useRef<HTMLInputElement>(null), zipRef = useRef<HTMLInputElement>(null), taRef = useRef<HTMLTextAreaElement>(null);
+  const abortRef = useRef<AbortController | null>(null), jobIdRef = useRef<string | null>(null), retryRef = useRef<{ cid: string; history: Turn } | null>(null), endRef = useRef<HTMLDivElement>(null), fileRef = useRef<HTMLInputElement>(null), taRef = useRef<HTMLTextAreaElement>(null);
   useEffect(() => () => {
     abortRef.current?.abort();
     if (jobIdRef.current) modelClient.cancelJob(jobIdRef.current);
@@ -200,16 +200,16 @@ export function ChatPage({ path, goto, notify }: { path: string; goto: (h: strin
     <div className="chat-composer-dock safe-b sticky bottom-0 px-3 pt-3 sm:px-6">
       <div className={`chat-composer-wrap mx-auto ${studioWidth ? 'max-w-[1060px]' : 'max-w-[820px]'}`}>
         {id && !available && <p className="chat-model-footnote" data-testid="status-model-local-only">Selected model unavailable. New messages are saved locally and not sent.</p>}
-        {files.length > 0 && <div className="chat-attachments" data-testid="list-pending-attachments">{files.map((f, i) => <span key={`${f.name}-${i}`} className="chat-attachment"><Paperclip size={13} /><span className="truncate">{f.name}</span><span className="shrink-0">{formatBytes(f.size)}</span><button type="button" aria-label={`Remove ${f.name}`} data-testid={`button-remove-attachment-${i}`} onClick={() => setFiles(files.filter((_, j) => j !== i))}><X size={14} /></button></span>)}<span className="chat-attachment-note">Attachments stay in this browser and are never sent to a model.</span></div>}
+        {files.length > 0 && <div className="chat-attachments" data-testid="list-pending-attachments">{files.map((f, i) => <span key={`${f.name}-${i}`} className="chat-attachment"><Paperclip size={13} /><span className="truncate">{f.name}</span><span className="shrink-0">{formatBytes(f.size)}</span><button type="button" aria-label={`Remove ${f.name}`} data-testid={`button-remove-attachment-${i}`} onClick={() => setFiles(files.filter((_, j) => j !== i))}><X size={14} /></button></span>)}<span className="chat-attachment-note">Press Send to save these files in this browser. Attachments are not sent to a model.</span></div>}
         <div className="chat-composer" data-testid="chat-composer">
             {!guest && <><input ref={fileRef} type="file" multiple hidden onChange={(e) => pick(e.target.files)} data-testid="input-attachments" />
-            <input ref={zipRef} type="file" accept=".zip,application/zip" hidden onChange={(e) => pick(e.target.files)} data-testid="input-zip-attachment" />
+            <input id="chat-zip-attachment" type="file" accept=".zip,application/zip" className="sr-only" onChange={(e) => { pick(e.target.files); e.currentTarget.value = ''; }} data-testid="input-zip-attachment" />
             <IconButton label="Attach files (stored locally)" onClick={() => fileRef.current?.click()} className="chat-composer-tool" data-testid="button-attach"><Paperclip size={17} /></IconButton>
-            <IconButton label="Upload ZIP archive" onClick={() => zipRef.current?.click()} className="chat-composer-tool" data-testid="button-upload-zip"><Archive size={17} /></IconButton>
+            <label htmlFor="chat-zip-attachment" aria-label="Upload ZIP archive" title="Upload ZIP archive" data-testid="button-upload-zip" className="chat-composer-tool grid size-9 shrink-0 cursor-pointer place-items-center rounded-lg text-slate-400 hover:bg-white/[.07] hover:text-white focus-within:ring-2 focus-within:ring-violet-400"><Archive size={17} /></label>
             <ActionMenu label="Other chat actions" up items={[
               { label: 'Open voice studio', onSelect: () => goto('/workspace/voice') },
               { label: 'Open coding workspace', onSelect: () => goto('/workspace/coding') },
-            ]}><MoreHorizontal size={17} /></ActionMenu></>}
+            ]} className="!flex !h-10 !w-auto gap-1 px-2"><MoreHorizontal size={16} /><span className="text-[11px]">Other</span></ActionMenu></>}
           <label className="sr-only" htmlFor="composer">Message</label>
           <textarea id="composer" ref={taRef} rows={1} value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing && (prefs.enterToSend ? !e.shiftKey : (e.ctrlKey || e.metaKey))) { e.preventDefault(); void send(); } }} placeholder="Write a message..." className="chat-composer-input" data-testid="input-message" aria-describedby="composer-hint" />
            {!guest && <Link href="/workspace/voice" aria-label="Open voice studio" title="Voice studio" data-testid="link-voice-studio" className="chat-composer-tool grid size-10 shrink-0 place-items-center rounded-xl text-slate-400 hover:bg-white/[.07] hover:text-white"><Mic size={17} /></Link>}
