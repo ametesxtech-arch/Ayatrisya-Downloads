@@ -11,10 +11,13 @@ documentation. No separate Ametesx website repository was present in the
 workspace, and this review does not establish the contents of a remote
 repository or deployed build.
 
-The owner's stated intention is to protect original work Ametesx can lawfully
-own or control, without claiming third-party material. Source files and assets
-prove that files are present in this workspace; they do not by themselves prove
-who created them, who owns them, or whether rights were assigned.
+The product owner has confirmed that Ayatrisya is an Ametesx product. This
+confirms the product relationship, not the authorship, ownership, assignment,
+license, registration, or exclusive rights for any specific asset. The owner's
+stated intention is to protect original work Ametesx can lawfully own or
+control, without claiming third-party material. Source files and assets prove
+that files are present in this workspace; they do not by themselves prove who
+created them, who owns them, or whether rights were assigned.
 
 The root `package.json` is both `"private": true` and `"license": "MIT"`, but no
 root `LICENSE` text was found. Each checked workspace package is private and

@@ -9,8 +9,9 @@
 ## Owner decisions required before publication
 
 - Confirm the legal/service operator's name and any applicable parent/subsidiary
-  relationship. “Ametesx” is a product/brand label in the checked UI; the legal
-  entity behind it was not established by this source review.
+  relationship. The product owner confirms Ayatrisya is an Ametesx product; that
+  product relationship does not establish the legal entity or service operator
+  behind Ametesx.
 - Provide a verified, monitored privacy contact and a process for access,
   correction, deletion, and other privacy requests. No verified contact channel
   was found in the checked project files.

@@ -4,8 +4,8 @@ These are implementation and owner-review blockers, not public contact details.
 
 ## Privacy Policy
 
-- [ ] Confirm the actual legal/service operator and relationship to the Ametesx
-  brand.
+- [ ] Confirm the actual legal/service operator. The product owner has confirmed
+  Ayatrisya is an Ametesx product; this does not establish the legal operator.
 - [ ] Configure and verify a monitored privacy contact.
 - [ ] Confirm production hosting/API operator, regions, CDN, and access-log
   practices.

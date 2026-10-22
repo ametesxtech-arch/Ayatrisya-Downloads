@@ -22,7 +22,7 @@ export const documentationArticles: DocArticle[] = [
       {
         heading: 'Product and status',
         paragraphs: [
-          'Ayatrisya is a workspace for conversations, research, projects, coding workflows, documents, presentations, and creative studios. Ayatrisya is a product of the Ametesx brand.',
+          'Ayatrisya is a product of Ametesx, as confirmed by its owner. It is a workspace for conversations, research, projects, coding workflows, documents, presentations, and creative studios.',
           'The interface and request paths exist for several AI-assisted workflows. Actual generation depends on a compatible Ayatrisya-operated model service being configured and passing a live inference test. The app does not bundle or train foundation models.',
         ],
       },
@@ -415,7 +415,7 @@ export const publicLegalPages: PublicLegalPage[] = [
       {
         heading: 'Ametesx and Ayatrisya ownership statement',
         paragraphs: [
-          'Ametesx is the parent brand identified for products including Ayatrisya. Subject to applicable law and documented third-party rights, Ametesx claims ownership of original intellectual property created for and lawfully owned by Ametesx. This claim applies only where authorship, ownership, assignment, or license rights can be verified. The repository alone does not establish that a work was assigned or licensed to Ametesx.',
+          'Ayatrisya is a product of Ametesx, as confirmed by its owner. This confirms the product relationship; it does not by itself establish authorship, copyright assignment, trademark registration, or exclusive rights in any specific code, design, logo, document, model, contribution, or other asset. Subject to applicable law and documented third-party rights, Ametesx claims ownership of original intellectual property created for and lawfully owned by Ametesx. That claim applies only where authorship, ownership, assignment, or license rights can be verified. The repository alone does not establish that a work was assigned or licensed to Ametesx.',
         ],
       },
       {

@@ -106,6 +106,7 @@ try {
   await call('Page.navigate',{url:'http://127.0.0.1:80/copyright'});
   await wait(`document.querySelector('h1')?.textContent.includes('Copyright and intellectual property')`,'copyright page');
   assert(await evaluate(`document.body.innerText.includes('Draft for owner and legal review')&&document.body.innerText.includes('Rights-request contact: pending owner configuration')`),'Copyright page must remain visibly gated on owner review and a verified rights contact');
+   assert(await evaluate(`document.body.innerText.includes('Ayatrisya is a product of Ametesx, as confirmed by its owner.')&&document.body.innerText.includes('does not by itself establish authorship, copyright assignment')`),'Copyright page must state the owner-confirmed product relationship without implying all assets are owned');
   await call('Page.navigate',{url:'http://127.0.0.1:80/documentation'});
   await wait(`document.querySelector('[data-testid="input-documentation-search"]')`,'documentation search after footer navigation');
   await input('[data-testid="input-documentation-search"]','loopback');
