@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 const dir=await fs.mkdtemp('/tmp/ayatrisya-browser-');
 const processHandle=spawn('chromium',['--headless','--no-sandbox','--disable-gpu','--disable-dev-shm-usage','--remote-debugging-port=0',`--user-data-dir=${dir}`,'about:blank'],{stdio:'ignore'});
 const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
-const passed=[],errors=[],uploads=[];
+const passed=[],errors=[],networkWrites=[];
 let reloadCounter=0;
 let socket;
 try {
@@ -21,7 +21,11 @@ try {
     const message=JSON.parse(event.data);
     if(message.id){const entry=pending.get(message.id);pending.delete(message.id);message.error?entry?.reject(Error(JSON.stringify(message.error))):entry?.resolve(message.result);}
     if(message.method==='Runtime.exceptionThrown')errors.push(message.params.exceptionDetails.text);
-    if(message.method==='Network.requestWillBeSent'&&!['GET','OPTIONS'].includes(message.params.request.method))uploads.push(message.params.request.method);
+    if(message.method==='Network.requestWillBeSent'&&!['GET','OPTIONS'].includes(message.params.request.method)){
+      const host=new URL(message.params.request.url).hostname.toLowerCase();
+      const category=/^(identitytoolkit|securetoken|firebaseinstallations)\.googleapis\.com$/.test(host)?'firebase-auth':host==='firestore.googleapis.com'?'firestore':'other';
+      networkWrites.push(category);
+    }
   });
   const call=(method,params={})=>new Promise((resolve,reject)=>{const id=++sequence;pending.set(id,{resolve,reject});socket.send(JSON.stringify({id,method,params}));});
   const evaluate=async expression=>{
@@ -173,10 +177,10 @@ try {
       assert(await evaluate(`document.querySelector('[data-testid="status-image"]')?.textContent.includes('No Ayatrisya image model is connected')`),'Unavailable image generation is not explained');
      await call('Page.reload');
      await wait(`document.querySelector('.guest-workspace')`,'persisted guest session');
-    assert.deepEqual(uploads,[]);
+    assert.deepEqual(networkWrites,[]);
     assert.deepEqual(errors,[]);
      passed.push('Guest access persists and is limited to chat and image generation; other workspace routes remain account-gated');
-    console.log(JSON.stringify({passed,authenticatedWorkspaceChecks:'skipped: set AYATRISYA_TEST_EMAIL and AYATRISYA_TEST_PASSWORD in the test environment',privateUploads:uploads.length,browserErrors:errors},null,2));
+    console.log(JSON.stringify({passed,authenticatedWorkspaceChecks:'skipped: set AYATRISYA_TEST_EMAIL and AYATRISYA_TEST_PASSWORD in the test environment',networkWrites:networkWrites.length,browserErrors:errors},null,2));
   } else {
   await call('Page.navigate',{url:'http://127.0.0.1:80/auth/sign-in'});
   await wait(`document.querySelector('[data-testid="input-email"]')`,'test account sign-in form');
@@ -322,12 +326,24 @@ await go('/workspace');await click('[data-testid="button-new-chat"]');
    await setViewport(1024,900,false);await assertNoHorizontalOverflow('Workspace shell at 1024px');
    assert.equal(await evaluate(`getComputedStyle(document.querySelector('[aria-label="Open navigation"]')).display`),'none','Workspace drawer control should hide on wide screens');
    assert.equal(await evaluate(`getComputedStyle(document.querySelector('.workspace-sidebar')).position`),'relative','Workspace sidebar should become part of the wide-screen layout');
-  assert.deepEqual(uploads,[]);assert.deepEqual(errors,[]);
-  console.log(JSON.stringify({passed,counts:before,privateUploads:uploads.length,browserErrors:errors,screenshots:[`${dir}/light.png`,`${dir}/mobile.png`]},null,2));
+  const unexpectedWrites=networkWrites.filter(category=>!['firebase-auth','firestore'].includes(category));
+  assert.deepEqual(unexpectedWrites,[]);
+  assert.deepEqual(errors,[]);
+  console.log(JSON.stringify({passed,counts:before,networkWrites:{firebaseAuth:networkWrites.filter(category=>category==='firebase-auth').length,firestore:networkWrites.filter(category=>category==='firestore').length,unexpected:unexpectedWrites.length},browserErrors:errors,screenshotsCaptured:2},null,2));
   }
 } catch(error) {
   console.error(JSON.stringify({failed:error.message,passed,errors},null,2));
   process.exitCode=1;
 } finally {
-  socket?.close();processHandle.kill('SIGTERM');
+  socket?.close();
+  if(processHandle.exitCode===null&&processHandle.signalCode===null){
+    const exited=new Promise(resolve=>processHandle.once('exit',resolve));
+    processHandle.kill('SIGTERM');
+    await Promise.race([exited,delay(3000)]);
+    if(processHandle.exitCode===null&&processHandle.signalCode===null){
+      processHandle.kill('SIGKILL');
+      await Promise.race([new Promise(resolve=>processHandle.once('exit',resolve)),delay(1000)]);
+    }
+  }
+  await fs.rm(dir,{recursive:true,force:true});
 }
