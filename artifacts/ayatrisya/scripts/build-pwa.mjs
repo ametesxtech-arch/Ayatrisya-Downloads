@@ -56,21 +56,26 @@ for (const filePath of publicFiles) {
 
 const precacheUrls = [...precache].sort();
 let totalBytes = 0;
+const precacheFingerprint = [];
 for (const url of precacheUrls) {
   if (url === "./") continue;
   const filePath = path.resolve(outputRoot, url.slice(2));
-  totalBytes += (await fs.stat(filePath)).size;
+  const bytes = await fs.readFile(filePath);
+  totalBytes += bytes.length;
+  precacheFingerprint.push(`${url}:${createHash("sha256").update(bytes).digest("hex")}`);
 }
 if (totalBytes > maxCacheBytes) {
   throw new Error(`PWA public asset cache would be ${totalBytes} bytes; limit is ${maxCacheBytes} bytes.`);
 }
 
-const cacheVersion = createHash("sha256").update(precacheUrls.join("\n")).digest("hex").slice(0, 12);
+const cacheVersion = createHash("sha256").update(precacheFingerprint.join("\n")).digest("hex").slice(0, 12);
 const worker = `/* Generated from the production public asset list. Never cache API or user data. */
 const CACHE_PREFIX = "ayatrisya-shell-";
 const CACHE_NAME = CACHE_PREFIX + "${cacheVersion}";
 const PRECACHE_URLS = ${JSON.stringify(precacheUrls)};
 const PRECACHE_PATHS = new Set(PRECACHE_URLS.map((item) => new URL(item, self.registration.scope).pathname));
+const API_BASE_PATH = new URL("./api", self.registration.scope).pathname.replace(/\\/$/, "");
+const isApiRequest = (pathname) => pathname === "/api" || pathname.startsWith("/api/") || pathname === API_BASE_PATH || pathname.startsWith(API_BASE_PATH + "/");
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS)));
@@ -93,7 +98,7 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET") return;
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
-  if (url.pathname === "/api" || url.pathname.startsWith("/api/")) return;
+  if (isApiRequest(url.pathname)) return;
 
   if (request.mode === "navigate") {
     event.respondWith(fetch(request).catch(async () => {

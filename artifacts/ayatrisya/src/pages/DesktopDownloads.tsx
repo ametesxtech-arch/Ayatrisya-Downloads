@@ -26,18 +26,17 @@ const releasePageUrl = secureHttpsUrl(env.VITE_DESKTOP_DOWNLOAD_URL);
 const platforms = [
   {
     name: "Linux",
-    status: "x64 AppImage built on Linux; unsigned",
+    status: "Linux x64 AppImage target configured; unsigned; installer launch not verified here",
     downloadUrl: secureHttpsUrl(env.VITE_DESKTOP_DOWNLOAD_LINUX_URL),
   },
   {
     name: "Windows",
-    status: "x64 NSIS build and installed-app startup check passed; unsigned",
+    status: "Windows x64 NSIS target configured; unsigned; installation and startup not verified here",
     downloadUrl: secureHttpsUrl(env.VITE_DESKTOP_DOWNLOAD_WINDOWS_URL),
   },
   {
     name: "macOS",
-    status:
-      "Universal DMG built on macOS; signing and notarization are not configured",
+    status: "macOS DMG target configured; build, signing, notarization, and launch not verified here",
     downloadUrl: secureHttpsUrl(env.VITE_DESKTOP_DOWNLOAD_MAC_URL),
   },
 ];
@@ -77,8 +76,9 @@ export function DesktopDownloadsPage() {
             Get Ayatrisya Desktop
           </h1>
           <p className="mt-5 max-w-2xl text-sm leading-7 text-slate-400">
-            The desktop app can open folders you choose and run commands only
-            after you approve them. The web app stays browser-only.
+            Ayatrisya Desktop can open folders you choose and run commands only
+            after you approve them. The website remains browser-only unless you
+            explicitly pair it with the desktop app on this same computer.
           </p>
 
           {releasePageUrl ? (
@@ -159,7 +159,7 @@ export function DesktopDownloadsPage() {
             {recommendedPlatform === "pwa" && <span className="rounded-full border border-violet-300/20 bg-violet-300/[.07] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-violet-100" data-testid="status-recommended-pwa">Recommended for this device</span>}
           </div>
           <p className="mt-2 max-w-2xl text-xs leading-5 text-slate-400">
-            The installable web app shares this browser’s saved workspace. Offline access is limited to the cached public app shell and browser-local data. Sign-in, AI, sync, and downloads require a connection; local folders and terminal commands require Ayatrisya Desktop.
+            The installable web app uses this browser’s saved workspace. Offline mode currently shows a static notice; the full workspace, sign-in, AI, sync, and downloads require a connection. Local folders and terminal commands require Ayatrisya Desktop and explicit same-computer pairing.
           </p>
           <div className="mt-4 flex flex-wrap items-center gap-3">
             {pwa.isInstalled ? (

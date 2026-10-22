@@ -8,6 +8,7 @@ const {
   isWithin,
   resolveExistingPath,
   resolveWritableFile,
+  validateBrowserCodingPath,
   validateNewTextFilePath,
   validateCommand,
   validateProjectId,
@@ -83,5 +84,20 @@ test("new agent files must be supported, non-sensitive text files within the gra
     "public/image.png",
   ]) {
     assert.throws(() => validateNewTextFilePath(file));
+  }
+});
+
+test("browser companion paths exclude credential, generated, and dependency locations", () => {
+  assert.equal(validateBrowserCodingPath("src/App.tsx"), path.join("src", "App.tsx"));
+  assert.equal(validateBrowserCodingPath(".github/workflows/check.yml"), path.join(".github", "workflows", "check.yml"));
+  for (const file of [
+    ".env/settings.ts",
+    "secrets/loader.ts",
+    "credentials/auth.json",
+    "node_modules/pkg/index.js",
+    "dist/bundle.js",
+    "src/private-key.ts",
+  ]) {
+    assert.throws(() => validateBrowserCodingPath(file));
   }
 });

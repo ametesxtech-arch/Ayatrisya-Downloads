@@ -47,7 +47,7 @@ function StatusBanners({
         {offline ? <WifiOff size={15} className="shrink-0 text-amber-200" /> : <RefreshCw size={15} className="shrink-0 text-violet-200" />}
         <p className="min-w-0 flex-1 leading-5" role="status">
           {offline
-            ? "Offline. Saved browser data may remain available; sign-in, hosted AI, sync, and downloads need a connection."
+            ? "Offline. Your browser-stored data remains here, but the full Ayatrisya workspace is not available offline yet."
             : "An Ayatrisya update is ready to install."}
         </p>
         {updateAvailable && <Button className="min-h-8 shrink-0 px-3 text-[11px]" onClick={applyUpdate} data-testid="button-pwa-update">Update</Button>}

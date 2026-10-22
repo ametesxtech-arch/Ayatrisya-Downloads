@@ -7,6 +7,7 @@ const ORIGIN = "https://ayatrisya.web.app";
 const servers = [];
 
 async function start(overrides = {}) {
+  const { handlers: handlerOverrides = {}, ...config } = overrides;
   const server = createCompanionServer({
     port: 0,
     allowedOrigins: [ORIGIN, "https://other.example"],
@@ -19,9 +20,9 @@ async function start(overrides = {}) {
       createFile: async () => undefined,
       writeFile: async () => undefined,
       runCommand: async () => ({ cancelled: false, code: 0, stdout: "ok", stderr: "", timedOut: false }),
-      ...overrides.handlers,
+      ...handlerOverrides,
     },
-    ...overrides,
+    ...config,
   });
   servers.push(server);
   const address = await server.ready;
@@ -39,7 +40,8 @@ function request(port, { method = "GET", path = "/v1/status", origin = ORIGIN, t
       headers: {
         Host: host || `127.0.0.1:${port}`,
         Origin: origin,
-        ...(method !== "GET" ? { "Content-Type": "application/json", "X-Ayatrisya-Protocol": "1" } : {}),
+        "X-Ayatrisya-Protocol": "1",
+        ...(method !== "GET" ? { "Content-Type": "application/json" } : {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...headers,
         ...(bytes ? { "Content-Length": bytes.length } : {}),

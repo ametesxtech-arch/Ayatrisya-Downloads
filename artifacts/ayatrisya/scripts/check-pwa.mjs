@@ -25,7 +25,9 @@ for (const icon of manifest.icons) {
 }
 
 assert.match(worker, /request\.mode === "navigate"/);
-assert.match(worker, /url\.pathname === "\/api" \|\| url\.pathname\.startsWith\("\/api\/"\)/);
+assert.match(worker, /const API_BASE_PATH = new URL\("\.\/api", self\.registration\.scope\)/);
+assert.match(worker, /const isApiRequest = \(pathname\) => pathname === "\/api" \|\| pathname\.startsWith\("\/api\/"\) \|\| pathname === API_BASE_PATH/);
+assert.match(worker, /if \(isApiRequest\(url\.pathname\)\) return/);
 assert.match(worker, /AYATRISYA_ACTIVATE_UPDATE/);
 assert.doesNotMatch(worker, /caches\.put\(/);
 assert.doesNotMatch(worker, /Authorization|firebase|token/i);

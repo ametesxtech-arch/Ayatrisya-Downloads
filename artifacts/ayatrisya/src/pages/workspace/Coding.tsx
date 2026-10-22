@@ -10,11 +10,13 @@ import { downloadText, errMsg, formatBytes, MAX_UPLOAD, safeName } from '@/lib/f
 import { DesktopProjectManager } from '@/components/DesktopProjectManager';
 import { CodingPlanner } from '@/components/CodingPlanner';
 import { ActionMenu } from '@/components/Menus';
+import { useBrowserCompanion } from '@/pwa/use-browser-companion';
 
 export function CodingPage({ notify }: { notify: (m: string) => void }) {
   const list = useLocalQuery(() => repository.listItems({ kind: 'code', sort: 'date', limit: 300 }), []);
   const [open, setOpen] = useState(false), [title, setTitle] = useState(''), [spec, setSpec] = useState('## Goal\n\n## Files and constraints\n\n## Acceptance checks\n'), [err, setErr] = useState('');
   const zipInput = useRef<HTMLInputElement>(null);
+  const browserCompanion = useBrowserCompanion();
   async function create() {
     try { await repository.saveItem({ title: title.trim() || 'Untitled coding task', kind: 'code', content: spec, tags: ['coding'] }); setOpen(false); setTitle(''); } catch (e) { setErr(errMsg(e)); }
   }
@@ -47,7 +49,7 @@ export function CodingPage({ notify }: { notify: (m: string) => void }) {
   }
   return <div className="mx-auto max-w-[1000px] p-4 sm:p-8">
     <PageHeading eyebrow="Coding" title="Build with an AI coding agent." description="Create coding specifications in the browser, or open a local project in Ayatrisya Desktop for an approval-based coding agent." actions={<><input id="coding-zip-upload" ref={zipInput} type="file" accept=".zip,application/zip" className="sr-only" onChange={(event) => void uploadZip(event.target.files?.[0])} data-testid="input-coding-zip" /><DesktopButton /><label htmlFor="coding-zip-upload" className="inline-flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/[.025] px-4 text-sm font-semibold text-slate-200 hover:border-white/20 hover:bg-white/[.06]"><Archive size={15} />Upload ZIP</label><Button onClick={() => setOpen(true)}><Plus size={15} />New task</Button><ActionMenu label="Other coding actions" items={[{ label: 'Upload ZIP archive', hint: '10 MB max', onSelect: () => zipInput.current?.click() }, { label: 'Export all tasks as Markdown', disabled: !items.length, onSelect: () => downloadText(items.map((i) => `# ${i.title}\n\n${i.content}`).join('\n\n---\n\n'), `${safeName('coding-tasks')}.md`, 'text/markdown') }, { label: 'Create a coding task', onSelect: () => setOpen(true) }]} className="!flex !h-10 !w-auto gap-1 border border-white/10 px-3 text-xs font-semibold"><MoreHorizontal size={16} /><span>Other</span></ActionMenu></>} />
-    <DesktopProjectManager />
+    <DesktopProjectManager browserCompanion={browserCompanion} />
     <CodingPlanner notify={notify} />
     <Notice>Coding specifications are stored in this browser and exported as Markdown. Desktop project folders remain local and are never exposed to the website.</Notice>
     <div className="mt-6">

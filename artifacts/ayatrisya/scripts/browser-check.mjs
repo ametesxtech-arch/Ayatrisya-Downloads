@@ -237,6 +237,9 @@ await go('/workspace');await click('[data-testid="button-new-chat"]');
   assert(await evaluate(`document.querySelector('[role="menu"][aria-label="Other chat actions"]')?.innerText.includes('Open voice studio')&&document.querySelector('[role="menu"][aria-label="Other chat actions"]')?.innerText.includes('Open coding workspace')`),'Chat Other menu actions are missing');
   await clickText('Open coding workspace');
   await wait(`location.pathname==='/workspace/coding'&&document.querySelector('[data-testid="input-coding-zip"]')`,'Chat Other coding navigation');
+  await wait(`document.querySelector('[data-testid="button-refresh-desktop-companion"]')`,'browser coding companion unavailable state');
+  assert(await evaluate(`document.body.innerText.includes('Connect local files through Ayatrisya Desktop')&&document.body.innerText.includes('does not send files to a model')`),'Unpaired browser companion requirements are missing');
+  passed.push('Coding explains same-computer desktop pairing and keeps local file access unavailable until connected');
   await click('[aria-label="Other coding actions"]');
   await wait(`document.querySelector('[role="menu"][aria-label="Other coding actions"]')`,'coding Other menu');
   assert(await evaluate(`document.querySelector('[role="menu"][aria-label="Other coding actions"]')?.innerText.includes('Upload ZIP archive')&&document.querySelector('[role="menu"][aria-label="Other coding actions"]')?.innerText.includes('Create a coding task')`),'Coding Other menu actions are missing');
@@ -345,5 +348,5 @@ await go('/workspace');await click('[data-testid="button-new-chat"]');
       await Promise.race([new Promise(resolve=>processHandle.once('exit',resolve)),delay(1000)]);
     }
   }
-  await fs.rm(dir,{recursive:true,force:true});
+  await fs.rm(dir,{recursive:true,force:true,maxRetries:20,retryDelay:100});
 }

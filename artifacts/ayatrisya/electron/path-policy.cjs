@@ -7,6 +7,11 @@ const CODING_EXTENSIONS = new Set([
 const EXCLUDED_CODING_SEGMENTS = new Set([
   ".git", ".ssh", ".aws", ".config", "node_modules", "vendor", "dist", "build", "coverage",
 ]);
+const BROWSER_EXCLUDED_SEGMENTS = new Set([
+  ".env", ".secrets", ".git", ".ssh", ".aws", ".config",
+  "secret", "secrets", "credential", "credentials",
+  "node_modules", "vendor", "dist", "build", "coverage",
+]);
 
 function validateProjectId(value) {
   if (typeof value !== "string" || !/^[0-9a-f-]{36}$/i.test(value)) {
@@ -50,6 +55,15 @@ function validateNewTextFilePath(value) {
     throw new Error("Ayatrisya can only create supported, non-sensitive text source files.");
   }
   return clean.split("/").join(path.sep);
+}
+
+function validateBrowserCodingPath(value) {
+  const clean = validateNewTextFilePath(value);
+  const segments = clean.replaceAll("\\", "/").split("/");
+  if (segments.some((part) => BROWSER_EXCLUDED_SEGMENTS.has(part.toLowerCase()))) {
+    throw new Error("Private, generated, and dependency files are not available through the browser companion.");
+  }
+  return clean;
 }
 
 function isWithin(root, candidate) {
@@ -115,6 +129,7 @@ module.exports = {
   resolveExistingPath,
   resolveWritableFile,
   validateNewTextFilePath,
+  validateBrowserCodingPath,
   validateCommand,
   validateProjectId,
 };

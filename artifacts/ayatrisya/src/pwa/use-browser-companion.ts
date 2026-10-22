@@ -5,7 +5,12 @@ const COMPANION_BASE_URL = "http://127.0.0.1:49381/v1";
 const PROTOCOL_HEADER = "X-Ayatrisya-Protocol";
 
 type CompanionMode = "checking" | "unavailable" | "available" | "paired" | "desktop";
-type CodingDesktopApi = {
+export interface CompanionAuditEntry {
+  at: string;
+  operation: string;
+  status: string;
+}
+export type CodingDesktopApi = {
   listProjects: () => Promise<DesktopProject[]>;
   chooseProjectFolder: () => Promise<DesktopProject | null>;
   removeProjectFolder: (projectId: string) => Promise<void>;
@@ -22,9 +27,11 @@ export interface BrowserCompanionState {
   api: CodingDesktopApi | null;
   busy: boolean;
   error: string;
+  audit: CompanionAuditEntry[];
   pair: () => Promise<void>;
   disconnect: () => Promise<void>;
   refresh: () => Promise<void>;
+  refreshAudit: () => Promise<void>;
 }
 
 interface CompanionStatusResponse {
@@ -66,6 +73,7 @@ export function useBrowserCompanion(): BrowserCompanionState {
   const [expiresAt, setExpiresAt] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [audit, setAudit] = useState<CompanionAuditEntry[]>([]);
 
   const refresh = useCallback(async () => {
     if (typeof window !== "undefined" && window.ayatrisyaDesktop?.isDesktop === true) {
@@ -77,7 +85,10 @@ export function useBrowserCompanion(): BrowserCompanionState {
       setMode(status.available && status.protocolVersion === 1 ? (token ? "paired" : "available") : "unavailable");
       setError("");
     } catch {
-      setMode(token ? "paired" : "unavailable");
+      setMode("unavailable");
+      setToken("");
+      setExpiresAt("");
+      setAudit([]);
     }
   }, [token]);
 
@@ -93,7 +104,12 @@ export function useBrowserCompanion(): BrowserCompanionState {
         const status = await companionFetch<CompanionStatusResponse>("/status", { method: "GET" });
         if (active) setMode(status.available && status.protocolVersion === 1 ? (token ? "paired" : "available") : "unavailable");
       } catch {
-        if (active) setMode(token ? "paired" : "unavailable");
+        if (active) {
+          setMode("unavailable");
+          setToken("");
+          setExpiresAt("");
+          setAudit([]);
+        }
       }
     };
     void probe();
@@ -116,11 +132,37 @@ export function useBrowserCompanion(): BrowserCompanionState {
     return () => clearTimeout(timeout);
   }, [token, expiresAt]);
 
+  useEffect(() => {
+    if (!token) return;
+    const sessionToken = token;
+    return () => {
+      void companionFetch("/session/revoke", { method: "POST", token: sessionToken, body: {} }).catch(() => undefined);
+    };
+  }, [token]);
+
   const clearSession = useCallback(() => {
     setToken("");
     setExpiresAt("");
+    setAudit([]);
     setMode("available");
   }, []);
+
+  const refreshAudit = useCallback(async () => {
+    if (!token) {
+      setAudit([]);
+      return;
+    }
+    try {
+      const result = await companionFetch<{ entries: CompanionAuditEntry[] }>("/audit", { token });
+      setAudit(result.entries);
+    } catch (reason) {
+      if (reason instanceof Error && /pair this browser/i.test(reason.message)) clearSession();
+    }
+  }, [clearSession, token]);
+
+  useEffect(() => {
+    if (token) void refreshAudit();
+  }, [refreshAudit, token]);
 
   const pair = useCallback(async () => {
     setBusy(true);
@@ -134,8 +176,9 @@ export function useBrowserCompanion(): BrowserCompanionState {
       setExpiresAt(response.expiresAt);
       setMode("paired");
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Could not pair with Ayatrisya Desktop.");
+      const message = reason instanceof Error ? reason.message : "Could not pair with Ayatrisya Desktop.";
       await refresh();
+      setError(message);
     } finally {
       setBusy(false);
     }
@@ -158,8 +201,11 @@ export function useBrowserCompanion(): BrowserCompanionState {
 
   const api = useMemo<CodingDesktopApi | null>(() => {
     if (!token || mode !== "paired") return null;
-    const request = async <T,>(path: string, body?: unknown, signal?: AbortSignal) =>
-      companionFetch<T>(path, { method: body === undefined ? "GET" : "POST", token, body, signal });
+    const request = async <T,>(path: string, body?: unknown, signal?: AbortSignal) => {
+      const result = await companionFetch<T>(path, { method: body === undefined ? "GET" : "POST", token, body, signal });
+      if (path !== "/audit") void refreshAudit();
+      return result;
+    };
     const onUnauthorized = (reason: unknown): never => {
       if (reason instanceof Error && /pair this browser/i.test(reason.message)) clearSession();
       throw reason;
@@ -206,9 +252,8 @@ export function useBrowserCompanion(): BrowserCompanionState {
         } catch (reason) { return onUnauthorized(reason); }
       },
       async runCommand(projectId, command, commandId = crypto.randomUUID()) {
-        const controller = new AbortController();
         try {
-          return await request<DesktopCommandResult>("/commands/run", { projectId, command, commandId }, controller.signal);
+          return await request<DesktopCommandResult>("/commands/run", { projectId, command, commandId });
         } catch (reason) { return onUnauthorized(reason); }
       },
       async cancelCommand(commandId) {
@@ -217,7 +262,7 @@ export function useBrowserCompanion(): BrowserCompanionState {
         } catch (reason) { return onUnauthorized(reason); }
       },
     };
-  }, [clearSession, mode, token]);
+  }, [clearSession, mode, refreshAudit, token]);
 
-  return { mode, api, busy, error, pair, disconnect, refresh };
+  return { mode, api, busy, error, audit, pair, disconnect, refresh, refreshAudit };
 }

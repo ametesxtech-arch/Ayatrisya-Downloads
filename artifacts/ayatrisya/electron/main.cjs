@@ -12,6 +12,7 @@ const {
   isWithin,
   resolveExistingPath,
   resolveWritableFile,
+  validateBrowserCodingPath,
   validateNewTextFilePath,
   validateCommand,
   validateProjectId,
@@ -33,6 +34,11 @@ const MAX_TEXT_FILE_BYTES = 1024 * 1024;
 const MAX_TERMINAL_OUTPUT_BYTES = 128 * 1024;
 const TERMINAL_TIMEOUT_MS = 60_000;
 const COMPANION_ALLOWED_ORIGIN = "https://ayatrisya.web.app";
+const COMPANION_EXCLUDED_SEGMENTS = new Set([
+  ".env", ".secrets", ".git", ".ssh", ".aws", ".config",
+  "secret", "secrets", "credential", "credentials",
+  "node_modules", "vendor", "dist", "build", "coverage",
+]);
 const GRANTS_FILE = "authorized-project-folders.json";
 const SERVER_FILE = "desktop-server.json";
 const LOCAL_MODEL_FILE = "local-model-endpoint.json";
@@ -1122,7 +1128,7 @@ async function confirmCompanionPair(origin) {
     type: "warning",
     title: "Pair a browser with Ayatrisya Desktop?",
     message: "Allow this website to connect to your local coding workspace for 15 minutes?",
-    detail: `Website:\n${origin}\n\nAfter pairing, it can list and read supported source files in folders you explicitly choose. File creation and edits require another desktop confirmation, and every command requires its own confirmation. The session token stays in memory and is not saved.`,
+    detail: `Website:\n${origin}\n\nAfter pairing, it can list and read supported source files in folders you previously granted to Ayatrisya Desktop or choose now. File creation and edits require another desktop confirmation, and every command requires its own confirmation. The session token stays in memory and is not saved.`,
     buttons: ["Cancel", "Pair this browser"],
     defaultId: 0,
     cancelId: 0,
@@ -1132,8 +1138,7 @@ async function confirmCompanionPair(origin) {
 }
 
 function excludedCompanionFolder(name) {
-  return new Set([".git", ".ssh", ".aws", ".config", "node_modules", "vendor", "dist", "build", "coverage"])
-    .has(name.toLowerCase());
+  return COMPANION_EXCLUDED_SEGMENTS.has(name.toLowerCase());
 }
 
 async function listCompanionFiles(projectId, relativePath) {
@@ -1151,7 +1156,7 @@ async function listCompanionFiles(projectId, relativePath) {
     if (!entry.isFile()) return false;
     const relative = path.posix.join(clean.replaceAll("\\", "/"), entry.name);
     try {
-      validateNewTextFilePath(relative);
+      validateBrowserCodingPath(relative);
       return true;
     } catch {
       return false;
@@ -1167,7 +1172,7 @@ async function listCompanionFiles(projectId, relativePath) {
 }
 
 async function readCompanionFile(projectId, relativePath) {
-  const safeRelativePath = validateNewTextFilePath(relativePath);
+  const safeRelativePath = validateBrowserCodingPath(relativePath);
   const project = requireProject(projectId);
   const file = await resolveExistingPath(fs, project.path, safeRelativePath, "file");
   if (file.stat.size > MAX_TEXT_FILE_BYTES) throw new Error("Files over 1 MB cannot be opened in the browser companion.");
@@ -1176,13 +1181,13 @@ async function readCompanionFile(projectId, relativePath) {
   return content;
 }
 
-async function confirmCompanionFileChange(project, relativePath, content, action) {
+async function confirmCompanionFileChange(project, relativePath, content, action, origin) {
   if (!mainWindow) return false;
   const result = await dialog.showMessageBox(mainWindow, {
     type: "warning",
     title: "Approve a local project file change?",
     message: `${action} ${relativePath}`,
-    detail: `Project: ${project.name}\nRequested by: ${COMPANION_ALLOWED_ORIGIN}\nContent size: ${Buffer.byteLength(content, "utf8")} bytes\n\nOnly supported source and documentation files are allowed. Review the file in Ayatrisya before approving. This change will be applied to your local project.`,
+    detail: `Project: ${project.name}\nRequested by: ${origin}\nContent size: ${Buffer.byteLength(content, "utf8")} bytes\n\nOnly supported source and documentation files are allowed. Review the file in Ayatrisya before approving. This change will be applied to your local project.`,
     buttons: ["Cancel", "Apply once"],
     defaultId: 0,
     cancelId: 0,
@@ -1191,27 +1196,27 @@ async function confirmCompanionFileChange(project, relativePath, content, action
   return result.response === 1;
 }
 
-async function createCompanionFile(projectId, relativePath) {
-  const safeRelativePath = validateNewTextFilePath(relativePath);
+async function createCompanionFile(projectId, relativePath, origin) {
+  const safeRelativePath = validateBrowserCodingPath(relativePath);
   const project = requireProject(projectId);
   const target = await resolveWritableFile(fs, project.path, safeRelativePath);
-  if (!(await confirmCompanionFileChange(project, safeRelativePath, "", "Create"))) {
+  if (!(await confirmCompanionFileChange(project, safeRelativePath, "", "Create", origin))) {
     throw Object.assign(new Error("File creation was cancelled in Ayatrisya Desktop."), { statusCode: 403 });
   }
   const handle = await fs.open(target, "wx", 0o600);
   await handle.close();
 }
 
-async function writeCompanionFile(projectId, relativePath, content) {
+async function writeCompanionFile(projectId, relativePath, content, origin) {
   if (typeof content !== "string" || Buffer.byteLength(content, "utf8") > MAX_TEXT_FILE_BYTES) {
     throw new Error("Text files are limited to 1 MB in the browser companion.");
   }
-  const safeRelativePath = validateNewTextFilePath(relativePath);
+  const safeRelativePath = validateBrowserCodingPath(relativePath);
   const project = requireProject(projectId);
   const target = await resolveWritableFile(fs, project.path, safeRelativePath);
   const stat = await fs.stat(target);
   if (!stat.isFile()) throw new Error("Choose a regular text file.");
-  if (!(await confirmCompanionFileChange(project, safeRelativePath, content, "Update"))) {
+  if (!(await confirmCompanionFileChange(project, safeRelativePath, content, "Update", origin))) {
     throw Object.assign(new Error("The file edit was cancelled in Ayatrisya Desktop."), { statusCode: 403 });
   }
   await fs.writeFile(target, content, "utf8");

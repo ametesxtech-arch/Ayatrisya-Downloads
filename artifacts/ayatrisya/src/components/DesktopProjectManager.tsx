@@ -6,12 +6,15 @@ import {
 } from 'lucide-react';
 import { Button, areaCls, inputCls } from '@/components/Primitives';
 import { formatBytes } from '@/lib/format';
-import type { DesktopFile, DesktopProject } from '@/desktop/contracts';
+import type { DesktopCompanionStatus, DesktopFile, DesktopProject } from '@/desktop/contracts';
 import { DesktopCodingAgent } from './DesktopCodingAgent';
 import { useDesktopRuntime } from '@/desktop/use-runtime';
+import type { BrowserCompanionState, CodingDesktopApi } from '@/pwa/use-browser-companion';
 
-export function DesktopProjectManager() {
-  const { desktop, checking } = useDesktopRuntime();
+export function DesktopProjectManager({ browserCompanion }: { browserCompanion: BrowserCompanionState }) {
+  const { desktop: nativeDesktop, checking } = useDesktopRuntime();
+  const desktop: CodingDesktopApi | null = nativeDesktop ?? browserCompanion.api;
+  const isBrowserCompanion = !nativeDesktop && Boolean(browserCompanion.api);
   const [projects, setProjects] = useState<DesktopProject[]>([]);
   const [activeId, setActiveId] = useState('');
   const [files, setFiles] = useState<DesktopFile[]>([]);
@@ -25,11 +28,39 @@ export function DesktopProjectManager() {
   const [busy, setBusy] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [error, setError] = useState('');
+  const [activeCommandId, setActiveCommandId] = useState('');
+  const [companionStatus, setCompanionStatus] = useState<DesktopCompanionStatus | null>(null);
+  const [companionBusy, setCompanionBusy] = useState(false);
+  const [companionError, setCompanionError] = useState('');
   const active = projects.find((project) => project.id === activeId) ?? null;
   const breadcrumbs = directory.split('/').filter(Boolean);
 
   useEffect(() => {
-    if (!desktop) return;
+    if (!nativeDesktop) {
+      setCompanionStatus(null);
+      return;
+    }
+    let cancelled = false;
+    nativeDesktop.getLocalCompanionStatus().then((status) => {
+      if (!cancelled) setCompanionStatus(status);
+    }).catch((reason: unknown) => {
+      if (!cancelled) setCompanionError(reason instanceof Error ? reason.message : 'Local companion status is unavailable.');
+    });
+    return () => { cancelled = true; };
+  }, [nativeDesktop]);
+
+  useEffect(() => {
+    if (!desktop) {
+      setProjects([]);
+      setActiveId('');
+      setFiles([]);
+      setDirectory('');
+      setSelectedFile('');
+      setDraft('');
+      setDirty(false);
+      setTerminalOutput('');
+      return;
+    }
     let cancelled = false;
     setBusy(true);
     desktop.listProjects().then((rows) => {
@@ -58,7 +89,13 @@ export function DesktopProjectManager() {
     return () => { cancelled = true; };
   }, [desktop, active?.id, active?.available, directory, refreshKey]);
 
-  if (checking) return <section className="mb-7 rounded-2xl border border-white/10 bg-[#13151c] p-4 sm:p-5" role="status">
+  useEffect(() => {
+    if (!activeCommandId) return;
+    const commandId = activeCommandId;
+    return () => { void desktop?.cancelCommand(commandId).catch(() => undefined); };
+  }, [activeCommandId, desktop]);
+
+  if (checking && !desktop) return <section className="mb-7 rounded-2xl border border-white/10 bg-[#13151c] p-4 sm:p-5" role="status">
     <p className="text-xs text-slate-400">Verifying the Ayatrisya desktop bridge…</p>
   </section>;
 
@@ -66,9 +103,21 @@ export function DesktopProjectManager() {
     <div className="flex items-start gap-3">
       <Code2 size={17} className="mt-0.5 text-violet-200" />
       <div>
-        <h2 className="display text-lg font-semibold">Local coding agent requires Ayatrisya Desktop</h2>
-        <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-400">The website cannot read your computer’s project files or run commands. Open this coding workspace in Ayatrisya Desktop to choose an authorized project folder. In desktop, code is sent only after your approval, edits require individual approval, and each suggested check requires a separate operating-system confirmation.</p>
-        <Link href="/desktop" className="mt-3 inline-flex min-h-9 items-center rounded-lg border border-white/10 px-3 text-xs font-medium text-slate-200 hover:bg-white/[.06]" data-testid="link-desktop-for-local-folders">Get Ayatrisya Desktop to open a local folder</Link>
+        <h2 className="display text-lg font-semibold">Connect local files through Ayatrisya Desktop</h2>
+        <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-400">The browser cannot access your files by itself. For same-computer access, open Ayatrisya Desktop, enable its loopback-only browser companion in Coding, and pair this browser. Folder selection, every file edit, and every command require a native desktop confirmation. This companion does not send files to a model.</p>
+        {browserCompanion.error && <p className="mt-3 text-xs text-amber-200" role="alert">{browserCompanion.error}</p>}
+        <div className="mt-3 flex flex-wrap gap-2">
+          {browserCompanion.mode === 'available' && <Button onClick={() => void browserCompanion.pair()} disabled={browserCompanion.busy} data-testid="button-pair-desktop-companion">{browserCompanion.busy ? 'Waiting for desktop approval…' : 'Pair this browser'}</Button>}
+          {browserCompanion.mode === 'paired' && <Button variant="outline" onClick={() => void browserCompanion.disconnect()} disabled={browserCompanion.busy} data-testid="button-disconnect-desktop-companion">Disconnect browser</Button>}
+          {browserCompanion.mode === 'unavailable' && <Button variant="outline" onClick={() => void browserCompanion.refresh()} disabled={browserCompanion.busy} data-testid="button-refresh-desktop-companion">Check again</Button>}
+          <Link href="/desktop" className="inline-flex min-h-10 items-center rounded-lg border border-white/10 px-3 text-xs font-medium text-slate-200 hover:bg-white/[.06]" data-testid="link-desktop-for-local-folders">Get Ayatrisya Desktop</Link>
+        </div>
+        <p className="mt-3 text-[10px] leading-4 text-slate-500" role="status">
+          {browserCompanion.mode === 'checking' ? 'Checking for Ayatrisya Desktop on this computer…' :
+            browserCompanion.mode === 'paired' ? 'This browser is paired for a temporary session.' :
+              browserCompanion.mode === 'available' ? 'Desktop companion detected. Pairing will open a confirmation in the desktop app.' :
+                'The desktop app must be running on this same computer. Mobile browsers cannot connect to a different computer’s loopback service.'}
+        </p>
       </div>
     </div>
   </section>;
@@ -188,11 +237,13 @@ export function DesktopProjectManager() {
 
   async function runCommand() {
     if (!active || !command.trim()) return;
+    const commandId = crypto.randomUUID();
+    setActiveCommandId(commandId);
     setBusy(true);
     setError('');
     setTerminalOutput('');
     try {
-      const result = await desktop!.runCommand(active.id, command);
+      const result = await desktop!.runCommand(active.id, command, commandId);
       if (result.cancelled) {
         setTerminalOutput('Command cancelled. Nothing was run.');
       } else {
@@ -200,6 +251,7 @@ export function DesktopProjectManager() {
           result.stdout,
           result.stderr,
           result.timedOut ? '[Stopped after 60 seconds.]' : '',
+          result.outputLimited ? '[Output was limited to 128 KB.]' : '',
           result.code === 0 ? '[Exited successfully.]' : result.code === null ? '[Process was stopped.]' : `[Exited with code ${result.code}.]`,
         ].filter(Boolean);
         setTerminalOutput(pieces.join('\n'));
@@ -207,7 +259,35 @@ export function DesktopProjectManager() {
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'The command could not be run.');
     } finally {
+      setActiveCommandId('');
       setBusy(false);
+    }
+  }
+
+  async function cancelCommand() {
+    if (!activeCommandId) return;
+    try {
+      await desktop?.cancelCommand(activeCommandId);
+      setTerminalOutput((value) => `${value}${value ? '\n' : ''}Cancellation requested…`);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'The command could not be cancelled.');
+    }
+  }
+
+  async function toggleCompanion() {
+    if (!nativeDesktop) return;
+    setCompanionBusy(true);
+    setCompanionError('');
+    try {
+      const status = companionStatus?.enabled
+        ? await nativeDesktop.disableLocalCompanion()
+        : await nativeDesktop.enableLocalCompanion();
+      setCompanionStatus(status);
+    } catch (reason) {
+      setCompanionError(reason instanceof Error ? reason.message : 'The browser companion could not be started.');
+      setCompanionStatus(await nativeDesktop.getLocalCompanionStatus().catch(() => null));
+    } finally {
+      setCompanionBusy(false);
     }
   }
 
@@ -222,12 +302,36 @@ export function DesktopProjectManager() {
   return <section className="mb-7 rounded-2xl border border-white/10 bg-[#13151c] p-4 sm:p-5" aria-labelledby="desktop-projects-heading">
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div>
-        <p className="text-[10px] font-semibold uppercase tracking-[.2em] text-violet-200">Desktop workspace</p>
+        <p className="text-[10px] font-semibold uppercase tracking-[.2em] text-violet-200">{isBrowserCompanion ? 'Temporary browser connection' : 'Desktop workspace'}</p>
         <h2 id="desktop-projects-heading" className="display mt-1 text-lg font-semibold">Local project folders</h2>
-        <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-400">Open folders only after choosing them. Files stay on this computer; removing access never deletes your files. Web projects remain available separately.</p>
+        <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-400">{isBrowserCompanion
+          ? 'Files stay on this computer. The website only sees folders you choose and supported source files you open. Each file change and command requires a separate native desktop confirmation.'
+          : 'Open folders only after choosing them. Without an approved browser pairing, folders remain local. Removing access never deletes your files.'}</p>
       </div>
-      <Button onClick={() => void addFolder()} disabled={busy} data-testid="button-open-local-folder"><FolderPlus size={15} />Open folder</Button>
+      <div className="flex flex-wrap gap-2">
+        {nativeDesktop && <Button variant="outline" onClick={() => void toggleCompanion()} disabled={companionBusy} data-testid="button-toggle-local-companion">
+          {companionBusy ? 'Working…' : companionStatus?.enabled ? 'Disable browser companion' : 'Enable browser companion'}
+        </Button>}
+        <Button onClick={() => void addFolder()} disabled={busy} data-testid="button-open-local-folder"><FolderPlus size={15} />Open folder</Button>
+      </div>
     </div>
+
+    {nativeDesktop && <div className="mt-3 rounded-lg border border-white/[.07] bg-black/10 p-3 text-xs">
+      <p className="font-medium text-slate-200" role="status">{companionStatus?.enabled ? `Browser companion is on for this session at 127.0.0.1:${companionStatus.port}.` : 'Browser companion is off.'}</p>
+      <p className="mt-1 leading-5 text-slate-500">Only {companionStatus?.allowedOrigin ?? 'the Ayatrisya website'} is allowed in packaged builds. Pairing lasts 15 minutes and requires approval in this desktop app. It stops when the desktop window closes.</p>
+      {companionError && <p className="mt-2 text-amber-200" role="alert">{companionError}</p>}
+    </div>}
+    {isBrowserCompanion && <details className="mt-3 rounded-lg border border-white/[.07] bg-black/10 p-3">
+      <summary className="cursor-pointer text-xs font-medium text-slate-300">Local companion activity ({browserCompanion.audit.length})</summary>
+      <p className="mt-2 text-[10px] leading-4 text-slate-500">This in-memory log records operation types and results only—not file contents, commands, or access tokens. It clears when the desktop companion stops.</p>
+      <Button variant="outline" className="mt-2 min-h-8 px-2 text-[10px]" onClick={() => void browserCompanion.refreshAudit()} data-testid="button-refresh-companion-audit"><RefreshCw size={12} />Refresh activity</Button>
+      {browserCompanion.audit.length ? <ul className="mt-2 max-h-36 space-y-1 overflow-auto">
+        {browserCompanion.audit.slice(0, 20).map((entry, index) => <li key={`${entry.at}-${index}`} className="flex flex-wrap justify-between gap-x-3 text-[10px] text-slate-500">
+          <span>{entry.operation.replaceAll('-', ' ')} · {entry.status}</span>
+          <time dateTime={entry.at}>{new Date(entry.at).toLocaleTimeString()}</time>
+        </li>)}
+      </ul> : <p className="mt-2 text-[10px] text-slate-500">No companion actions recorded yet.</p>}
+    </details>}
 
     {error && <p className="mt-3 rounded-lg border border-rose-400/20 bg-rose-400/[.06] p-3 text-xs text-rose-200" role="alert">{error}</p>}
     <div className="mt-4 grid gap-3 xl:grid-cols-[230px_minmax(210px,260px)_minmax(0,1fr)]">
@@ -243,7 +347,7 @@ export function DesktopProjectManager() {
               <FolderOpen size={14} className="mt-0.5 shrink-0 text-violet-200" />
               <span className="min-w-0">
                 <span className="block truncate text-xs font-medium">{project.name}</span>
-                <span className={`block truncate text-[10px] ${project.available ? 'text-slate-500' : 'text-amber-300'}`}>{project.available ? project.path : 'Folder unavailable — reselect to restore access'}</span>
+                <span className={`block truncate text-[10px] ${project.available ? 'text-slate-500' : 'text-amber-300'}`}>{project.available ? (isBrowserCompanion ? 'Local folder · path hidden' : project.path) : 'Folder unavailable — reselect to restore access'}</span>
               </span>
             </button>
             <button type="button" onClick={() => void removeFolder(project)} disabled={busy} aria-label={`Remove access to ${project.name}`} title="Remove access only" className="mt-0.5 rounded p-1 text-slate-500 opacity-70 hover:bg-white/10 hover:text-rose-200 disabled:opacity-40"><Trash2 size={12} /></button>
@@ -297,13 +401,14 @@ export function DesktopProjectManager() {
       <div className="flex flex-col gap-2 sm:flex-row">
         <input value={command} onChange={(event) => setCommand(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') void runCommand(); }} disabled={!active?.available || busy} className={`${inputCls} mono min-w-0 flex-1`} placeholder="Example: pnpm test" aria-label="Terminal command" maxLength={2000} />
         <Button onClick={() => void runCommand()} disabled={!active?.available || busy || !command.trim()}><SquareTerminal size={14} />{busy ? 'Working…' : 'Review & run'}</Button>
+        {activeCommandId && <Button variant="outline" onClick={() => void cancelCommand()} data-testid="button-cancel-terminal-command">Cancel</Button>}
       </div>
       <p className="mt-2 text-[10px] leading-4 text-slate-500">Ayatrisya shows the exact command and folder in an operating-system confirmation before running it. Commands use your OS account permissions, so they may affect files outside this folder. They stop after 60 seconds; output is capped at 128 KB. This is a command runner, not a persistent interactive shell.</p>
       {terminalOutput && <pre className="mono mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-[#090a0f] p-3 text-[11px] leading-5 text-slate-300" aria-live="polite">{terminalOutput}</pre>}
     </div>
 
-    {active?.available && <DesktopCodingAgent
-      desktop={desktop}
+    {nativeDesktop && active?.available && <DesktopCodingAgent
+      desktop={nativeDesktop}
       projectId={active.id}
       projectName={active.name}
       directory={directory}

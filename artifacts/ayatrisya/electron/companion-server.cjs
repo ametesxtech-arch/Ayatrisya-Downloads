@@ -322,7 +322,7 @@ function createCompanionServer({
         if (typeof body.projectId !== "string" || typeof body.relativePath !== "string") {
           throw Object.assign(new Error("The selected file is invalid."), { statusCode: 400 });
         }
-        await handlers.createFile(body.projectId, body.relativePath);
+        await handlers.createFile(body.projectId, body.relativePath, origin);
         record("file-create", "approved");
         send(response, 200, { created: true });
         return;
