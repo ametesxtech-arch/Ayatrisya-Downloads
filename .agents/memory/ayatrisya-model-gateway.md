@@ -9,3 +9,9 @@ Health and capability responses alone must not be presented as proof that a mode
 **Why:** The user specified authenticated cloud inference for browser/mobile clients while retaining local-first inference and no silent cloud fallback on desktop.
 
 **How to apply:** Configure a same-computer service through the verified desktop bridge and confirm a live response there. Do not claim hosted inference is connected unless its separate HTTPS endpoint and server-side secret are configured and a real inference succeeds.
+
+The Ametesx-owned Ayatrisya model is still under development. Do not invent an endpoint or report the model as available; keep the client compatible for a later verified integration.
+
+**Why:** The user confirmed model development is still in progress and explicitly prohibited fabricated endpoints or availability claims.
+
+**How to apply:** Keep model capability unavailable until the owner supplies a real endpoint and it passes a live inference test.

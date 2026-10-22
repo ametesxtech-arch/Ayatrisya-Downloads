@@ -35,3 +35,14 @@ approval.
 
 **How to apply:** Get explicit approval before creating Firebase resources or
 deploying to Firebase.
+
+War Mode must remain independent of both hosted and desktop model APIs. Its
+local Windows Defender and bundled scanner paths must not be gated on model
+credentials, endpoint availability, or AI authentication; optional rule updates
+are separate from offline scanning.
+
+**Why:** The user explicitly requires desktop War Mode to keep working without
+the model API.
+
+**How to apply:** Keep scanning and local status checks on the desktop bridge;
+do not add model API calls or cloud prerequisites to those operations.

@@ -1,6 +1,6 @@
 - [Ayatrisya account access](ayatrisya-account-access.md) — Firebase email/password, Google, GitHub, plus limited browser-local guest access.
 - [Browser data verification](browser-data-verification.md) — keep data checks in one profile; sanitize authenticated test output and remove temporary sessions.
-- [Ayatrisya desktop boundaries](ayatrisya-desktop-boundaries.md) — browser stays sandboxed; local capabilities require consent; Windows/macOS installers need native runners.
+- [Ayatrisya desktop boundaries](ayatrisya-desktop-boundaries.md) — browser stays sandboxed; War Mode remains local and independent of model APIs; installers need native runners.
 - [Ayatrisya model ownership](ayatrisya-model-ownership.md) — AI inference and generation must use Ayatrisya-operated models; do not call other companies' AI APIs.
 - [Ayatrisya preview delivery](ayatrisya-preview-delivery.md) — confirm UI fixes against the active preview and surface that preview when the user's browser may be stale.
 - [Ayatrisya model connection](ayatrisya-model-gateway.md) — current inference is desktop-local on loopback; hosted calls remain Firebase-authenticated and server-keyed.
