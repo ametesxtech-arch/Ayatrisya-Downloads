@@ -20,3 +20,13 @@ assignment for every repository component.
 **How to apply:** keep proprietary notices narrowly scoped to Ametesx-owned or
 authorized original work; preserve and document any existing license terms and
 resolve the historical root MIT metadata without claiming retroactive revocation.
+
+The Ayatrisya AI model repository is not ready; model development is still in
+progress and is a separate future workstream. Do not assume that repository
+exists or invent its URL.
+
+**Why:** the owner explicitly stated this on 2026-10-22.
+
+**How to apply:** audit only repositories the owner identifies and grants access
+to; keep model architecture and training work out of the workspace audit unless
+the owner later asks to include it.
