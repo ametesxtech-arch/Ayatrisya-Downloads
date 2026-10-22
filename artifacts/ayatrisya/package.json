@@ -7,10 +7,11 @@
   "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite --config vite.config.ts --host 0.0.0.0",
-    "build": "vite build --config vite.config.ts",
+    "build": "vite build --config vite.config.ts && node scripts/build-pwa.mjs",
     "serve": "vite preview --config vite.config.ts --host 0.0.0.0",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --config vitest.config.ts",
+    "test:pwa": "node scripts/check-pwa.mjs",
     "test:browser": "node scripts/browser-check.mjs",
     "test:desktop:security": "node --test electron/path-policy.test.cjs electron/model-endpoint-policy.test.cjs electron/war-mode.test.cjs electron/war-mode-assets.test.cjs",
     "desktop:dev": "node scripts/desktop-dev.mjs",

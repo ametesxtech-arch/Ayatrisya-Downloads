@@ -1,0 +1,27 @@
+{
+  "id": "./",
+  "name": "Ayatrisya",
+  "short_name": "Ayatrisya",
+  "description": "A focused workspace for chat, study, writing, projects, and coding.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "any",
+  "theme_color": "#0d0e12",
+  "background_color": "#0d0e12",
+  "icons": [
+    {
+      "src": "./ayatrisya-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./ayatrisya-desktop.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

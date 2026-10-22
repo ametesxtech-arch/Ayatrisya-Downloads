@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0d0e12">
+    <title>Ayatrisya is offline</title>
+    <style>
+      :root { color-scheme: dark; font-family: system-ui, sans-serif; background: #0d0e12; color: #eef0f7; }
+      body { min-height: 100svh; margin: 0; display: grid; place-items: center; padding: 24px; box-sizing: border-box; }
+      main { width: min(100%, 480px); padding: 32px; border: 1px solid #272934; border-radius: 20px; background: #13151b; }
+      img { width: 44px; height: 44px; }
+      h1 { margin: 24px 0 8px; font-size: 1.5rem; }
+      p { color: #a4a8b6; font-size: .95rem; line-height: 1.7; }
+      button { min-height: 44px; margin-top: 12px; border: 0; border-radius: 9px; padding: 0 18px; color: white; background: #7959e8; font: inherit; font-weight: 650; cursor: pointer; }
+      button:focus-visible { outline: 2px solid #c2b2ff; outline-offset: 3px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <img src="./brand/ayatrisya-mark.svg" alt="">
+      <h1>You’re offline</h1>
+      <p>The offline notice is available, but the full workspace needs a connection to load. Sign-in, hosted AI, synchronization, and downloads also require the network. Your private workspace data and executable app bundles are not cached by the service worker.</p>
+      <button type="button" onclick="location.reload()">Try again</button>
+    </main>
+  </body>
+</html>

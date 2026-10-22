@@ -14,6 +14,7 @@ import { DesktopDownloadsPage } from '@/pages/DesktopDownloads';
 import { PublicDocumentation, PublicLegalRoute } from '@/pages/PublicPages';
 import { wallpapers } from '@/data/wallpapers';
 import { CloudPreferenceSyncProvider } from '@/integrations/firebase/CloudPreferenceSync';
+import { PwaProvider } from '@/pwa/PwaProvider';
 
 const Workspace = lazy(() => import('@/components/WorkspaceShell').then((m) => ({ default: m.Workspace })));
 const AuthPage = lazy(() => import('@/pages/Auth').then((m) => ({ default: m.AuthPage })));
@@ -124,19 +125,21 @@ function Router() {
 
 function App() {
   return (
-    <AuthProvider>
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <CloudPreferenceSyncProvider>
-            <PrefsEffects />
-            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
-              <Router />
-            </WouterRouter>
-            <Toaster />
-          </CloudPreferenceSyncProvider>
-        </TooltipProvider>
-      </QueryClientProvider>
-    </AuthProvider>
+    <PwaProvider>
+      <AuthProvider>
+        <QueryClientProvider client={queryClient}>
+          <TooltipProvider>
+            <CloudPreferenceSyncProvider>
+              <PrefsEffects />
+              <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
+                <Router />
+              </WouterRouter>
+              <Toaster />
+            </CloudPreferenceSyncProvider>
+          </TooltipProvider>
+        </QueryClientProvider>
+      </AuthProvider>
+    </PwaProvider>
   );
 }
 

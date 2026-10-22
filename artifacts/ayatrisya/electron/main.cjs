@@ -27,10 +27,12 @@ const {
   parseStatusOutput,
 } = require("./war-mode.cjs");
 const { createWarModeYaraService } = require("./war-mode-yara.cjs");
+const { DEFAULT_PORT: COMPANION_PORT, createCompanionServer } = require("./companion-server.cjs");
 
 const MAX_TEXT_FILE_BYTES = 1024 * 1024;
 const MAX_TERMINAL_OUTPUT_BYTES = 128 * 1024;
 const TERMINAL_TIMEOUT_MS = 60_000;
+const COMPANION_ALLOWED_ORIGIN = "https://ayatrisya.web.app";
 const GRANTS_FILE = "authorized-project-folders.json";
 const SERVER_FILE = "desktop-server.json";
 const LOCAL_MODEL_FILE = "local-model-endpoint.json";
@@ -69,8 +71,10 @@ const CONTENT_SECURITY_POLICY = [
 let mainWindow = null;
 let uiOrigin = null;
 let staticServer = null;
+let companionServer = null;
 let projectGrants = [];
 const localModelRequests = new Map();
+const activeCommandRuns = new Map();
 const warModeFolderGrants = new Map();
 let warModeScanRunning = false;
 let activeWarModeChild = null;
@@ -860,7 +864,7 @@ registerIpc("desktop:model-endpoint:request", requestLocalModel);
 registerIpc("desktop:model-endpoint:cancel", cancelLocalModelRequest);
 
 registerIpc("desktop:projects:list", listProjects);
-registerIpc("desktop:projects:choose", async () => {
+async function chooseProjectFolder() {
   const result = await dialog.showOpenDialog(mainWindow, {
     title: "Choose a local project folder",
     properties: ["openDirectory"],
@@ -876,7 +880,8 @@ registerIpc("desktop:projects:choose", async () => {
   projectGrants = [...projectGrants, project];
   await persistGrants();
   return { ...project, available: true };
-});
+}
+registerIpc("desktop:projects:choose", chooseProjectFolder);
 registerIpc("desktop:projects:remove", async (projectId) => {
   const id = validateProjectId(projectId);
   if (!projectGrants.some((item) => item.id === id)) throw new Error("Local project folder not found.");
@@ -937,13 +942,18 @@ registerIpc("desktop:files:write", async (projectId, relativePath, content) => {
   await fs.writeFile(target, content, { encoding: "utf8", mode: 0o600 });
 });
 
-function executeCommand(command, cwd) {
+function executeCommand(command, cwd, signal = null) {
   return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      resolve({ cancelled: true, code: null, stdout: "", stderr: "", timedOut: false });
+      return;
+    }
     const windows = process.platform === "win32";
     const executable = windows ? (process.env.ComSpec || "cmd.exe") : "/bin/sh";
     const args = windows ? ["/d", "/s", "/c", command] : ["-lc", command];
     const child = spawn(executable, args, {
       cwd,
+      detached: !windows,
       windowsHide: true,
       stdio: ["ignore", "pipe", "pipe"],
     });
@@ -951,8 +961,55 @@ function executeCommand(command, cwd) {
     let stderr = "";
     let collectedBytes = 0;
     let timedOut = false;
+    let cancelled = false;
     let outputLimited = false;
     let settled = false;
+    let terminationStarted = false;
+    let timer;
+    let killTimer;
+    const terminateTree = (reason) => {
+      if (settled || terminationStarted) return;
+      terminationStarted = true;
+      if (reason === "timeout") timedOut = true;
+      if (reason === "cancel") cancelled = true;
+      if (reason === "limit") outputLimited = true;
+      if (child.pid) {
+        if (windows) {
+          const killer = spawn("taskkill.exe", ["/pid", String(child.pid), "/t", "/f"], {
+            windowsHide: true,
+            stdio: "ignore",
+            shell: false,
+          });
+          killer.once("error", () => child.kill());
+        } else {
+          try {
+            process.kill(-child.pid, "SIGTERM");
+          } catch {
+            child.kill("SIGTERM");
+          }
+        }
+      } else {
+        child.kill();
+      }
+      killTimer = setTimeout(() => {
+        if (child.pid) {
+          if (windows) {
+            spawn("taskkill.exe", ["/pid", String(child.pid), "/t", "/f"], {
+              windowsHide: true,
+              stdio: "ignore",
+              shell: false,
+            }).unref?.();
+          } else {
+            try {
+              process.kill(-child.pid, "SIGKILL");
+            } catch {
+              child.kill("SIGKILL");
+            }
+          }
+        }
+      }, 1_500);
+      killTimer.unref?.();
+    };
     const append = (target, chunk) => {
       const text = chunk.toString("utf8");
       const available = Math.max(0, MAX_TERMINAL_OUTPUT_BYTES - collectedBytes);
@@ -962,37 +1019,50 @@ function executeCommand(command, cwd) {
       if (target === "stdout") stdout += accepted;
       else stderr += accepted;
       if (bytes.length > available && !outputLimited) {
-        outputLimited = true;
         stderr += "\n[Output limited to 128 KB.]";
-        child.kill();
+        terminateTree("limit");
       }
     };
     child.stdout.on("data", (chunk) => append("stdout", chunk));
     child.stderr.on("data", (chunk) => append("stderr", chunk));
-    const timer = setTimeout(() => {
-      timedOut = true;
-      child.kill();
-    }, TERMINAL_TIMEOUT_MS);
+    const onAbort = () => terminateTree("cancel");
+    signal?.addEventListener("abort", onAbort, { once: true });
+    timer = setTimeout(() => terminateTree("timeout"), TERMINAL_TIMEOUT_MS);
     child.once("error", (error) => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
+      clearTimeout(killTimer);
+      signal?.removeEventListener("abort", onAbort);
       reject(error);
     });
     child.once("close", (code) => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
-      resolve({ cancelled: false, code, stdout, stderr, timedOut });
+      clearTimeout(killTimer);
+      signal?.removeEventListener("abort", onAbort);
+      resolve({ cancelled, code, stdout, stderr, timedOut, outputLimited });
     });
   });
 }
 
-registerIpc("desktop:terminal:run", async (projectId, rawCommand) => {
+async function runConfirmedCommand(projectId, rawCommand, commandId, externalSignal = null) {
+  const id = typeof commandId === "string" && /^[0-9a-f-]{36}$/i.test(commandId)
+    ? commandId
+    : randomUUID();
+  if (activeCommandRuns.has(id)) throw new Error("That command is already running.");
+  const controller = new AbortController();
+  const abort = () => controller.abort();
+  if (externalSignal?.aborted) controller.abort();
+  externalSignal?.addEventListener("abort", abort, { once: true });
+  activeCommandRuns.set(id, controller);
+  try {
   const project = requireProject(projectId);
   const command = validateCommand(rawCommand);
   const stat = await fs.lstat(project.path);
   if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error("The selected project folder is unavailable.");
+  if (controller.signal.aborted) return { cancelled: true, code: null, stdout: "", stderr: "", timedOut: false };
 
   const confirmation = await dialog.showMessageBox(mainWindow, {
     type: "warning",
@@ -1004,11 +1074,227 @@ registerIpc("desktop:terminal:run", async (projectId, rawCommand) => {
     cancelId: 0,
     noLink: true,
   });
-  if (confirmation.response !== 1) {
+  if (confirmation.response !== 1 || controller.signal.aborted) {
     return { cancelled: true, code: null, stdout: "", stderr: "", timedOut: false };
   }
-  return executeCommand(command, project.path);
-});
+  return executeCommand(command, project.path, controller.signal);
+  } finally {
+    externalSignal?.removeEventListener("abort", abort);
+    activeCommandRuns.delete(id);
+  }
+}
+
+function cancelCommandRun(commandId) {
+  if (typeof commandId !== "string" || !/^[0-9a-f-]{36}$/i.test(commandId)) {
+    throw new Error("The command request is invalid.");
+  }
+  activeCommandRuns.get(commandId)?.abort();
+}
+
+function getCompanionAllowedOrigins() {
+  const origins = [COMPANION_ALLOWED_ORIGIN];
+  if (!app.isPackaged) {
+    try {
+      const devOrigin = new URL(process.env.AYATRISYA_DESKTOP_DEV_URL || "");
+      if ((devOrigin.protocol === "http:" || devOrigin.protocol === "https:") &&
+          ["localhost", "127.0.0.1"].includes(devOrigin.hostname)) {
+        origins.push(devOrigin.origin);
+      }
+    } catch {
+      // Packaged and non-local origins are never accepted from an environment override.
+    }
+  }
+  return [...new Set(origins)];
+}
+
+function getLocalCompanionStatus() {
+  return {
+    enabled: Boolean(companionServer?.enabled),
+    port: COMPANION_PORT,
+    allowedOrigin: COMPANION_ALLOWED_ORIGIN,
+    sessionLifetimeMinutes: 15,
+  };
+}
+
+async function confirmCompanionPair(origin) {
+  if (!mainWindow) return false;
+  const result = await dialog.showMessageBox(mainWindow, {
+    type: "warning",
+    title: "Pair a browser with Ayatrisya Desktop?",
+    message: "Allow this website to connect to your local coding workspace for 15 minutes?",
+    detail: `Website:\n${origin}\n\nAfter pairing, it can list and read supported source files in folders you explicitly choose. File creation and edits require another desktop confirmation, and every command requires its own confirmation. The session token stays in memory and is not saved.`,
+    buttons: ["Cancel", "Pair this browser"],
+    defaultId: 0,
+    cancelId: 0,
+    noLink: true,
+  });
+  return result.response === 1;
+}
+
+function excludedCompanionFolder(name) {
+  return new Set([".git", ".ssh", ".aws", ".config", "node_modules", "vendor", "dist", "build", "coverage"])
+    .has(name.toLowerCase());
+}
+
+async function listCompanionFiles(projectId, relativePath) {
+  const project = requireProject(projectId);
+  const clean = cleanRelativePath(relativePath, true);
+  if (clean.split(/[\\/]/).some(excludedCompanionFolder)) {
+    throw new Error("Generated, private, and dependency folders are not available through the browser companion.");
+  }
+  const folder = await resolveExistingPath(fs, project.path, clean, "directory");
+  const entries = await fs.readdir(folder.path, { withFileTypes: true });
+  if (entries.length > 2000) throw new Error("This folder has more than 2,000 entries. Open a narrower subfolder to browse it.");
+  const visible = entries.filter((entry) => {
+    if (entry.isSymbolicLink()) return false;
+    if (entry.isDirectory()) return !excludedCompanionFolder(entry.name);
+    if (!entry.isFile()) return false;
+    const relative = path.posix.join(clean.replaceAll("\\", "/"), entry.name);
+    try {
+      validateNewTextFilePath(relative);
+      return true;
+    } catch {
+      return false;
+    }
+  });
+  return Promise.all(visible.map(async (entry) => {
+    const relative = path.posix.join(clean.replaceAll("\\", "/"), entry.name);
+    const isDirectory = entry.isDirectory();
+    const size = isDirectory ? 0 : (await fs.stat(path.join(folder.path, entry.name))).size;
+    return { name: entry.name, relativePath: relative, isDirectory, size };
+  })).then((items) => items.sort((a, b) =>
+    Number(b.isDirectory) - Number(a.isDirectory) || a.name.localeCompare(b.name)));
+}
+
+async function readCompanionFile(projectId, relativePath) {
+  const safeRelativePath = validateNewTextFilePath(relativePath);
+  const project = requireProject(projectId);
+  const file = await resolveExistingPath(fs, project.path, safeRelativePath, "file");
+  if (file.stat.size > MAX_TEXT_FILE_BYTES) throw new Error("Files over 1 MB cannot be opened in the browser companion.");
+  const content = await fs.readFile(file.path, "utf8");
+  if (content.includes("\0")) throw new Error("This appears to be a binary file and cannot be opened as text.");
+  return content;
+}
+
+async function confirmCompanionFileChange(project, relativePath, content, action) {
+  if (!mainWindow) return false;
+  const result = await dialog.showMessageBox(mainWindow, {
+    type: "warning",
+    title: "Approve a local project file change?",
+    message: `${action} ${relativePath}`,
+    detail: `Project: ${project.name}\nRequested by: ${COMPANION_ALLOWED_ORIGIN}\nContent size: ${Buffer.byteLength(content, "utf8")} bytes\n\nOnly supported source and documentation files are allowed. Review the file in Ayatrisya before approving. This change will be applied to your local project.`,
+    buttons: ["Cancel", "Apply once"],
+    defaultId: 0,
+    cancelId: 0,
+    noLink: true,
+  });
+  return result.response === 1;
+}
+
+async function createCompanionFile(projectId, relativePath) {
+  const safeRelativePath = validateNewTextFilePath(relativePath);
+  const project = requireProject(projectId);
+  const target = await resolveWritableFile(fs, project.path, safeRelativePath);
+  if (!(await confirmCompanionFileChange(project, safeRelativePath, "", "Create"))) {
+    throw Object.assign(new Error("File creation was cancelled in Ayatrisya Desktop."), { statusCode: 403 });
+  }
+  const handle = await fs.open(target, "wx", 0o600);
+  await handle.close();
+}
+
+async function writeCompanionFile(projectId, relativePath, content) {
+  if (typeof content !== "string" || Buffer.byteLength(content, "utf8") > MAX_TEXT_FILE_BYTES) {
+    throw new Error("Text files are limited to 1 MB in the browser companion.");
+  }
+  const safeRelativePath = validateNewTextFilePath(relativePath);
+  const project = requireProject(projectId);
+  const target = await resolveWritableFile(fs, project.path, safeRelativePath);
+  const stat = await fs.stat(target);
+  if (!stat.isFile()) throw new Error("Choose a regular text file.");
+  if (!(await confirmCompanionFileChange(project, safeRelativePath, content, "Update"))) {
+    throw Object.assign(new Error("The file edit was cancelled in Ayatrisya Desktop."), { statusCode: 403 });
+  }
+  await fs.writeFile(target, content, "utf8");
+}
+
+async function removeCompanionProject(projectId) {
+  const id = validateProjectId(projectId);
+  const project = projectGrants.find((item) => item.id === id);
+  if (!project) throw new Error("Local project folder not found.");
+  const result = await dialog.showMessageBox(mainWindow, {
+    type: "warning",
+    title: "Remove local folder access?",
+    message: `Remove Ayatrisya's access to "${project.name}"?`,
+    detail: "Your project files will not be deleted. You can grant access again later from Ayatrisya Desktop.",
+    buttons: ["Cancel", "Remove access"],
+    defaultId: 0,
+    cancelId: 0,
+    noLink: true,
+  });
+  if (result.response !== 1) return false;
+  projectGrants = projectGrants.filter((item) => item.id !== id);
+  await persistGrants();
+  return true;
+}
+
+async function enableLocalCompanion() {
+  if (companionServer?.enabled) return getLocalCompanionStatus();
+  if (companionServer) {
+    await companionServer.close().catch(() => undefined);
+    companionServer = null;
+  }
+  const approval = await dialog.showMessageBox(mainWindow, {
+    type: "warning",
+    title: "Enable the local browser companion?",
+    message: "Start Ayatrisya’s loopback-only coding companion for this desktop session?",
+    detail: `It listens only on 127.0.0.1:${COMPANION_PORT}, accepts the exact Ayatrisya website origin, and stops when the desktop window closes. It is disabled by default. Every browser pairing, file change, and command requires a separate desktop approval. This does not expose the service to your local network.`,
+    buttons: ["Cancel", "Enable for this session"],
+    defaultId: 0,
+    cancelId: 0,
+    noLink: true,
+  });
+  if (approval.response !== 1) return { ...getLocalCompanionStatus(), cancelled: true };
+
+  const candidate = createCompanionServer({
+    port: COMPANION_PORT,
+    allowedOrigins: getCompanionAllowedOrigins(),
+    handlers: {
+      confirmPair: confirmCompanionPair,
+      listProjects,
+      chooseProject: chooseProjectFolder,
+      removeProject: removeCompanionProject,
+      listFiles: listCompanionFiles,
+      readFile: readCompanionFile,
+      createFile: createCompanionFile,
+      writeFile: writeCompanionFile,
+      runCommand: runConfirmedCommand,
+    },
+  });
+  companionServer = candidate;
+  try {
+    await candidate.ready;
+  } catch {
+    companionServer = null;
+    await candidate.close().catch(() => undefined);
+    throw new Error(`Could not start the browser companion on 127.0.0.1:${COMPANION_PORT}. Another application may be using that port.`);
+  }
+  return getLocalCompanionStatus();
+}
+
+async function disableLocalCompanion() {
+  const current = companionServer;
+  companionServer = null;
+  if (current) await current.close();
+  return getLocalCompanionStatus();
+}
+
+registerIpc("desktop:companion:status", getLocalCompanionStatus);
+registerIpc("desktop:companion:enable", enableLocalCompanion);
+registerIpc("desktop:companion:disable", disableLocalCompanion);
+
+registerIpc("desktop:terminal:run", (projectId, rawCommand, commandId) =>
+  runConfirmedCommand(projectId, rawCommand, commandId));
+registerIpc("desktop:terminal:cancel", cancelCommandRun);
 
 function contentType(filePath) {
   return MIME_TYPES[path.extname(filePath).toLowerCase()] || "application/octet-stream";
@@ -1097,6 +1383,7 @@ async function createMainWindow() {
   });
   mainWindow.once("ready-to-show", () => mainWindow?.show());
   mainWindow.on("closed", () => {
+    void disableLocalCompanion().catch(() => undefined);
     mainWindow = null;
     warModeFolderGrants.clear();
     activeWarModeChild?.kill();
@@ -1173,4 +1460,7 @@ app.on("before-quit", () => {
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();
+});
+app.on("will-quit", () => {
+  void disableLocalCompanion().catch(() => undefined);
 });

@@ -18,8 +18,12 @@ contextBridge.exposeInMainWorld(
       ipcRenderer.invoke("desktop:files:create-with-content", projectId, relativePath, content),
     writeFile: (projectId, relativePath, content) =>
       ipcRenderer.invoke("desktop:files:write", projectId, relativePath, content),
-    runCommand: (projectId, command) =>
-      ipcRenderer.invoke("desktop:terminal:run", projectId, command),
+    runCommand: (projectId, command, commandId) =>
+      ipcRenderer.invoke("desktop:terminal:run", projectId, command, commandId),
+    cancelCommand: (commandId) => ipcRenderer.invoke("desktop:terminal:cancel", commandId),
+    getLocalCompanionStatus: () => ipcRenderer.invoke("desktop:companion:status"),
+    enableLocalCompanion: () => ipcRenderer.invoke("desktop:companion:enable"),
+    disableLocalCompanion: () => ipcRenderer.invoke("desktop:companion:disable"),
     getLocalModelEndpoint: () => ipcRenderer.invoke("desktop:model-endpoint:get"),
     setLocalModelEndpoint: (endpoint) => ipcRenderer.invoke("desktop:model-endpoint:set", endpoint),
     requestLocalModel: (path, method, body, requestId) =>

@@ -18,6 +18,15 @@ export interface DesktopCommandResult {
   stdout: string;
   stderr: string;
   timedOut: boolean;
+  outputLimited?: boolean;
+}
+
+export interface DesktopCompanionStatus {
+  enabled: boolean;
+  port: number;
+  allowedOrigin: string;
+  sessionLifetimeMinutes: number;
+  cancelled?: boolean;
 }
 
 export type LocalModelPath =
@@ -194,7 +203,11 @@ export interface AyatrisyaDesktopApi {
   createFile(projectId: string, relativePath: string): Promise<void>;
   createFileWithContent(projectId: string, relativePath: string, content: string): Promise<void>;
   writeFile(projectId: string, relativePath: string, content: string): Promise<void>;
-  runCommand(projectId: string, command: string): Promise<DesktopCommandResult>;
+  runCommand(projectId: string, command: string, commandId?: string): Promise<DesktopCommandResult>;
+  cancelCommand(commandId: string): Promise<void>;
+  getLocalCompanionStatus(): Promise<DesktopCompanionStatus>;
+  enableLocalCompanion(): Promise<DesktopCompanionStatus>;
+  disableLocalCompanion(): Promise<DesktopCompanionStatus>;
   getLocalModelEndpoint(): Promise<string>;
   setLocalModelEndpoint(endpoint: string): Promise<string>;
   requestLocalModel(path: LocalModelPath, method: LocalModelMethod, body: unknown, requestId: string): Promise<LocalModelResponse>;
