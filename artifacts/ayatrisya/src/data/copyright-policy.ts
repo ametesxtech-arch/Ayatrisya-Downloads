@@ -1,9 +1,9 @@
 /**
- * Shared Ametesx/Ayatrisya copyright wording.
+ * Shared Ametesx/Ayatrisya copyright and proprietary-software wording.
  *
- * Scope is deliberately conditional: the root package declares MIT, but the
- * intended scope of that declaration has not been resolved. This policy must
- * not override an applicable open-source or third-party license.
+ * This wording applies only to original material Ametesx owns or is authorized
+ * to license. It does not override third-party terms or revoke prior grants.
+ * See docs/PROPRIETARY-SOFTWARE-NOTICE.md for the repository license history.
  */
 export type CopyrightProduct = 'Ayatrisya';
 
@@ -13,6 +13,12 @@ export function copyrightNotice(product?: CopyrightProduct): string {
     ? `© ${year} Ametesx · ${product}. All rights reserved.`
     : `© ${year} Ametesx. All rights reserved.`;
 }
+
+export const proprietarySoftwareNotice =
+  'Ayatrisya is a proprietary, closed-source product of Ametesx. No public license is granted to copy, modify, redistribute, or commercially reuse original material Ametesx owns or is authorized to license unless expressly authorized. Third-party and previously granted licenses remain in force.';
+
+export const proprietarySoftwareShortNotice =
+  'Proprietary software of Ametesx. No public license for Ametesx-owned original material; third-party and prior licenses remain in force.';
 
 export const ownershipScopeStatement =
   'Ametesx claims rights only in original materials that it owns or is authorized to protect. Product inclusion or repository presence alone does not establish authorship, assignment, license, or exclusive ownership.';
@@ -28,6 +34,9 @@ export const ownershipCategories = [
   'Original tools, utilities, and model code created by or lawfully assigned or licensed to Ametesx.',
   'Other original work created by or lawfully assigned or licensed to Ametesx.',
 ];
+
+export const brandUseStatement =
+  'The Ametesx and Ayatrisya names and logos identify Ametesx and its product. Do not use these identifiers in a way that suggests affiliation, sponsorship, or endorsement without permission from the applicable rights holder. No trademark registration claim is made here.';
 
 export const thirdPartyIntellectualPropertyStatement =
   'Third-party dependencies, pretrained models, datasets, fonts, icons, libraries, rules, and externally generated assets remain subject to their respective owners and license terms. Ametesx does not claim third-party ownership merely because material is used, integrated, hosted, or distributed with an Ametesx product.';

@@ -4,4 +4,4 @@
 - [Ayatrisya model ownership](ayatrisya-model-ownership.md) — AI inference and generation must use Ayatrisya-operated models; do not call other companies' AI APIs.
 - [Ayatrisya preview delivery](ayatrisya-preview-delivery.md) — confirm UI fixes against the active preview and surface that preview when the user's browser may be stale.
 - [Ayatrisya model connection](ayatrisya-model-gateway.md) — current inference is desktop-local on loopback; hosted calls remain Firebase-authenticated and server-keyed.
-- [Ayatrisya product identity](ayatrisya-product-identity.md) — Ayatrisya is an Ametesx product; this does not prove rights in each asset or contribution.
+- [Ayatrisya product identity](ayatrisya-product-identity.md) — owner says proprietary/closed-source; no public license for Ametesx-owned work, while prior grants and third-party rights remain.

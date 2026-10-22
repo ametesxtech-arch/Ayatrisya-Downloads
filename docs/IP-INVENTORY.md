@@ -22,17 +22,20 @@ control, without claiming third-party material. Source files and assets prove
 that files are present in this workspace; they do not by themselves prove who
 created them, who owns them, or whether rights were assigned.
 
-The root `package.json` is both `"private": true` and `"license": "MIT"`, but no
-root `LICENSE` text was found. Each checked workspace package is private and
-does not declare a package license. The scope of the root MIT declaration is
-therefore unresolved. Do not assume it applies only to dependencies, or that it
-grants a license to every product asset. Do not add a blanket proprietary
-source-code notice or change the license until the owner resolves the scope.
+At the start of this audit, the root `package.json` was both `"private": true`
+and `"license": "MIT"`, but no root `LICENSE` text or tracked nested license
+file was found. Each checked workspace package is private and does not declare
+a package license. On 2026-10-22, at the owner's direction, the root metadata
+was changed to `"UNLICENSED"` to avoid signaling a public MIT license for future
+workspace use. This change is prospective only: it does not revoke or erase
+any rights that may have been granted by the earlier MIT metadata or any prior
+distribution. The exact scope of that historical declaration and whether any
+distribution relied on it remain unresolved; do not claim the material became
+proprietary retroactively.
 
-The public footer currently uses `© 2026 Ametesx. All rights reserved.` followed
-by a qualification that the notice applies only to material Ametesx owns or is
-authorized to protect. This is a site notice, not proof of ownership of every
-repository file.
+The public footer uses a product-specific, current-year Ayatrisya notice,
+qualified to apply only to material Ametesx owns or is authorized to protect.
+This is a site notice, not proof of ownership of every repository file.
 
 ## Asset inventory
 
@@ -56,13 +59,79 @@ repository file.
 - The public website footer's notice is limited by the adjacent statement:
   “This notice applies only to material Ametesx owns or is authorized to
   protect.”
-- No blanket copyright header was added to source files because the root MIT
-  scope, individual authorship, and assignment evidence are unresolved.
+- The proprietary notice is scoped to original material Ametesx owns or is
+  authorized to license. Source-entrypoint notices do not prove authorship or
+  assignment and do not override third-party or previously granted licenses.
 - Copyright documentation does not require a trademark registration. This
   inventory makes no trademark-registration or patent claim.
 - Any future notice must identify only material with a verified rights basis,
   preserve third-party notices, and not override an applicable open-source,
   font, model, dataset, or platform license.
+
+## Brand use and trademark readiness
+
+- [ ] Search the relevant official trademark registries and name databases for
+  Ametesx and Ayatrisya in owner-selected markets and product classes.
+- [ ] Confirm name availability and obtain qualified trademark advice before
+  filing or making any registration, exclusivity, or enforceability claim.
+- [ ] Preserve original and editable logo files, dated drafts, creator/tool
+  provenance, and applicable platform or assignment terms.
+- [ ] Keep third-party and platform-generated marks distinct from first-party
+  brand assets; do not assume repository presence proves ownership.
+
+No search, filing, registration, or clearance was performed in this workspace.
+
+## Technical protection and verification limits
+
+- `.replit` contains the Firebase web API key as public client configuration.
+  It is not a server credential and is expected to be visible to browser code;
+  it must be restricted to the required Firebase APIs and authorized domains.
+  No server-secret value was identified in tracked source by the key-pattern
+  check; one private-key-shaped test fixture is an intentional negative test.
+- The web client is delivered to browsers and can be inspected or copied.
+  Production source maps are disabled; that does not hide or make the bundled
+  JavaScript impossible to inspect.
+- The Firebase web API key is public client configuration required by the
+  Firebase browser SDK, not a server credential. Restrict its permitted APIs and
+  authorized domains in the Firebase/Google Cloud project; enforce access with
+  Firebase Authentication and Firestore rules. The key must never authorize
+  privileged server operations.
+- The checked Firestore rule limits personalization documents to the
+  authenticated user's UID and validates allowed fields and sizes.
+- The API validates Firebase identity for model and connector routes. Hosted
+  model requests use a server-side key; browser code does not receive that key.
+- Only an internal backup remote is configured; no source-hosting remote is
+  configured. Repository visibility, branch protections, GitHub Actions
+  secrets, and production deployment permissions could not be verified here.
+- `.env` is ignored by Git and the only tracked environment template is
+  `.env.example`. Deployment secret values and production access policies are
+  not visible in this source audit.
+
+## Repository license audit
+
+- No root `LICENSE` file or tracked nested `LICENSE`, `LICENCE`, `COPYING`, or
+  `NOTICE` file exists. The root MIT declaration was package metadata; its
+  historic scope is recorded in `docs/PROPRIETARY-SOFTWARE-NOTICE.md`.
+- The Windows WAR MODE preparation script recreates and packages YARA-X's
+  BSD-3-Clause license, the Signature-Base Detection Rule License (DRL) 1.1,
+  and a provenance notice. These files are in the ignored build-assets folder,
+  not tracked source. They cover the scanner engine and selected rule files,
+  not Ayatrisya's original source code.
+- Electron's generated `LICENSE.electron.txt` covers Electron's distribution;
+  generated Chromium credits cover Chromium components. These are build output,
+  not licenses for Ayatrisya source.
+- The pnpm `--prod` selector for the Ayatrisya workspace reports 69 installed
+  package entries declaring MIT. This is not a complete browser-runtime
+  inventory: the Vite app also bundles packages declared under `devDependencies`.
+  The full installed Ayatrisya graph reports 717 packages with mixed licenses,
+  including three development plugins with unknown metadata and two MPL-2.0
+  Lightning CSS packages. The API production graph reports 101 packages
+  (92 MIT, 1 Apache-2.0, 7 ISC, 1 BSD-3-Clause). These are package metadata
+  snapshots, not a release SBOM or a legal compatibility opinion.
+- The public `/licenses` page is intentionally a selected inventory, not a
+  complete list of every dependency or packaged component. Keep upstream
+  notices and generate a release-specific license inventory before
+  distribution.
 
 ## Immediate preservation steps and unresolved decisions
 

@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { ArrowLeft, ArrowUpRight } from 'lucide-react';
 import { Link } from 'wouter';
 import { Brand } from '@/components/Brand';
-import { copyrightNotice } from '@/data/copyright-policy';
+import { copyrightNotice, proprietarySoftwareShortNotice } from '@/data/copyright-policy';
 
 const footerLinks = [
   { href: '/#capabilities', label: 'Product' },
@@ -65,6 +65,7 @@ export function PublicSiteFooter() {
           </nav>
           <div className="text-[11px] text-slate-500 lg:text-right">
             <p>{copyrightNotice('Ayatrisya')}</p>
+            <p className="mt-1">{proprietarySoftwareShortNotice}</p>
             <p className="mt-1">This notice applies only to material Ametesx owns or is authorized to protect.</p>
             <p className="mt-1">Local-first storage where supported; model use may involve remote processing.</p>
           </div>

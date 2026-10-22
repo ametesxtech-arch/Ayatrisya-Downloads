@@ -1,3 +1,4 @@
+// Proprietary notice: applies only to original material Ametesx owns or is authorized to license; third-party and prior licenses remain in force.
 const { app, BrowserWindow, dialog, ipcMain, shell } = require("electron");
 const { spawn } = require("node:child_process");
 const fsSync = require("node:fs");

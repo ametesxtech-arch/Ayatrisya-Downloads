@@ -1,5 +1,7 @@
 import {
   copyrightNotice,
+  proprietarySoftwareNotice,
+  brandUseStatement,
   originalMaterialsProtectionStatement,
   ownershipCategories,
   ownershipScopeStatement,
@@ -297,52 +299,32 @@ export const documentationArticles: DocArticle[] = [
   {
     id: 'developer',
     category: 'Developer documentation',
-    title: 'Architecture and configuration',
-    summary: 'Verified API paths, environment variable names, and local checks.',
+    title: 'Developer overview',
+    summary: 'Product architecture, security boundaries, and development checks.',
     sections: [
       {
         heading: 'Architecture',
         paragraphs: [
-          'The Ayatrisya web client is a React and TypeScript application built with Vite. Local workspace records are stored in IndexedDB. The API service is a separate Express application. Ayatrisya Desktop wraps the web UI in Electron and uses validated IPC for native operations.',
+          'Ayatrisya includes a browser workspace and a separate desktop application. Browser workspace records are stored in the browser; desktop capabilities are provided through permission-controlled native operations.',
         ],
       },
       {
-        heading: 'Model API paths',
-        paragraphs: [],
-        bullets: [
-          'GET /api/model/health and GET /api/model/capabilities',
-          'POST /api/model/chat',
-          'POST /api/model/generate/image, /api/model/generate/3d, and /api/model/generate/music',
-          'POST /api/model/transcribe and POST /api/model/speech',
-          'Hosted model routes require a verified Firebase ID token. The server stores/forwards the model credential; the browser must never receive it.',
-        ],
-      },
-      {
-        heading: 'Environment variable names',
+        heading: 'Security and data boundaries',
         paragraphs: [
-          'Names below are documented from the repository’s environment example and source. They are names and purposes only; never place secret values in this page, source control, browser-visible VITE_ variables, or logs.',
-        ],
-        bullets: [
-          'VITE_FIREBASE_API_KEY, VITE_FIREBASE_AUTH_DOMAIN, VITE_FIREBASE_PROJECT_ID, VITE_FIREBASE_APP_ID — Firebase web app identifiers/configuration.',
-          'FIREBASE_PROJECT_ID — server-side Firebase ID-token verification project.',
-          'AYATRISYA_MODEL_ENDPOINT — server-side HTTPS Ayatrisya model endpoint; non-secret.',
-          'AYATRISYA_MODEL_API_KEY — server-side model credential; secret.',
-          'GITHUB_OAUTH_CLIENT_ID / GITHUB_OAUTH_CLIENT_SECRET and FIGMA_OAUTH_CLIENT_ID / FIGMA_OAUTH_CLIENT_SECRET — OAuth app configuration; secrets stay server-side.',
-          'VITE_GOOGLE_CLIENT_ID — Google Drive browser OAuth client identifier.',
-          'SESSION_SECRET — server-side signing/encryption secret for OAuth state/session handling.',
-          'AYATRISYA_APP_ORIGIN — allowed HTTPS origin for production OAuth flows.',
-          'VITE_DESKTOP_DOWNLOAD_URL, VITE_DESKTOP_DOWNLOAD_LINUX_URL, VITE_DESKTOP_DOWNLOAD_WINDOWS_URL, VITE_DESKTOP_DOWNLOAD_MAC_URL — optional public release/installer URLs.',
+          'Hosted model access requires a signed-in account and server-side identity verification. Model credentials are kept on the server and are not sent to the browser.',
+          'Desktop-local model connections and local file access are separate from browser capabilities. The website does not have unrestricted access to files or terminal commands on a visitor’s computer.',
+          'External services such as GitHub, Figma, and Google Drive are used only through user-authorized connection flows. Their own permissions and terms continue to apply.',
+          'Provider credentials, secret values, internal API routes, and deployment configuration are intentionally not published in this overview.',
         ],
       },
       {
-        heading: 'Build and tests',
-        paragraphs: [],
+        heading: 'Development checks',
+        paragraphs: [
+          'Automated tests and production builds verify only the code paths they execute. They do not, by themselves, confirm live model inference, third-party OAuth configuration, or installer behavior.',
+        ],
         bullets: [
-          'From the workspace root: pnpm run typecheck',
-          'Ayatrisya checks: pnpm --filter @workspace/ayatrisya run typecheck and pnpm --filter @workspace/ayatrisya run test',
-          'API checks: pnpm --filter @workspace/api-server run test',
-          'Production build: pnpm --filter @workspace/ayatrisya run build',
-          'A successful automated test suite does not verify live model inference, OAuth provider configuration, or platform installer behavior unless those specific integration tests run.',
+          'Run the project’s type checks and test suites before a release.',
+          'Build the production web application and verify the desktop installer on its target operating system.',
         ],
       },
       {
@@ -433,9 +415,14 @@ export const publicLegalPages: PublicLegalPage[] = [
         ],
       },
       {
+        heading: 'Brand names and logos',
+        paragraphs: [brandUseStatement],
+      },
+      {
         heading: 'Copyright notice and permitted use',
         paragraphs: [
           copyrightNotice('Ayatrisya'),
+          proprietarySoftwareNotice,
           'This notice applies only to material Ametesx owns or is authorized to protect. It does not grant or remove permissions under any applicable license. No patent, trademark registration, or completed assignment is asserted here.',
         ],
       },
@@ -474,6 +461,7 @@ export const publicLegalPages: PublicLegalPage[] = [
         heading: 'Scope of this inventory',
         paragraphs: [
           'This page lists selected dependency and bundled-asset notices from the checked Ayatrisya package metadata and release files. It is not a complete inventory of every transitive dependency or release artifact; additional licenses may apply to specific distributions.',
+          'Ayatrisya is proprietary software. This page does not grant a license to Ametesx-owned original code or assets. Third-party and previously granted licenses continue to govern the components they cover.',
         ],
       },
       {
@@ -482,7 +470,8 @@ export const publicLegalPages: PublicLegalPage[] = [
           'The checked installed package metadata identifies these representative direct dependencies and their declared licenses:',
         ],
         bullets: [
-          'React, React DOM, Vite, TypeScript, Tailwind CSS, Wouter, Zod, TanStack Query, Radix UI packages, Firebase JavaScript SDK, Electron, and Electron Builder — MIT, except where noted below.',
+          'React, React DOM, Vite, TypeScript, Tailwind CSS, Wouter, Zod, TanStack Query, Radix UI packages, Electron, and Electron Builder — MIT, except where noted below.',
+          'Firebase JavaScript SDK — Apache-2.0.',
           'Lucide React — ISC.',
           'idb — ISC.',
           'class-variance-authority — Apache-2.0.',

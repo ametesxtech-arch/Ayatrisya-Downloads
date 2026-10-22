@@ -14,6 +14,7 @@ import type { ChatMode, ModelId, Preferences } from '@/storage/types';
 import { modelClient } from '@/ai/client';
 import { useDesktopRuntime } from '@/desktop/use-runtime';
 import { WarModePanel } from '@/components/WarModePanel';
+import { proprietarySoftwareShortNotice } from '@/data/copyright-policy';
 
 type Section = 'appearance' | 'personalization' | 'models' | 'war-mode' | 'privacy' | 'storage';
 const sections: Array<[Section, string]> = [['appearance', 'Appearance'], ['personalization', 'Personalization'], ['models', 'Models'], ['war-mode', 'War Mode'], ['privacy', 'Privacy'], ['storage', 'Storage and backup']];
@@ -228,6 +229,10 @@ function Privacy({ goStorage, goto }: { goStorage: () => void; goto: (h: string)
       <p className="py-3 text-sm leading-6 text-slate-400">Conversations, projects, notes, documents and files are stored in IndexedDB in this browser profile. Ayatrisya has no content database. Clearing browser data, or using a private window, can remove them; export a backup to keep a copy.</p>
       <p className="py-3 text-sm leading-6 text-slate-400">If a model server is configured, text you choose to send reaches that server for processing, and you are asked first. Attachments are not sent. Ayatrisya does not train models on private content.</p>
       <p className="py-3 text-sm leading-6 text-slate-400">Google Drive backup is manual and optional, and only works when an OAuth client is configured.</p>
+    </Card>
+    <Card title="Ayatrisya software and rights">
+      <p className="py-3 text-sm leading-6 text-slate-400">{proprietarySoftwareShortNotice}</p>
+      <Button variant="outline" onClick={() => goto('/copyright')}>View copyright and license details</Button>
     </Card>
     <Button onClick={goStorage}><HardDrive size={15} />Export or delete your data</Button>
   </>;

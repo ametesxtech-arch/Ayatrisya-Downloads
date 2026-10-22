@@ -1,0 +1,49 @@
+AMETESX IP PROTECTION — CODE, BRAND, UI AND INFRASTRUCTURE
+
+My goal is to protect Ametesx and Ayatrisya against unauthorised copying. Audit the existing project and implement all technically appropriate protections without breaking the product.
+
+1. Source code
+
+* Keep private backend and infrastructure repositories private.
+* Remove accidental source maps, debug endpoints, source files and secrets from production builds where appropriate.
+* Never expose API keys, private credentials, signing keys, internal endpoints or privileged configuration in frontend code.
+* Audit dependencies and preserve their required licence notices.
+* Add a clear copyright and proprietary-use notice to original files where appropriate.
+* Do not claim that browser-delivered JavaScript can be made impossible to inspect or copy.
+
+2. Brand names and logos
+
+* Identify all uses of Ametesx and Ayatrisya across the website, application, documentation and metadata.
+* Add appropriate brand-use restrictions to the copyright/IP page.
+* Do not imply that trademark registration exists unless verified.
+* Prepare a checklist for checking name availability and pursuing appropriate trademark protection.
+
+3. UI and visual design
+
+* Inventory original logos, illustrations, icons, graphics, written content and distinctive visual assets.
+* Preserve authorship and ownership records for original material.
+* Do not claim exclusive ownership of generic layouts, common UI patterns, third-party assets or externally licensed components.
+
+4. Infrastructure and backend
+
+* Keep server-side logic, deployment configuration, private model infrastructure and internal architecture confidential where possible.
+* Check repository visibility, deployment permissions, environment variables, access controls, security rules and production configuration.
+* Ensure private APIs enforce server-side authentication, authorisation, input validation and rate limits.
+* Do not publish secrets, internal architecture diagrams or sensitive configuration in public documentation.
+
+5. Legal notices and records
+
+* Retain a consistent copyright notice for material Ametesx owns or is authorised to protect.
+* Maintain docs/IP-INVENTORY.md with asset paths, origin, licence, ownership evidence and unresolved issues.
+* Keep third-party and open-source licences intact.
+* Do not silently replace any existing licence.
+* Do not claim that a notice, obfuscation, or technical control guarantees complete protection against copying.
+
+6. Verification
+
+* Inspect the existing codebase before changing it.
+* Implement only justified changes.
+* Run relevant tests, typechecking and production builds.
+* Report the exact files changed, security issues found, remaining risks and manual actions needed.
+
+Do not merely add more legal text. Prioritise actual protection of source code, brand assets, access credentials and backend infrastructure.
