@@ -1,3 +1,13 @@
+import {
+  copyrightNotice,
+  licenseScopeStatement,
+  originalMaterialsProtectionStatement,
+  ownershipCategories,
+  ownershipScopeStatement,
+  rightsContactStatus,
+  thirdPartyIntellectualPropertyStatement,
+} from '@/data/copyright-policy';
+
 export type DocSection = {
   heading: string;
   paragraphs?: string[];
@@ -413,40 +423,49 @@ export const publicLegalPages: PublicLegalPage[] = [
     reviewed: false,
     sections: [
       {
-        heading: 'Ametesx and Ayatrisya ownership statement',
+        heading: 'Ametesx original materials',
         paragraphs: [
-          'Ayatrisya is a product of Ametesx, as confirmed by its owner. This confirms the product relationship; it does not by itself establish authorship, copyright assignment, trademark registration, or exclusive rights in any specific code, design, logo, document, model, contribution, or other asset. Subject to applicable law and documented third-party rights, Ametesx claims ownership of original intellectual property created for and lawfully owned by Ametesx. That claim applies only where authorship, ownership, assignment, or license rights can be verified. The repository alone does not establish that a work was assigned or licensed to Ametesx.',
+          ownershipScopeStatement,
+          originalMaterialsProtectionStatement,
+        ],
+        bullets: ownershipCategories,
+      },
+      {
+        heading: 'Ayatrisya product materials',
+        paragraphs: [
+          'Ayatrisya is a product of Ametesx, as confirmed by its owner. This confirms the product relationship; it does not by itself establish authorship, copyright assignment, trademark registration, or exclusive rights in any specific code, design, logo, document, model, contribution, or other asset. The legal status of the Ametesx and Ayatrisya names and logos, including any registrations, has not been verified here.',
         ],
       },
       {
-        heading: 'Brand identity',
+        heading: 'Copyright notice and permitted use',
         paragraphs: [
-          'The Ametesx and Ayatrisya names, logos, and product identities are intended to identify Ametesx and its products. Their legal status and any registrations have not been verified here and must not be misrepresented.',
+          copyrightNotice('Ayatrisya'),
+          'This notice applies only to material Ametesx owns or is authorized to protect. It does not grant or remove permissions under any applicable license. No patent, trademark registration, or completed assignment is asserted here.',
         ],
       },
       {
-        heading: 'Original software and content',
+        heading: 'Third-party intellectual property',
         paragraphs: [
-          'Ametesx claims rights in original software, source code, website design, interface layouts, original graphics, product documentation, writing, and marketing materials only where the work was created for and is lawfully owned by Ametesx, or validly assigned or licensed to it. For verified proprietary materials, rights are reserved only to the extent Ametesx owns or is authorized to enforce them; no broader permission to copy, modify, redistribute, commercially exploit, or use Ametesx-owned branding is granted except as expressly authorized or permitted by law. This does not override an applicable open-source or third-party license. The repository alone does not establish authorship or transfer of rights. No patent or completed assignment is asserted.',
+          thirdPartyIntellectualPropertyStatement,
         ],
       },
       {
-        heading: 'Third-party material and licensing',
+        heading: 'Open-source licenses and attributions',
         paragraphs: [
-          'Third-party software, models, datasets, fonts, icons, libraries, rules, and other materials remain subject to their respective owners’ rights and license terms. Ametesx does not claim third-party ownership merely because material is used, integrated, hosted, or distributed with an Ametesx product.',
-          'The root package manifest declares MIT, but no root LICENSE text was found in the checked repository and the scope of that manifest declaration is unresolved. The Ayatrisya package is marked private and does not declare a package license. Do not infer that the MIT declaration applies to all product code, brand assets, models, datasets, or content. No license was changed for this review.',
+          licenseScopeStatement,
+          'See the Third-party licenses and attributions page for the selected dependency and bundled-scanner notices. That page is not a complete software bill of materials; remaining package and asset licenses require review before distribution.',
         ],
       },
       {
-        heading: 'Models, user content, and generated content',
+        heading: 'User content, models, and generated output',
         paragraphs: [
-          'No foundation-model weights are bundled with the web application. The model-service operator, model licenses, training data rights, and terms for generated output have not been verified. This page does not claim ownership of user-submitted content or model output, and it does not guarantee that generated output is original or free of third-party rights.',
+          'This page does not claim ownership of user-submitted content or model output, and it does not guarantee that generated output is original or free of third-party rights. No foundation-model weights are bundled with the web application; the model-service operator, model licenses, training data rights, and terms for generated output have not been verified.',
         ],
       },
       {
-        heading: 'Rights requests and publication status',
+        heading: 'Copyright and IP enquiries',
         paragraphs: [
-          'Ametesx may enforce rights it owns or is authorized to enforce, subject to applicable law. Rights-request contact: pending owner configuration; no verified, monitored contact channel was found in the checked project. This page remains a draft until the contact channel, repository license scope, and creator/contributor ownership records are reviewed. The intended notice for verified Ametesx-owned or authorized materials is “© [current year] Ametesx. All rights reserved.”',
+          `Ametesx may enforce rights it owns or is authorized to enforce, subject to applicable law. ${rightsContactStatus}`,
         ],
       },
     ],

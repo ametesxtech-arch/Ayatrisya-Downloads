@@ -1,0 +1,117 @@
+AMETESX — HARD-CODED COPYRIGHT & INTELLECTUAL PROPERTY PROTECTION
+
+Implement a consistent, code-level copyright and intellectual-property notice across the Ametesx website and all Ametesx-owned products, including Ayatrisya.
+
+This is a real implementation task, not a mockup. Inspect the current repository, identify the shared footer, application shell, documentation pages, product metadata and licence files, then make the changes in the actual codebase.
+
+1. Canonical Ametesx copyright notice
+
+Create one shared, centrally maintained constant:
+
+© [current year] Ametesx. All rights reserved.
+
+Use the current year dynamically in the UI. Do not hardcode an outdated year.
+
+For Ayatrisya product-specific pages, use:
+
+© [current year] Ametesx · Ayatrisya. All rights reserved.
+
+Where the notice applies to original materials owned by Ametesx, include this statement:
+
+“Original software, content, documentation, designs and other intellectual property owned by Ametesx are protected by applicable intellectual-property laws. All rights in such materials are reserved except where Ametesx expressly grants permission or applicable law provides otherwise.”
+
+Do not apply this notice in a way that overrides third-party licences or claims ownership of material Ametesx does not own.
+
+2. Hardcode the ownership policy in the application
+
+Implement the policy as a shared source-controlled module and use it in the relevant public pages and components.
+
+Cover these categories, subject to verified ownership:
+
+* Ametesx website source code and original content.
+* Ayatrisya application code and original UI designs.
+* Original logos, illustrations, graphics and visual assets.
+* Original documentation, written material and marketing content.
+* Original tools, utilities, and model code.
+* Other original works created by or lawfully assigned or licensed to Ametesx.
+
+Explicitly distinguish ownership of original work from ownership of third-party dependencies, pretrained models, datasets, fonts, icons, libraries and externally generated assets.
+
+3. Update all relevant website locations
+
+Use the shared notice consistently in:
+
+* The global footer.
+* About and product pages.
+* Documentation and copyright pages.
+* Ayatrisya web and desktop About/legal screens, where available.
+* Relevant original downloadable documents and generated reports.
+* Product metadata and any existing copyright component.
+
+Do not add intrusive copyright banners to every screen. Keep the interface polished and professional.
+
+4. Review the existing MIT licence before changing anything
+
+Inspect the root package.json, root LICENSE, nested licence files and repository documentation.
+
+Determine what the existing MIT declaration actually covers. Do not assume it applies exclusively to dependencies or exclusively to application code.
+
+Do not silently delete, overwrite, or contradict an existing MIT licence. If the owner intends to make original application code proprietary, report the exact scope and required owner decisions before changing licence terms. Preserve all third-party licence obligations and notices.
+
+5. Create a comprehensive internal IP register
+
+Create or update docs/IP-INVENTORY.md.
+
+For each significant asset or asset category, record:
+
+* Asset or component name.
+* Repository path or identifier.
+* Creator, if known.
+* Current ownership evidence.
+* Applicable licence.
+* Third-party dependencies or source material.
+* Whether ownership is verified, owner-confirmed, or unresolved.
+* Required next action.
+
+Include original application code, product branding, UI, website content, documentation, models, datasets and bundled assets where applicable.
+
+Do not fabricate assignments, authorship, licences, registration numbers or ownership evidence.
+
+6. Copyright and IP page
+
+Update /copyright with clear sections:
+
+* Ametesx original materials.
+* Ayatrisya product materials.
+* Copyright notice and permitted use.
+* Third-party intellectual property.
+* Open-source licences and attributions.
+* Copyright and IP enquiries.
+
+State that Ametesx reserves rights in original materials it owns or is authorized to protect. Do not claim trademark registration, patent ownership or rights over all materials merely because they appear in an Ametesx product.
+
+7. Security and implementation requirements
+
+* Keep the canonical notice in source control.
+* Do not expose API keys, credentials or private repository information.
+* Do not add a fake contact email.
+* Do not make unsupported legal compliance claims.
+* Keep the website functional if legal contact details are missing.
+* Maintain accessible typography and responsive layout.
+* Avoid unnecessary paid dependencies.
+
+8. Verification
+
+Run the existing typecheck, lint, tests and production build.
+
+Verify that:
+
+* The notice appears consistently on relevant pages.
+* The displayed year updates automatically.
+* No footer links or existing features are broken.
+* The existing licence has not been silently contradicted.
+* Third-party notices remain intact.
+
+Return a report listing files changed, tests actually run, licence conflicts found and unresolved ownership questions.
+
+The objective is to hardcode Ametesx’s copyright policy into the real application, while keeping every ownership claim accurate and enforceable to the extent supported by the underlying rights.
