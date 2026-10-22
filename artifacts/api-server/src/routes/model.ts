@@ -39,29 +39,43 @@ const messages = {
   invalid: "Your sign-in session expired. Sign in again to use hosted models.",
 };
 
-function getModelConfig(): { baseUrl: URL; apiKey: string } | undefined {
+type ModelConfigResult =
+  | { ok: true; baseUrl: URL; apiKey: string }
+  | { ok: false; reason: "missing" | "invalid-endpoint" | "unsupported-provider" };
+
+const modelConfigErrors = {
+  missing: "The Ayatrisya hosted model service is not configured. Configure its server-side endpoint and API key.",
+  "invalid-endpoint": "Hosted model requests require HTTPS. Local or private-network model URLs are supported only in Ayatrisya Desktop; configure a reachable public HTTPS service for the website.",
+  "unsupported-provider": "This provider is not permitted for Ayatrisya hosted inference.",
+} as const;
+
+function getModelConfig(): ModelConfigResult {
   const rawEndpoint = process.env.AYATRISYA_MODEL_ENDPOINT?.trim();
   const apiKey = process.env.AYATRISYA_MODEL_API_KEY?.trim();
-  if (!rawEndpoint || !apiKey) return undefined;
+  if (!rawEndpoint || !apiKey) return { ok: false, reason: "missing" };
+
+  let baseUrl: URL;
   try {
-    const baseUrl = new URL(rawEndpoint);
-    if (
-      baseUrl.protocol !== "https:" ||
-      baseUrl.username ||
-      baseUrl.password ||
-      baseUrl.search ||
-      baseUrl.hash ||
-      isIP(baseUrl.hostname) !== 0 ||
-      ["localhost", "local", "internal"].some((suffix) =>
-        baseUrl.hostname.toLowerCase() === suffix ||
-        baseUrl.hostname.toLowerCase().endsWith(`.${suffix}`)) ||
-      DENIED_HOSTS.test(baseUrl.hostname)
-    ) return undefined;
-    if (!baseUrl.pathname.endsWith("/")) baseUrl.pathname += "/";
-    return { baseUrl, apiKey };
+    baseUrl = new URL(rawEndpoint);
   } catch {
-    return undefined;
+    return { ok: false, reason: "invalid-endpoint" };
   }
+
+  if (
+    baseUrl.protocol !== "https:" ||
+    baseUrl.username ||
+    baseUrl.password ||
+    baseUrl.search ||
+    baseUrl.hash ||
+    isIP(baseUrl.hostname) !== 0 ||
+    ["localhost", "local", "internal"].some((suffix) =>
+      baseUrl.hostname.toLowerCase() === suffix ||
+      baseUrl.hostname.toLowerCase().endsWith(`.${suffix}`))
+  ) return { ok: false, reason: "invalid-endpoint" };
+  if (DENIED_HOSTS.test(baseUrl.hostname)) return { ok: false, reason: "unsupported-provider" };
+
+  if (!baseUrl.pathname.endsWith("/")) baseUrl.pathname += "/";
+  return { ok: true, baseUrl, apiKey };
 }
 
 function getModelUrl(baseUrl: URL, upstreamPath: string): URL {
@@ -112,8 +126,9 @@ async function proxyModelRequest(
   method: "GET" | "POST",
 ): Promise<void> {
   const config = getModelConfig();
-  if (!config) {
-    sendError(res, 503, "The Ayatrisya model endpoint is not configured.");
+  if (!config.ok) {
+    req.log.warn({ reason: config.reason }, "Ayatrisya hosted model configuration rejected");
+    sendError(res, 503, modelConfigErrors[config.reason]);
     return;
   }
 

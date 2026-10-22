@@ -20,7 +20,7 @@ An authenticated Firebase test account was used for a real request:
 - `GET /api/model/health` → **503**, `The Ayatrisya model endpoint is not configured.`
 - `POST /api/model/chat` with a minimal test prompt → **503**, the same message.
 
-The configured hosted endpoint is HTTP and private/local. The server accepts only HTTPS endpoints and rejects private/local addresses, so it returns the error before forwarding the prompt upstream. **No model received the test prompt; live inference is not verified.**
+The configured hosted endpoint is HTTP and private/local. The server rejects it before forwarding the prompt upstream. **No model received the test prompt; live inference is not verified.** The development gateway now returns a specific configuration message for this case: hosted requests require HTTPS, and local/private model URLs belong in Ayatrisya Desktop settings.
 
 ## User-validation plan
 

@@ -71,17 +71,35 @@ describe("authenticated Ayatrisya model gateway", () => {
     const call = await startApi();
     const response = await call("/api/model/health");
     expect(response.status).toBe(503);
-    expect(await response.json()).toMatchObject({ error: "The Ayatrisya model endpoint is not configured." });
+    expect(await response.json()).toMatchObject({
+      error: "The Ayatrisya hosted model service is not configured. Configure its server-side endpoint and API key.",
+    });
     expect(upstream).not.toHaveBeenCalled();
   });
 
-  it("rejects loopback and known third-party inference endpoints", async () => {
+  it("rejects local HTTP endpoints with a desktop-only explanation before any upstream request", async () => {
+    vi.stubEnv("AYATRISYA_MODEL_ENDPOINT", "http://192.168.1.20:1234/v1/");
+    const upstream = vi.fn();
+    vi.stubGlobal("fetch", upstream);
+    const call = await startApi();
+    const response = await call("/api/model/health");
+    expect(response.status).toBe(503);
+    const body = await response.json() as { error: string };
+    expect(body.error).toContain("require HTTPS");
+    expect(body.error).toContain("Ayatrisya Desktop");
+    expect(upstream).not.toHaveBeenCalled();
+  });
+
+  it("rejects third-party inference endpoints without making an upstream request", async () => {
     vi.stubEnv("AYATRISYA_MODEL_ENDPOINT", "https://api.openai.com/v1/");
     const upstream = vi.fn();
     vi.stubGlobal("fetch", upstream);
     const call = await startApi();
     const response = await call("/api/model/health");
     expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({
+      error: "This provider is not permitted for Ayatrisya hosted inference.",
+    });
     expect(upstream).not.toHaveBeenCalled();
   });
 
