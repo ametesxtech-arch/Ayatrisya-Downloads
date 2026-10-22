@@ -1,6 +1,8 @@
 # Legal publication blockers — internal
 
 These are implementation and owner-review blockers, not public contact details.
+The document and claim evidence is tracked in the internal register at
+`../../../docs/OWNER-VERIFIED-DOCUMENTATION-REGISTER.md`.
 
 ## Privacy Policy
 

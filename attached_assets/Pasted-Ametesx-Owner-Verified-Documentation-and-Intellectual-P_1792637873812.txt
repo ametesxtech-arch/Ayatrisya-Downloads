@@ -1,0 +1,54 @@
+Ametesx — Owner-Verified Documentation and Intellectual Property Register
+
+Ayatrisya is an Ametesx product. Build on the existing documentation implementation; do not create duplicate pages or invent legal facts.
+
+1. Audit all existing documents
+
+Inspect the public documentation pages, internal IP inventory, repository licence files, package manifests, contributor records, privacy-related configuration, model licences, third-party notices and deployment configuration.
+
+Create an internal register with:
+
+* Document name and location
+* Public or internal status
+* Source of each material claim
+* Whether the claim is owner-confirmed, implementation-verified, externally sourced, or awaiting approval
+* Outstanding evidence and required owner action
+* Last reviewed date, without inventing a review date
+
+2. Protect Ametesx’s original work
+
+Document the intended ownership of eligible original Ametesx work, including original source code, website content, product designs, documentation, graphics and original model code.
+
+For each asset, distinguish:
+
+* Created directly by the owner
+* Created by a contributor or contractor
+* Generated using an external platform or tool
+* Derived from or bundled with third-party material
+* Ownership or licence not yet established
+
+Do not mark an asset as legally owned by Ametesx solely because it appears in an Ametesx product.
+
+3. Check licensing conflicts
+
+Inspect the actual root MIT licence and all relevant package-level licence declarations. Do not assume that the MIT licence applies only to dependencies or only to application code.
+
+Identify conflicting or unclear licence statements. Preserve mandatory third-party notices and model, dataset, font, icon and library licence terms. Do not relicense material without the necessary authority.
+
+4. Legal documents
+
+Keep the Privacy Policy, Terms of Service, Copyright/IP page, Licences and Cookies page accessible through stable routes. Where a document is not approved, show a professional draft-status notice rather than a broken page or unsupported legal claims.
+
+Keep missing legal operator information, verified contact details, jurisdiction, endpoint-retention terms and rights provenance as explicit owner-review items. Do not invent them.
+
+5. Owner approval workflow
+
+Provide a private internal checklist that allows the owner to review and confirm factual statements. Owner confirmation must not be treated as proof of a third-party assignment, licence permission, company registration or legal transfer that has not actually occurred.
+
+Do not expose private notes, credentials, internal file paths or sensitive deployment information on public pages.
+
+6. Final verification
+
+Test the public documentation routes, footer links, responsive layouts, typecheck, lint, existing tests and production build. Report exact results and outstanding blockers.
+
+Do not label the entire documentation set “owner-verified” unless every included claim has a traceable basis and the necessary approvals have actually been obtained.
