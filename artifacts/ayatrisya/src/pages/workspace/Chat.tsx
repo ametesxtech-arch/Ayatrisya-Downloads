@@ -205,9 +205,10 @@ export function ChatPage({ path, goto, notify }: { path: string; goto: (h: strin
             {!guest && <><input ref={fileRef} type="file" multiple hidden onChange={(e) => pick(e.target.files)} data-testid="input-attachments" />
             <input ref={zipRef} type="file" accept=".zip,application/zip" hidden onChange={(e) => pick(e.target.files)} data-testid="input-zip-attachment" />
             <IconButton label="Attach files (stored locally)" onClick={() => fileRef.current?.click()} className="chat-composer-tool" data-testid="button-attach"><Paperclip size={17} /></IconButton>
+            <IconButton label="Upload ZIP archive" onClick={() => zipRef.current?.click()} className="chat-composer-tool" data-testid="button-upload-zip"><Archive size={17} /></IconButton>
             <ActionMenu label="Other chat actions" up items={[
-              { label: 'Upload ZIP archive', hint: '10 MB max', onSelect: () => zipRef.current?.click() },
               { label: 'Open voice studio', onSelect: () => goto('/workspace/voice') },
+              { label: 'Open coding workspace', onSelect: () => goto('/workspace/coding') },
             ]}><MoreHorizontal size={17} /></ActionMenu></>}
           <label className="sr-only" htmlFor="composer">Message</label>
           <textarea id="composer" ref={taRef} rows={1} value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing && (prefs.enterToSend ? !e.shiftKey : (e.ctrlKey || e.metaKey))) { e.preventDefault(); void send(); } }} placeholder="Write a message..." className="chat-composer-input" data-testid="input-message" aria-describedby="composer-hint" />

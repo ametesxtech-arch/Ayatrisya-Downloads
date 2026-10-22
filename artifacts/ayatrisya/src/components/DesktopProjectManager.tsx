@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'wouter';
 import {
   ChevronRight, Code2, FileCode2, Folder, FolderOpen, FolderPlus, RefreshCw,
   Save, SquareTerminal, Trash2,
@@ -67,6 +68,7 @@ export function DesktopProjectManager() {
       <div>
         <h2 className="display text-lg font-semibold">Local coding agent requires Ayatrisya Desktop</h2>
         <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-400">The website cannot read your computer’s project files or run commands. Open this coding workspace in Ayatrisya Desktop to choose an authorized project folder. In desktop, code is sent only after your approval, edits require individual approval, and each suggested check requires a separate operating-system confirmation.</p>
+        <Link href="/desktop" className="mt-3 inline-flex min-h-9 items-center rounded-lg border border-white/10 px-3 text-xs font-medium text-slate-200 hover:bg-white/[.06]" data-testid="link-desktop-for-local-folders">Get Ayatrisya Desktop to open a local folder</Link>
       </div>
     </div>
   </section>;

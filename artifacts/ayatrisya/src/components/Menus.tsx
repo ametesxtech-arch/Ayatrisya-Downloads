@@ -43,7 +43,7 @@ export function FloatingMenu({ x, y, items, onClose, label = 'Actions' }: { x: n
 export function ActionMenu({ label, items, children, className = '', up = false }: { label: string; items: MenuItem[]; children?: ReactNode; className?: string; up?: boolean }) {
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
   return <>
-    <button aria-label={label} aria-haspopup="menu" aria-expanded={!!pos} data-tip={label} onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); setPos({ x: Math.max(8, r.right - 200), y: up ? Math.max(8, r.top - items.length * 36 - 20) : r.bottom + 4 }); }} className={`grid size-9 place-items-center rounded-lg text-slate-400 hover:bg-white/[.07] hover:text-white ${className}`}>{children ?? <MoreHorizontal size={16} />}</button>
+    <button type="button" aria-label={label} aria-haspopup="menu" aria-expanded={!!pos} data-tip={label} onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); setPos({ x: Math.max(8, r.right - 200), y: up ? Math.max(8, r.top - items.length * 36 - 20) : r.bottom + 4 }); }} className={`grid size-9 place-items-center rounded-lg text-slate-400 hover:bg-white/[.07] hover:text-white ${className}`}>{children ?? <MoreHorizontal size={16} />}</button>
     {pos && <FloatingMenu x={pos.x} y={pos.y} items={items} label={label} onClose={() => setPos(null)} />}
   </>;
 }
