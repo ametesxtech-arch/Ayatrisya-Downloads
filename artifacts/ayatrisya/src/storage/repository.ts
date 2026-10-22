@@ -168,7 +168,7 @@ export class LocalRepository {
     return paginate(items, { limit: 500, ...options });
   }
   getItem(id: string) { return this.get<ProjectItem>("projectItems", id); }
-  async saveItem(input: {id?: string; title: string; kind: ProjectItem["kind"]; content?: string; projectId?: string|null; tags?: string[]; completed?: boolean}): Promise<ProjectItem> {
+  async saveItem(input: {id?: string; title: string; kind: ProjectItem["kind"]; content?: string; projectId?: string|null; tags?: string[]; completed?: boolean; attachmentId?: string}): Promise<ProjectItem> {
     return operations.atomic(this,["projectItems","projects","attachments"],async(tx,owner)=>{
     const old:ProjectItem|undefined = input.id ? await tx.objectStore("projectItems").get([owner,input.id]) : undefined;
     if (input.id && !old) throw new Error("Item no longer exists.");

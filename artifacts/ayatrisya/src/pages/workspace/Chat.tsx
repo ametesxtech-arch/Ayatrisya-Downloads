@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'wouter';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { ArrowDown, Check, Copy, RefreshCw, MoreHorizontal, Mic, Paperclip, Pencil, Send, Square, Trash2, X, Sparkles, ArrowUpRight, MessageCircle, Code2, Lightbulb, ShieldCheck } from 'lucide-react';
+import { ArrowDown, Check, Copy, RefreshCw, MoreHorizontal, Mic, Paperclip, Pencil, Send, Square, Trash2, X, Sparkles, ArrowUpRight, Code2, Lightbulb, ShieldCheck, Archive } from 'lucide-react';
 import { Button, ConfirmDialog, IconButton, Modal, Notice, Skeleton, LoadError } from '@/components/Primitives';
 import { AttachmentChip } from '@/components/AttachmentPreview';
 import { repository } from '@/storage/repository';
@@ -77,7 +77,7 @@ export function ChatPage({ path, goto, notify }: { path: string; goto: (h: strin
   const [consent, setConsent] = useState(false), [ask, setAsk] = useState<{ cid: string; history: Turn; after?: () => Promise<void> } | null>(null), [remember, setRemember] = useState(false);
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null), [confirmDel, setConfirmDel] = useState(false), [renaming, setRenaming] = useState<string | null>(null), [delMsg, setDelMsg] = useState<Message | null>(null), [resubmit, setResubmit] = useState<{ m: Message; text: string } | null>(null), [copied, setCopied] = useState<string | null>(null), [atBottom, setAtBottom] = useState(true);
   const acts = useConvActions({ notify, goto, onDeleted: () => goto('/workspace') });
-  const abortRef = useRef<AbortController | null>(null), jobIdRef = useRef<string | null>(null), retryRef = useRef<{ cid: string; history: Turn } | null>(null), endRef = useRef<HTMLDivElement>(null), fileRef = useRef<HTMLInputElement>(null), taRef = useRef<HTMLTextAreaElement>(null);
+  const abortRef = useRef<AbortController | null>(null), jobIdRef = useRef<string | null>(null), retryRef = useRef<{ cid: string; history: Turn } | null>(null), endRef = useRef<HTMLDivElement>(null), fileRef = useRef<HTMLInputElement>(null), zipRef = useRef<HTMLInputElement>(null), taRef = useRef<HTMLTextAreaElement>(null);
   useEffect(() => () => {
     abortRef.current?.abort();
     if (jobIdRef.current) modelClient.cancelJob(jobIdRef.current);
@@ -202,8 +202,13 @@ export function ChatPage({ path, goto, notify }: { path: string; goto: (h: strin
         {id && !available && <p className="chat-model-footnote" data-testid="status-model-local-only">Selected model unavailable. New messages are saved locally and not sent.</p>}
         {files.length > 0 && <div className="chat-attachments" data-testid="list-pending-attachments">{files.map((f, i) => <span key={`${f.name}-${i}`} className="chat-attachment"><Paperclip size={13} /><span className="truncate">{f.name}</span><span className="shrink-0">{formatBytes(f.size)}</span><button type="button" aria-label={`Remove ${f.name}`} data-testid={`button-remove-attachment-${i}`} onClick={() => setFiles(files.filter((_, j) => j !== i))}><X size={14} /></button></span>)}<span className="chat-attachment-note">Attachments stay in this browser and are never sent to a model.</span></div>}
         <div className="chat-composer" data-testid="chat-composer">
-           {!guest && <><input ref={fileRef} type="file" multiple hidden onChange={(e) => pick(e.target.files)} data-testid="input-attachments" />
-           <IconButton label="Attach files (stored locally)" onClick={() => fileRef.current?.click()} className="chat-composer-tool" data-testid="button-attach"><Paperclip size={17} /></IconButton></>}
+            {!guest && <><input ref={fileRef} type="file" multiple hidden onChange={(e) => pick(e.target.files)} data-testid="input-attachments" />
+            <input ref={zipRef} type="file" accept=".zip,application/zip" hidden onChange={(e) => pick(e.target.files)} data-testid="input-zip-attachment" />
+            <IconButton label="Attach files (stored locally)" onClick={() => fileRef.current?.click()} className="chat-composer-tool" data-testid="button-attach"><Paperclip size={17} /></IconButton>
+            <ActionMenu label="Other chat actions" up items={[
+              { label: 'Upload ZIP archive', hint: '10 MB max', onSelect: () => zipRef.current?.click() },
+              { label: 'Open voice studio', onSelect: () => goto('/workspace/voice') },
+            ]}><MoreHorizontal size={17} /></ActionMenu></>}
           <label className="sr-only" htmlFor="composer">Message</label>
           <textarea id="composer" ref={taRef} rows={1} value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing && (prefs.enterToSend ? !e.shiftKey : (e.ctrlKey || e.metaKey))) { e.preventDefault(); void send(); } }} placeholder="Write a message..." className="chat-composer-input" data-testid="input-message" aria-describedby="composer-hint" />
            {!guest && <Link href="/workspace/voice" aria-label="Open voice studio" title="Voice studio" data-testid="link-voice-studio" className="chat-composer-tool grid size-10 shrink-0 place-items-center rounded-xl text-slate-400 hover:bg-white/[.07] hover:text-white"><Mic size={17} /></Link>}

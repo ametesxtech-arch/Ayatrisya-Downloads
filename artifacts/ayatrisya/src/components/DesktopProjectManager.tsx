@@ -224,7 +224,7 @@ export function DesktopProjectManager() {
         <h2 id="desktop-projects-heading" className="display mt-1 text-lg font-semibold">Local project folders</h2>
         <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-400">Open folders only after choosing them. Files stay on this computer; removing access never deletes your files. Web projects remain available separately.</p>
       </div>
-      <Button onClick={() => void addFolder()} disabled={busy}><FolderPlus size={15} />Add local folder</Button>
+      <Button onClick={() => void addFolder()} disabled={busy} data-testid="button-open-local-folder"><FolderPlus size={15} />Open folder</Button>
     </div>
 
     {error && <p className="mt-3 rounded-lg border border-rose-400/20 bg-rose-400/[.06] p-3 text-xs text-rose-200" role="alert">{error}</p>}

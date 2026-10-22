@@ -1,7 +1,7 @@
 export const MAX_FILE_BYTES = 10 * 1024 * 1024;
 export const allowedExtensions = new Set([
   "txt", "md", "csv", "json", "pdf", "png", "jpg", "jpeg", "gif", "webp",
-  "mp3", "wav", "ogg", "webm", "m4a", "ts", "tsx", "py", "css", "glb", "gltf", "obj",
+  "mp3", "wav", "ogg", "webm", "m4a", "ts", "tsx", "py", "css", "glb", "gltf", "obj", "zip",
 ]);
 export function validateFile(file: Pick<File, "name" | "size" | "type">) {
   if (!file.name.trim() || file.name.length > 255) throw new Error("Choose a file with a valid name (up to 255 characters).");
@@ -25,6 +25,7 @@ export function validateFileBytes(file:Pick<File,"name"|"size"|"type">,bytes:Uin
   const ascii=(start:number,end:number)=>String.fromCharCode(...bytes.subarray(start,end));
   const starts=(values:number[])=>values.every((value,index)=>bytes[index]===value);
   const signatures:Record<string,()=>boolean>={
+    zip:()=>ascii(0,2)==="PK"&&([0x03,0x05,0x07].includes(bytes[2])),
     png:()=>starts([137,80,78,71,13,10,26,10]),jpg:()=>starts([255,216,255]),jpeg:()=>starts([255,216,255]),
     gif:()=>/^GIF8[79]a$/.test(ascii(0,6)),webp:()=>ascii(0,4)==="RIFF"&&ascii(8,12)==="WEBP",
     pdf:()=>ascii(0,5)==="%PDF-",wav:()=>ascii(0,4)==="RIFF"&&ascii(8,12)==="WAVE",
@@ -35,7 +36,7 @@ export function validateFileBytes(file:Pick<File,"name"|"size"|"type">,bytes:Uin
   };
   if(signatures[extension]){
     if(!signatures[extension]())throw new Error("The file contents do not match its stated format. Nothing was stored.");
-    const expected:Record<string,string[]>={png:["image/png"],jpg:["image/jpeg"],jpeg:["image/jpeg"],gif:["image/gif"],webp:["image/webp"],pdf:["application/pdf"],wav:["audio/wav","audio/x-wav","audio/wave"],ogg:["audio/ogg","application/ogg"],webm:["audio/webm","video/webm"],mp3:["audio/mpeg","audio/mp3"],m4a:["audio/mp4","audio/x-m4a"],glb:["model/gltf-binary"]};
+    const expected:Record<string,string[]>={png:["image/png"],jpg:["image/jpeg"],jpeg:["image/jpeg"],gif:["image/gif"],webp:["image/webp"],pdf:["application/pdf"],wav:["audio/wav","audio/x-wav","audio/wave"],ogg:["audio/ogg","application/ogg"],webm:["audio/webm","video/webm"],mp3:["audio/mpeg","audio/mp3"],m4a:["audio/mp4","audio/x-m4a"],glb:["model/gltf-binary"],zip:["application/zip","application/x-zip-compressed"]};
     if(file.type&&file.type!=="application/octet-stream"&&!expected[extension]?.includes(file.type))throw new Error("File content, extension and MIME type disagree.");
     if(extension==="glb"){
       if(bytes.length<20||ascii(16,20)!=="JSON")throw new Error("This GLB has no valid JSON scene.");

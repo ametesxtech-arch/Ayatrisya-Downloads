@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { openDB } from "idb";
 import { LocalRepository, storageError } from "../storage/repository";
 import { exportBackup, inspectBackup, restoreBackup } from "../storage/backup";
-import { validateFile } from "../storage/files";
+import { validateFile, validateFileBytes } from "../storage/files";
 import { defaultPreferences } from "../storage/types";
 
 const active:LocalRepository[]=[];
@@ -72,6 +72,16 @@ describe("IndexedDB local repository",()=>{
     await repo.deleteAttachment(file.id);
     expect((await repo.getMessages(c.id))[0].attachmentIds).toEqual([]);
     await repo.deleteConversation(c.id);expect(await repo.getMessages(c.id)).toEqual([]);
+  });
+  it("stores ZIP archives locally and allows a coding task to reference the archive",async()=>{
+    const repo=local();
+    const zip=new File([Uint8Array.from([0x50,0x4b,0x05,0x06,...Array(18).fill(0)])],"project.zip",{type:"application/zip"});
+    validateFileBytes(zip,new Uint8Array(await zip.arrayBuffer()));
+    const attachment=await repo.addFile(zip);
+    const task=await repo.saveItem({title:"Review project.zip",kind:"code",content:"Review the archive safely.",attachmentId:attachment.id});
+    expect(task.attachmentId).toBe(attachment.id);
+    expect(await (await repo.getFile(attachment.id))?.size).toBe(22);
+    expect(() => validateFileBytes(new File(["not a ZIP"],"broken.zip",{type:"application/zip"}),new TextEncoder().encode("not a ZIP"))).toThrow(/contents do not match/);
   });
   it("upgrades an existing v1 database without dropping stored conversations",async()=>{
     const name=`migration-${crypto.randomUUID()}`;
