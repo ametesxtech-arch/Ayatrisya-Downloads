@@ -77,7 +77,7 @@ repository file.
    attribution set before bundling or redistributing assets.
 5. Obtain model and dataset provenance and license details from the configured
    endpoint owner before making claims about original Ayatrisya models.
-6. Keep `/copyright` in draft status and keep the rights-request contact marked
-   pending until a verified, monitored channel and the ownership records are
-   available.
+6. Keep `/copyright` limited to conditional, source-supported information.
+   Internal approval and rights-provenance status remain in the publication
+   checklist; do not imply verified ownership beyond the evidence recorded here.
 

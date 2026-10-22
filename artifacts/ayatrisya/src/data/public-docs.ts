@@ -1,6 +1,5 @@
 import {
   copyrightNotice,
-  licenseScopeStatement,
   originalMaterialsProtectionStatement,
   ownershipCategories,
   ownershipScopeStatement,
@@ -366,7 +365,6 @@ export type PublicLegalPage = {
   path: string;
   title: string;
   description: string;
-  reviewed: boolean;
   sections: PublicSection[];
 };
 
@@ -374,13 +372,12 @@ export const publicLegalPages: PublicLegalPage[] = [
   {
     path: '/terms',
     title: 'Terms of Service',
-    description: 'Draft use terms for the Ayatrisya app and its experimental features.',
-    reviewed: false,
+    description: 'Use expectations and important limitations for the Ayatrisya service.',
     sections: [
       {
-        heading: 'Draft status',
+        heading: 'About this page',
         paragraphs: [
-          'Draft for owner and legal review. This page is not legal advice and is not a claim that a binding agreement has been accepted. Owner review is required to identify the service operator, effective date, governing law, jurisdiction, and a valid notice/contact process.',
+          'This page summarizes current use expectations. It is informational and does not record acceptance of an agreement.',
         ],
       },
       {
@@ -411,7 +408,7 @@ export const publicLegalPages: PublicLegalPage[] = [
       {
         heading: 'Suspension, termination, and liability',
         paragraphs: [
-          'The service operator may need to restrict access to address abuse, security, legal, or operational issues. The app currently has no published suspension/appeal process. Any final limitation of liability, warranty disclaimer, indemnity, governing-law, and termination terms require qualified legal review and owner confirmation; no jurisdiction or enforceability claim is made here.',
+          'Access may be limited for security, abuse, legal, or operational reasons. This information page does not set a specific appeal process, warranty, liability limit, indemnity, or governing-law term.',
         ],
       },
     ],
@@ -420,7 +417,6 @@ export const publicLegalPages: PublicLegalPage[] = [
     path: '/copyright',
     title: 'Copyright and intellectual property',
     description: 'How Ayatrisya identifies its own material and third-party materials.',
-    reviewed: false,
     sections: [
       {
         heading: 'Ametesx original materials',
@@ -433,7 +429,7 @@ export const publicLegalPages: PublicLegalPage[] = [
       {
         heading: 'Ayatrisya product materials',
         paragraphs: [
-          'Ayatrisya is a product of Ametesx, as confirmed by its owner. This confirms the product relationship; it does not by itself establish authorship, copyright assignment, trademark registration, or exclusive rights in any specific code, design, logo, document, model, contribution, or other asset. The legal status of the Ametesx and Ayatrisya names and logos, including any registrations, has not been verified here.',
+          'Ayatrisya is a product of Ametesx, as confirmed by its owner. This confirms the product relationship; it does not by itself establish authorship, copyright assignment, or exclusive rights in any specific code, design, logo, document, model, contribution, or other asset. The Ametesx and Ayatrisya names and logos identify Ametesx and its product; no trademark registration claim is made here.',
         ],
       },
       {
@@ -452,14 +448,13 @@ export const publicLegalPages: PublicLegalPage[] = [
       {
         heading: 'Open-source licenses and attributions',
         paragraphs: [
-          licenseScopeStatement,
-          'See the Third-party licenses and attributions page for the selected dependency and bundled-scanner notices. That page is not a complete software bill of materials; remaining package and asset licenses require review before distribution.',
+          'Open-source and third-party licenses continue to apply to the software or assets they cover. See the Third-party licenses and attributions page for selected dependency and bundled-scanner notices; that page is not a complete inventory of every release component.',
         ],
       },
       {
         heading: 'User content, models, and generated output',
         paragraphs: [
-          'This page does not claim ownership of user-submitted content or model output, and it does not guarantee that generated output is original or free of third-party rights. No foundation-model weights are bundled with the web application; the model-service operator, model licenses, training data rights, and terms for generated output have not been verified.',
+          'This page does not claim ownership of user-submitted content or model output, and it does not guarantee that generated output is original or free of third-party rights. The web application does not bundle foundation-model weights. Third-party models and generated media remain subject to the terms and rights applicable to their owners.',
         ],
       },
       {
@@ -473,13 +468,12 @@ export const publicLegalPages: PublicLegalPage[] = [
   {
     path: '/licenses',
     title: 'Third-party licenses and attributions',
-    description: 'Selected direct dependencies, bundled scanner notices, and unresolved license review.',
-    reviewed: false,
+    description: 'Selected third-party software, font, and bundled scanner notices.',
     sections: [
       {
         heading: 'Scope of this inventory',
         paragraphs: [
-          'This is a first-party dependency/asset inventory based on the Ayatrisya package manifest, installed package metadata, and checked bundled notices. It is not a complete software bill of materials: a full transitive dependency and release-artifact scan is still required before distribution.',
+          'This page lists selected dependency and bundled-asset notices from the checked Ayatrisya package metadata and release files. It is not a complete inventory of every transitive dependency or release artifact; additional licenses may apply to specific distributions.',
         ],
       },
       {
@@ -514,7 +508,7 @@ export const publicLegalPages: PublicLegalPage[] = [
         heading: 'Models and unresolved review',
         paragraphs: [
           'No foundation-model weights are bundled in the Ayatrisya web app. The configured model endpoint and any models it serves must be audited and attributed separately by the service owner; no model license is asserted here.',
-          'Owner review required: produce a complete transitive SBOM/license report for each published web and desktop build, confirm the repository MIT scope, confirm Google Fonts delivery/notice requirements, and audit model-service licenses separately.',
+          'Model-service software, model weights, datasets, and externally hosted assets are separate from the dependency licenses listed here. Check the license and attribution supplied with the specific service or distribution.',
         ],
       },
     ],
@@ -523,7 +517,6 @@ export const publicLegalPages: PublicLegalPage[] = [
     path: '/cookies',
     title: 'Cookies and storage notice',
     description: 'First-party browser storage and provider-managed authentication state.',
-    reviewed: false,
     sections: [
       {
         heading: 'First-party browser storage',
@@ -535,7 +528,7 @@ export const publicLegalPages: PublicLegalPage[] = [
       {
         heading: 'Analytics and controls',
         paragraphs: [
-          'No analytics or advertising tracker was found in the inspected Ayatrisya client source and package dependencies. This statement should be rechecked against the production deployment, tag manager, CDN, and any injected scripts before publication.',
+          'No analytics or advertising tracker was found in the inspected Ayatrisya client source and package dependencies. This describes the inspected application source and does not establish what a hosting provider or injected deployment script may collect.',
           'To remove local workspace records, use Settings → Storage and backup. Clearing browser/site storage also removes locally stored Ayatrisya data and may sign the user out. The app does not currently provide in-app account deletion.',
         ],
       },

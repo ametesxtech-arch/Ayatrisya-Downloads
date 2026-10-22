@@ -92,21 +92,25 @@ try {
     await call('Page.navigate',{url:`http://127.0.0.1:80${route}`});
     await wait(`location.pathname===${JSON.stringify(route)}`,`${route} route`);
     await wait(`document.querySelector('h1')?.textContent.toLowerCase().includes(${JSON.stringify(title.toLowerCase())})`,`${route} heading`);
-    assert(await evaluate(`!!document.querySelector('footer a[href="/privacy"]')&&!!document.querySelector('footer a[href="/copyright"]')&&!!document.querySelector('footer a[href="/terms"]')&&!!document.querySelector('footer a[href="/documentation"]')`),`${route} is missing a required public policy/documentation footer link`);
+    assert(await evaluate(`!!document.querySelector('footer a[href="/privacy"]')&&!!document.querySelector('footer a[href="/copyright"]')&&!!document.querySelector('footer a[href="/terms"]')&&!!document.querySelector('footer a[href="/documentation"]')&&!!document.querySelector('footer a[href="/contact"]')&&!!document.querySelector('footer a[href="/licenses"]')&&!!document.querySelector('footer a[href="/cookies"]')`),`${route} is missing a required public policy/documentation footer link`);
     for(const width of [360,390,768,1366,1920]){await setViewport(width,width<640?844:1000,width<1024);await assertNoHorizontalOverflow(`${route} at ${width}px`);}
   }
   await call('Page.navigate',{url:'http://127.0.0.1:80/documentation'});
   await wait(`document.querySelector('[data-testid="input-documentation-search"]')`,'documentation search');
   await click('footer a[href="/privacy"]');
   await wait(`location.pathname==='/privacy'&&document.querySelector('h1')?.textContent.includes('Privacy Policy')`,'footer privacy link navigation');
-  assert(await evaluate(`document.querySelector('[data-testid="legal-page-unpublished"]')?.textContent.includes('Privacy Policy is not yet published')`),'Privacy route must remain unpublished');
-  assert(await evaluate(`document.querySelector('[data-testid="legal-page-unpublished"]')?.textContent.includes('Effective date: Pending owner and qualified legal approval')`),'Privacy effective date must remain pending');
-  assert.equal(await evaluate(`document.body.innerText.includes('Owner review required before publishing')`),false,'Internal privacy draft must not be rendered on the public route');
+  assert(await evaluate(`document.querySelector('[data-testid="legal-page-unpublished"]')?.textContent.includes('The official Privacy Policy is not available yet')`),'Privacy route must clearly state that the official policy is not published');
+  assert.equal(await evaluate(`document.body.innerText.includes('Effective date:')||document.body.innerText.includes('Owner review required before publishing')`),false,'Internal privacy checklist and pending date must not be rendered publicly');
+  await call('Page.navigate',{url:'http://127.0.0.1:80/terms'});
+  await wait(`document.querySelector('h1')?.textContent.includes('Terms of Service')`,'terms page');
+  assert(await evaluate(`document.body.innerText.includes('This page summarizes current use expectations. It is informational and does not record acceptance of an agreement.')`),'Terms must not imply an accepted agreement');
+  assert.equal(await evaluate(`document.body.innerText.includes('Draft for owner and legal review')`),false,'Internal review banner must not appear on Terms');
   await call('Page.navigate',{url:'http://127.0.0.1:80/contact'});
   await wait(`document.querySelector('[data-testid="legal-page-unpublished"]')?.textContent.includes('No verified, monitored contact channel')`,'contact publication gate');
   await call('Page.navigate',{url:'http://127.0.0.1:80/copyright'});
   await wait(`document.querySelector('h1')?.textContent.includes('Copyright and intellectual property')`,'copyright page');
-   assert(await evaluate(`document.body.innerText.includes('Draft for owner and legal review')&&document.body.innerText.includes('no verified, monitored contact channel is configured')`),'Copyright page must remain visibly gated on owner review and a verified rights contact');
+   assert(await evaluate(`document.body.innerText.includes('official rights-request contact details are not available yet')`),'Copyright page must not invent a rights contact');
+   assert.equal(await evaluate(`document.body.innerText.includes('Draft for owner and legal review')`),false,'Internal legal-review banner must not appear on Copyright');
    assert(await evaluate(`document.body.innerText.includes('Ayatrisya is a product of Ametesx, as confirmed by its owner.')&&document.body.innerText.includes('does not by itself establish authorship, copyright assignment')`),'Copyright page must state the owner-confirmed product relationship without implying all assets are owned');
    assert(await evaluate(`document.body.innerText.includes('Copyright notice and permitted use')&&document.body.innerText.includes('Open-source licenses and attributions')&&document.body.innerText.includes('© '+new Date().getFullYear()+' Ametesx · Ayatrisya. All rights reserved.')`),'Copyright page must contain the shared product notice and required IP sections');
    assert(await evaluate(`document.body.innerText.includes('no permission to copy, modify, redistribute')&&document.body.innerText.includes('Applicable open-source and third-party licenses remain controlling')`),'Copyright page must limit permissions to verified proprietary materials and preserve applicable licenses');
@@ -114,7 +118,7 @@ try {
   await wait(`document.querySelector('[data-testid="input-documentation-search"]')`,'documentation search after footer navigation');
   await input('[data-testid="input-documentation-search"]','loopback');
   await wait(`document.body.innerText.toLowerCase().includes('loopback')`,'documentation search results');
-  passed.push('Documentation and legal routes load with shared footer links; Privacy stays unpublished with a pending effective date; Copyright remains a draft; responsive widths 360, 390, 768, 1366, and 1920px; documentation search works');
+  passed.push('Documentation and legal routes load with shared footer links; Privacy remains unpublished, Terms do not imply acceptance, Copyright claims remain conditional, and legal pages stay responsive at 360, 390, 768, 1366, and 1920px');
   await call('Page.navigate',{url:'http://127.0.0.1:80/'});
   await wait(`document.querySelector('a[aria-label="Get Ayatrisya Desktop"]')`,'landing page after desktop status check');
   const testEmail=process.env.AYATRISYA_TEST_EMAIL,testPassword=process.env.AYATRISYA_TEST_PASSWORD;

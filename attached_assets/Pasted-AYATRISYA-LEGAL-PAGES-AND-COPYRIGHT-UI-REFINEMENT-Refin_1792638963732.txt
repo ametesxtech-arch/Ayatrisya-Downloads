@@ -1,0 +1,56 @@
+AYATRISYA — LEGAL PAGES AND COPYRIGHT UI REFINEMENT
+
+Refine the existing implementation. Do not rebuild the website, change the product branding, or remove valid legal protections.
+
+1. Main objective
+
+Make the Privacy Policy, Terms of Service, Copyright & Intellectual Property, and Contact pages look like finished, premium Ayatrisya website pages rather than internal legal-review drafts.
+
+2. Copyright
+
+Keep a consistent footer notice:
+
+© 2026 Ametesx. All rights reserved.
+
+On Ayatrisya-specific pages, use:
+
+© 2026 Ametesx · Ayatrisya. All rights reserved.
+
+Use the current year dynamically in code rather than hardcoding 2026 permanently.
+
+State that Ayatrisya is an Ametesx product. Describe ownership only for original materials Ametesx owns or is authorised to protect. Preserve all applicable third-party and open-source licence notices. Do not claim that every dependency, model, generated output, or contributor’s work belongs exclusively to Ametesx.
+
+3. Privacy Policy
+
+Do not invent data practices. Review the actual implementation and document what is verifiably true about:
+
+* Data collected and account information.
+* Browser/local storage and uploaded files.
+* Authentication, analytics and external services, if present.
+* Whether requests or content can be sent to remote model providers.
+* Retention, deletion, security and user contact options.
+
+Where a material fact cannot be verified, keep it in an internal implementation checklist and flag it for resolution before publication. Do not publish a misleading assurance or falsely claim that a draft policy is legally effective.
+
+4. Terms of Service
+
+Keep clear, readable terms covering permitted use, account security, experimental features, AI-output limitations, third-party services and intellectual property. Do not invent a legal entity, governing jurisdiction, contact address or accepted agreement that has not been verified.
+
+5. Contact page
+
+Do not fabricate an email address or support channel. If no verified contact method exists, show a restrained, honest message explaining that official contact details are not yet available. Keep the page visually polished.
+
+6. Visual design
+
+* Retain Ayatrisya’s dark theme and violet accents.
+* Use a consistent readable content width, spacing, headings and typography.
+* Remove repeated warning banners and duplicated disclaimers.
+* Keep necessary disclosures concise and place internal review tasks outside public-facing pages.
+* Make all pages responsive on mobile and desktop.
+* Keep navigation and footer links working.
+
+7. Important implementation rule
+
+Separate internal legal-review status from public-facing content. Create or update a private-to-the-repository checklist, such as docs/LEGAL_PUBLICATION_CHECKLIST.md, for unresolved facts and required approvals. Do not expose internal checklists in the public website.
+
+Inspect the existing routes and shared components first. Reuse the existing implementation wherever possible. Run the relevant tests, typecheck and build. Report exactly which files changed and which publication blockers remain. Do not claim that legal review or publication approval has occurred.

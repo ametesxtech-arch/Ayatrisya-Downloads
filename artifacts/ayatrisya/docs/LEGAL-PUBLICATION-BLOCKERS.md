@@ -1,6 +1,6 @@
-# Legal publication blockers — internal
+# Legal publication checklist — internal
 
-These are implementation and owner-review blockers, not public contact details.
+**Repository-only review checklist. Never render this file on the public site.**
 The document and claim evidence is tracked in the internal register at
 `../../../docs/OWNER-VERIFIED-DOCUMENTATION-REGISTER.md`.
 
@@ -24,20 +24,36 @@ The document and claim evidence is tracked in the internal register at
   document.
 - [ ] Have qualified counsel determine applicable legal requirements after the
   operator and user locations are confirmed.
-- [ ] Approve and set the effective date only after the preceding items are
-  resolved.
+- [ ] Approve the policy and set its effective date only after the preceding
+  items are resolved.
 
-**Current state:** The public `/privacy` route only shows “not published” and
-“Effective date: Pending owner and qualified legal approval.” The evidence-based draft is in
-`PRIVACY-POLICY-DRAFT.md` and is not imported into the web bundle.
+**Public state:** `/privacy` shows that the official policy is not available.
+The evidence-based draft is internal and is not imported into the web bundle.
+No effective date or privacy guarantee is displayed.
+
+## Terms of Service
+
+- [ ] Confirm the service operator and intended contractual relationship.
+- [ ] Review account security, permitted use, AI output limitations, feature
+  availability, third-party services, intellectual property, termination,
+  warranty, liability, and notice procedures with qualified counsel.
+- [ ] Decide whether and how users accept final terms. The current page does not
+  record acceptance of an agreement.
+- [ ] Confirm any effective date and jurisdiction with the owner and counsel.
+
+**Public state:** `/terms` is informational use guidance. It explicitly does
+not record acceptance of an agreement. This does not mean final terms have been
+approved.
 
 ## Copyright and IP page
 
 - [ ] Confirm the root `package.json` MIT declaration scope. No root `LICENSE`
   text was found in the checked repository; do not treat the manifest alone as
   proof that all product materials are MIT-licensed.
-- [ ] Review the internal asset/provenance inventory at `../../../docs/IP-INVENTORY.md`
-  and resolve unknown creators, evidence, licenses, and ownership actions.
+- [ ] Review the internal asset/provenance inventory at
+  `../../../docs/IP-INVENTORY.md` and
+  `../../../docs/OWNER-VERIFIED-DOCUMENTATION-REGISTER.md`; resolve unknown
+  creators, evidence, licenses, and ownership actions.
 - [ ] Confirm package-level license declarations, repository notices, and
   third-party attributions for each published web/desktop build.
 - [ ] Inventory authorship of code and creative work, including founder,
@@ -50,6 +66,21 @@ The document and claim evidence is tracked in the internal register at
 - [ ] Configure a real, monitored rights-request contact before publishing the
   page as final.
 
-**Current state:** `/copyright` remains visibly marked for owner/legal review.
-The text makes ownership conditional on verified authorship and rights and does
-not claim that any transfer, registration, or license has been completed.
+**Public state:** `/copyright` provides conditional ownership information,
+product-specific notice, and third-party license qualifications. It does not
+claim that every product asset is owned by Ametesx. This checklist, not the
+public page, tracks approval and provenance blockers.
+
+## Contact, Licenses, and Storage
+
+- [ ] Add only verified, monitored contact channels; do not publish
+  placeholders.
+- [ ] Generate a complete release SBOM and verify all bundled software, fonts,
+  models, datasets, rules, and assets before distribution.
+- [ ] Recheck analytics, CDN, hosting, and injected scripts against the actual
+  production deployment before making privacy or cookie assurances.
+
+**Public state:** `/contact` says official contact details are unavailable.
+`/licenses` identifies selected notices and states that it is not a complete
+inventory. `/cookies` describes checked source behavior and does not claim to
+describe deployment-provider collection.

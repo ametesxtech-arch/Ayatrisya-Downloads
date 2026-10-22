@@ -32,8 +32,5 @@ export const ownershipCategories = [
 export const thirdPartyIntellectualPropertyStatement =
   'Third-party dependencies, pretrained models, datasets, fonts, icons, libraries, rules, and externally generated assets remain subject to their respective owners and license terms. Ametesx does not claim third-party ownership merely because material is used, integrated, hosted, or distributed with an Ametesx product.';
 
-export const licenseScopeStatement =
-  'The root package manifest declares MIT, but no root LICENSE text was found in the checked repository and the declaration scope is unresolved. The Ayatrisya package is private and does not declare a package license. No license was changed by this notice. Do not infer that the root declaration applies only to dependencies, only to application code, or to every product asset.';
-
 export const rightsContactStatus =
-  'Copyright and IP enquiries: no verified, monitored contact channel is configured. This page remains a draft until the contact channel, license scope, and creator/contributor ownership records are reviewed.';
+  'Copyright and IP enquiries: official rights-request contact details are not available yet.';

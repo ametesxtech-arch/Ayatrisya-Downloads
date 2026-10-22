@@ -132,7 +132,7 @@ function DocumentationPage() {
 function LegalPage({ page }: { page: PublicLegalPage }) {
   usePageMetadata(page.title, page.description);
   return (
-    <PublicPageFrame eyebrow="Ametesx · Ayatrisya" title={page.title} description={page.description} reviewNotice={!page.reviewed}>
+    <PublicPageFrame eyebrow="Ametesx · Ayatrisya" title={page.title} description={page.description}>
       <SectionContent sections={page.sections} />
     </PublicPageFrame>
   );
@@ -142,29 +142,24 @@ function UnpublishedPage({
   title,
   description,
   detail,
-  effectiveDate,
+  statusTitle,
 }: {
   title: string;
   description: string;
   detail: string;
-  effectiveDate?: string;
+  statusTitle: string;
 }) {
   usePageMetadata(title, description);
   return (
     <PublicPageFrame eyebrow="Ametesx · Ayatrisya" title={title} description={description}>
       <section
-        className="rounded-2xl border border-amber-300/20 bg-amber-300/[.045] p-5 sm:p-7"
+        className="rounded-2xl border border-violet-300/[.14] bg-[radial-gradient(ellipse_at_top_left,rgba(124,92,255,.12),transparent_62%)] bg-[#14151c] p-5 sm:p-7"
         role="status"
         data-testid="legal-page-unpublished"
       >
-        <p className="text-[10px] font-semibold uppercase tracking-[.16em] text-amber-200">Not published</p>
-        <h2 className="display mt-3 text-xl font-semibold tracking-[-.03em] text-slate-100">{title} is not yet published</h2>
-        <p className="mt-3 text-sm leading-7 text-slate-400">{detail}</p>
-        {effectiveDate && (
-          <p className="mt-4 border-t border-white/[.07] pt-4 text-xs text-slate-300">
-            Effective date: <span className="font-medium text-amber-200">{effectiveDate}</span>
-          </p>
-        )}
+        <p className="inline-flex rounded-full border border-violet-300/15 bg-violet-300/[.06] px-2.5 py-1 text-[10px] font-medium tracking-wide text-violet-200">Official information</p>
+        <h2 className="display mt-4 text-xl font-semibold tracking-[-.03em] text-slate-100">{statusTitle}</h2>
+        <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-400">{detail}</p>
       </section>
     </PublicPageFrame>
   );
@@ -181,9 +176,9 @@ export function PublicLegalRoute() {
     return (
       <UnpublishedPage
         title="Privacy Policy"
-        description="The Ayatrisya Privacy Policy is not yet published."
-        detail="This notice is not in effect. The data-flow review, service and retention disclosures, privacy contact, and qualified legal review are still pending."
-        effectiveDate="Pending owner and qualified legal approval"
+        description="Information about how Ayatrisya handles data."
+        statusTitle="The official Privacy Policy is not available yet"
+        detail="An official Privacy Policy has not been published for Ayatrisya. This page does not set an effective date or make privacy guarantees."
       />
     );
   }
@@ -191,8 +186,9 @@ export function PublicLegalRoute() {
     return (
       <UnpublishedPage
         title="Contact"
-        description="Contact details for Ayatrisya and Ametesx are not yet published."
-        detail="No verified, monitored contact channel is available on this page."
+        description="Official contact information for Ayatrisya."
+        statusTitle="Official contact details are not available yet"
+        detail="No verified, monitored contact channel is available to publish here."
       />
     );
   }

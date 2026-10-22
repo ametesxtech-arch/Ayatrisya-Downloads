@@ -81,13 +81,11 @@ export function PublicPageFrame({
   eyebrow,
   title,
   description,
-  reviewNotice = false,
   children,
 }: {
   eyebrow: string;
   title: string;
   description: string;
-  reviewNotice?: boolean;
   children: ReactNode;
 }) {
   return (
@@ -103,11 +101,6 @@ export function PublicPageFrame({
             <h1 className="display mt-3 text-4xl font-semibold tracking-[-.055em] text-slate-50 sm:text-5xl">{title}</h1>
             <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-400">{description}</p>
           </div>
-          {reviewNotice && (
-            <div role="note" className="mt-6 rounded-xl border border-amber-300/20 bg-amber-300/[.055] px-4 py-3 text-xs leading-6 text-amber-100/85">
-              Draft for owner and legal review. Unknown company, contact, jurisdiction, endpoint-retention, or license details are explicitly marked and must be verified before publication.
-            </div>
-          )}
           <div className="public-reading mt-8">{children}</div>
         </div>
       </main>
