@@ -27,17 +27,21 @@ def main() -> int:
         default=None,
         help="Override the checkpoint's recorded train/validation split seed.",
     )
+    parser.add_argument(
+        "--all-data",
+        action="store_true",
+        help="Evaluate all supplied documents as an external holdout set.",
+    )
     parser.add_argument("--batch-size", type=int, default=2)
     args = parser.parse_args()
     model, tokenizer, payload = load_model_checkpoint(args.checkpoint.resolve())
     training_state = payload.get("training_state", {})
-    split_seed = (
-        args.seed
-        if args.seed is not None
-        else int(training_state.get("seed", 17))
-    )
+    split_seed = args.seed if args.seed is not None else int(training_state.get("seed", 17))
     documents, dataset_hash, duplicates = load_documents([path.resolve() for path in args.data])
-    _, validation_documents = split_documents(documents, seed=split_seed)
+    if args.all_data:
+        validation_documents = documents
+    else:
+        _, validation_documents = split_documents(documents, seed=split_seed)
     dataset = TextWindowDataset(
         validation_documents,
         tokenizer,
@@ -78,6 +82,7 @@ def main() -> int:
         "model": "Ayatrisya Seed",
         "checkpoint_step": payload.get("training_state", {}).get("step"),
         "split_seed": split_seed,
+        "evaluation_scope": "all_supplied_documents" if args.all_data else "checkpoint_seeded_validation_split",
         "dataset_sha256": dataset_hash,
         "duplicate_documents_removed": duplicates,
         "held_out_tokens": token_total,

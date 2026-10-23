@@ -177,6 +177,23 @@ python -m training.evaluate \
     ../attached_assets/ayatrisya_seed_synthetic_v2_1792739038113.jsonl
 ```
 
+To generate additional original synthetic examples and evaluate on a separate,
+unseen prompt-template set:
+
+```bash
+python -m training.generate_synthetic_expansion
+python -m training.train --config configs/expanded-experimental.json --dry-run
+python -m training.train --config configs/expanded-experimental.json
+python -m training.evaluate \
+  --checkpoint checkpoints/seed-expanded-experimental.pt \
+  --data data/generated/synthetic-expansion-eval.jsonl \
+  --all-data
+```
+
+Generated examples are intended for internal experiments only; no public
+license is assigned. The separate holdout is synthetic and is not a real-user
+or independent capability benchmark.
+
 ## Project ownership and third-party components
 
 First-party Ayatrisya Seed source and original documentation are intended to
