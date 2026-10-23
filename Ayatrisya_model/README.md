@@ -1,0 +1,157 @@
+# Ayatrisya Seed
+
+**Experimental, locally trainable model project. Not an assistant or production model.**
+
+Ayatrisya Seed contains first-party code for a small decoder-only Transformer, a
+UTF-8 byte tokenizer, deterministic dataset preparation, resumable training,
+evaluation, and a loopback-only inference server. The brief's required folder
+was not present as a populated project; this implementation lives in the
+existing empty `Ayatrisya_model/` directory. No existing weights, model repo,
+or training corpus were assumed.
+
+## Important status
+
+- The architecture and software pipeline are implemented.
+- The included corpus is synthetic test text created only for a short software
+  smoke run. It is not useful pretraining data.
+- A smoke-trained checkpoint is an experimental artifact, ignored by Git, and
+  must not be used to answer real users.
+- This project is not connected to the Ayatrisya website or desktop application.
+- No external model or AI inference API is called. The API server binds only to
+  `127.0.0.1`.
+- Windows commands are documented, but this Linux workspace does not verify
+  Windows installation or execution.
+
+## Requirements
+
+- Python 3.10 or newer
+- PyTorch 2.6 or newer
+- CPU works; CUDA is optional and detected rather than assumed
+- Enough free memory and disk space for the chosen configuration
+
+### Linux/macOS setup
+
+From this directory:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+python -m pip install -r requirements.txt
+```
+
+### Windows PowerShell setup
+
+```powershell
+py -3.13 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+python -m pip install -r requirements.txt
+```
+
+If that Python version has no matching wheel on the official PyTorch index,
+install a currently supported Python version rather than bypassing package
+verification. The commands above have not been run on Windows.
+
+## Verify and run the smoke experiment
+
+```bash
+python -m unittest discover -s tests -v
+python -m training.train --config configs/smoke.json --dry-run
+python -m training.train --config configs/smoke.json
+```
+
+The smoke config is intentionally tiny and trains for six steps on the
+synthetic sample. It writes `checkpoints/seed-smoke.pt` and a neighboring
+`.run.json` record. Checkpoints are excluded from Git. To make a real training
+run, use only data you are authorized to use and record the source and license.
+
+Validate provided text without downloading anything:
+
+```bash
+python -m training.prepare_data path/to/authorized-data.txt
+```
+
+Supported inputs are UTF-8 `.txt` files split into documents by blank lines and
+UTF-8 `.jsonl` files with one object containing a string `text` field per line.
+Exact duplicate documents are removed. Documents are split before training to
+avoid document-level train/validation leakage. At least two distinct documents
+are required. Every training configuration must include a
+`data_provenance` owner statement describing sources and permission basis. The
+software records that statement but cannot verify legal rights.
+
+## Local inference API
+
+Only after training a checkpoint:
+
+```bash
+python -m inference.server --checkpoint checkpoints/seed-smoke.pt
+```
+
+The server listens on `127.0.0.1:49382`; it cannot bind to a LAN or public
+interface. It does not enable browser CORS by default. An exact browser origin
+can be added with `--allow-origin`, but that exposes a no-login local generation
+route to scripts running on that origin; do not use it for the public website.
+The future desktop integration should use Ayatrisya's authenticated,
+permission-controlled local bridge instead.
+
+`GET /health` returns ready only when a compatible checkpoint loaded.
+`POST /v1/generate` accepts JSON:
+
+```json
+{
+  "request_id": "0123456789abcdef0123456789abcdef",
+  "prompt": "A short prompt",
+  "max_new_tokens": 32,
+  "temperature": 0.8,
+  "top_k": 40,
+  "top_p": 0.95,
+  "repetition_penalty": 1.0
+}
+```
+
+`POST /v1/cancel` with the same `request_id` requests cancellation. Cancellation
+and timeouts are checked between token-generation steps; an in-progress CPU
+matrix operation cannot be interrupted. Requests are serialized, prompts are
+not written to logs, bodies/prompts/outputs have size bounds, and generated
+tokens are capped. A missing or invalid checkpoint returns not-ready/errors;
+the server never silently substitutes random weights or canned responses.
+
+This API is a local development interface only. It has not been connected to
+Ayatrisya's authenticated model gateway or desktop bridge. Do not forward
+private conversations to it from a browser or network service.
+
+## Training and evaluation
+
+Set either `max_steps`, `epochs`, or both in the training configuration;
+training stops at the first configured limit. Gradient accumulation works
+across batches and partial final updates are scaled by the number of batches
+actually accumulated. The run record stores the dataset content hash, seed, model/training
+configuration, actual steps, train and validation losses, validation
+perplexity, elapsed time, token counts, and device. Evaluation reports
+next-byte cross-entropy/perplexity only; it does not establish reasoning,
+instruction-following, coding skill, safety, or user readiness.
+
+For a held-out evaluation of a checkpoint:
+
+```bash
+python -m training.evaluate \
+  --checkpoint checkpoints/seed-smoke.pt \
+  --data data/samples/smoke.txt
+```
+
+The same deterministic split seed must be used to make evaluations comparable.
+Use a sufficiently large, legally usable, carefully separated corpus for
+meaningful evaluation.
+
+## Project ownership and third-party components
+
+First-party Ayatrisya Seed source and original documentation are intended to
+remain proprietary to Ametesx; no public license to copy, modify, redistribute,
+or commercially reuse those materials is granted by this repository. This
+notice does not change third-party software or data licenses. PyTorch and its
+transitive dependencies remain governed by their own upstream terms. See
+`PROPRIETARY-NOTICE.md` and `MODEL_CARD.md`; confirm ownership authority and
+any required assignments before distribution.

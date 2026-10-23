@@ -1,0 +1,26 @@
+Ayatrisya Seed is an experimental language model built by Ametesx.
+This short synthetic paragraph exists only to test the local training code.
+
+The model reads a sequence of bytes and predicts the next byte.
+Training loss measures prediction on the supplied training examples.
+
+A held out document is kept separate from the training documents.
+Evaluation measures the model on examples it did not train on.
+
+A small number of steps is a software smoke test, not useful pretraining.
+The resulting checkpoint is experimental and should not answer real users.
+
+The local inference server loads model weights from an explicit checkpoint.
+It returns an error when the checkpoint is absent or incompatible.
+
+Ayatrisya Seed does not download data or call a hosted AI provider.
+The owner must review every training source before using it.
+
+The tokenizer maps UTF-8 bytes to stable integer identifiers.
+Special tokens mark the beginning, padding, and end of a sequence.
+
+The training run records its seed, data checksum, steps, and measured losses.
+A reproducible record helps distinguish a real experiment from a claim.
+
+This generated sample is intentionally simple and repetitive.
+It demonstrates execution only and does not establish language ability.

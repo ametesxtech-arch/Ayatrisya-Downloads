@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+.venv/
+checkpoints/*
+!checkpoints/.gitkeep
+data/raw/
+data/processed/
+runs/
+.pytest_cache/
+.coverage
