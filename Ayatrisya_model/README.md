@@ -159,9 +159,9 @@ python -m training.evaluate \
   --data data/samples/smoke.txt
 ```
 
-The same deterministic split seed must be used to make evaluations comparable.
-Use a sufficiently large, legally usable, carefully separated corpus for
-meaningful evaluation.
+Evaluation defaults to the split seed recorded in the checkpoint; pass
+`--seed` only to intentionally evaluate a different split. Use a sufficiently
+large, legally usable, carefully separated corpus for meaningful evaluation.
 
 ## Project ownership and third-party components
 

@@ -21,12 +21,23 @@ def main() -> int:
     )
     parser.add_argument("--checkpoint", type=Path, required=True)
     parser.add_argument("--data", type=Path, nargs="+", required=True)
-    parser.add_argument("--seed", type=int, default=17)
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=None,
+        help="Override the checkpoint's recorded train/validation split seed.",
+    )
     parser.add_argument("--batch-size", type=int, default=2)
     args = parser.parse_args()
-    documents, dataset_hash, duplicates = load_documents([path.resolve() for path in args.data])
-    _, validation_documents = split_documents(documents, seed=args.seed)
     model, tokenizer, payload = load_model_checkpoint(args.checkpoint.resolve())
+    training_state = payload.get("training_state", {})
+    split_seed = (
+        args.seed
+        if args.seed is not None
+        else int(training_state.get("seed", 17))
+    )
+    documents, dataset_hash, duplicates = load_documents([path.resolve() for path in args.data])
+    _, validation_documents = split_documents(documents, seed=split_seed)
     dataset = TextWindowDataset(
         validation_documents,
         tokenizer,
@@ -66,6 +77,7 @@ def main() -> int:
     report = {
         "model": "Ayatrisya Seed",
         "checkpoint_step": payload.get("training_state", {}).get("step"),
+        "split_seed": split_seed,
         "dataset_sha256": dataset_hash,
         "duplicate_documents_removed": duplicates,
         "held_out_tokens": token_total,
