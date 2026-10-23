@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import random
+import re
 from pathlib import Path
 from typing import Iterable
 
@@ -97,6 +98,23 @@ def load_documents(paths: Iterable[Path]) -> tuple[list[str], str, int]:
     return documents, source_hash.hexdigest(), duplicate_count
 
 
+def document_group_key(document: str) -> str:
+    """Keep JSONL examples with the same instruction template in one split."""
+    instruction_lines: list[str] = []
+    collecting = False
+    for line in document.splitlines():
+        if not collecting and line.startswith("Instruction: "):
+            collecting = True
+            instruction_lines.append(line.removeprefix("Instruction: "))
+        elif collecting and line.startswith(("Input: ", "Response: ")):
+            break
+        elif collecting:
+            instruction_lines.append(line)
+    value = "\n".join(instruction_lines) if instruction_lines else document
+    normalized = re.sub(r"[^\w]+", " ", value.casefold(), flags=re.UNICODE).strip()
+    return normalized or hashlib.sha256(document.encode("utf-8")).hexdigest()
+
+
 def split_documents(
     documents: list[str],
     *,
@@ -107,11 +125,35 @@ def split_documents(
         raise ValueError("at least two documents are required for a held-out split")
     if not 0.05 <= validation_fraction <= 0.5:
         raise ValueError("validation_fraction must be between 0.05 and 0.5")
-    indices = list(range(len(documents)))
-    random.Random(seed).shuffle(indices)
-    validation_size = max(1, round(len(indices) * validation_fraction))
-    validation_size = min(validation_size, len(indices) - 1)
-    validation_indices = set(indices[:validation_size])
+    grouped: dict[str, list[int]] = {}
+    for index, document in enumerate(documents):
+        grouped.setdefault(document_group_key(document), []).append(index)
+    if len(grouped) < 2:
+        raise ValueError("at least two distinct instruction groups are required for a held-out split")
+
+    target_size = max(1, round(len(documents) * validation_fraction))
+    max_validation_size = len(documents) - 1
+    groups = list(grouped.items())
+    random.Random(seed).shuffle(groups)
+
+    # A small subset-sum pass gets close to the requested document fraction
+    # while assigning each normalized instruction template wholly to one split.
+    choices: dict[int, tuple[str, ...]] = {0: ()}
+    for group_key, indices in groups:
+        for size in sorted(tuple(choices), reverse=True):
+            new_size = size + len(indices)
+            if new_size <= max_validation_size and new_size not in choices:
+                choices[new_size] = choices[size] + (group_key,)
+    validation_size = min(
+        (size for size in choices if size > 0),
+        key=lambda size: (abs(size - target_size), size < target_size),
+    )
+    validation_groups = set(choices[validation_size])
+    validation_indices = {
+        index
+        for group_key in validation_groups
+        for index in grouped[group_key]
+    }
     train = [doc for index, doc in enumerate(documents) if index not in validation_indices]
     validation = [doc for index, doc in enumerate(documents) if index in validation_indices]
     return train, validation

@@ -93,9 +93,10 @@ and UTF-8 JSONL (including newline-delimited JSON saved with a `.txt`
 extension). A JSONL record may contain a `text` field or `instruction`,
 optional `input`, and `output` fields. Instruction records are serialized as
 plain text for next-byte training; this is not instruction fine-tuning.
-Exact duplicate documents are removed. Documents are split before training to
-avoid document-level train/validation leakage. At least two distinct documents
-are required. Every training configuration must include a
+Exact duplicate documents are removed. Documents are split before training;
+normalized matching instruction templates stay in one split to prevent
+template leakage. At least two distinct instruction groups are required.
+Every training configuration must include a
 `data_provenance` owner statement describing sources and permission basis. The
 software records that statement but cannot verify legal rights.
 
@@ -162,6 +163,19 @@ python -m training.evaluate \
 Evaluation defaults to the split seed recorded in the checkpoint; pass
 `--seed` only to intentionally evaluate a different split. Use a sufficiently
 large, legally usable, carefully separated corpus for meaningful evaluation.
+
+For the combined user-provided synthetic corpus, use the separate experimental
+configuration and checkpoint:
+
+```bash
+python -m training.train --config configs/synthetic-v2-experimental.json --dry-run
+python -m training.train --config configs/synthetic-v2-experimental.json
+python -m training.evaluate \
+  --checkpoint checkpoints/seed-synthetic-v2-experimental.pt \
+  --data \
+    ../attached_assets/Pasted--instruction-Why-do-we-see-lightning-before-hearing-thu_1792736481903.txt \
+    ../attached_assets/ayatrisya_seed_synthetic_v2_1792739038113.jsonl
+```
 
 ## Project ownership and third-party components
 

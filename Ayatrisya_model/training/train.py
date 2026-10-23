@@ -12,7 +12,12 @@ import torch
 
 from model.config import ModelConfig
 from model.tokenizer import ByteTokenizer
-from training.data import TextWindowDataset, load_documents, split_documents
+from training.data import (
+    TextWindowDataset,
+    document_group_key,
+    load_documents,
+    split_documents,
+)
 from training.trainer import TrainingConfig, train_model
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -110,6 +115,15 @@ def main() -> int:
     print(f"Parameter estimate: {model_config.parameter_count_estimate():,}")
     print(f"Conservative training memory estimate: {estimate / (1024**2):.1f} MiB")
     print(f"Distinct documents: {len(documents)}; removed exact duplicates: {duplicate_count}")
+    train_group_count = len({document_group_key(document) for document in train_documents})
+    validation_group_count = len(
+        {document_group_key(document) for document in validation_documents}
+    )
+    print(
+        f"Instruction groups: {len({document_group_key(document) for document in documents})}; "
+        f"train={train_group_count}; validation={validation_group_count}; "
+        "template leakage=0"
+    )
     print(f"Train windows: {len(train_data)}; validation windows: {len(validation_data)}")
     if args.dry_run:
         print("Dry run passed; no model weights were trained or saved.")

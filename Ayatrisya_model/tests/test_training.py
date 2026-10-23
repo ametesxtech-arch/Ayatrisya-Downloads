@@ -11,7 +11,12 @@ from model.config import ModelConfig
 from model.tokenizer import ByteTokenizer
 from model.transformer import SeedTransformer
 from training.checkpoint import load_model_checkpoint, save_checkpoint
-from training.data import TextWindowDataset, load_documents, split_documents
+from training.data import (
+    TextWindowDataset,
+    document_group_key,
+    load_documents,
+    split_documents,
+)
 from training.trainer import TrainingConfig, train_model
 
 
@@ -68,6 +73,26 @@ class DataAndTrainingTests(unittest.TestCase):
             self.assertIn("Instruction: Why does lightning arrive before thunder?", docs[0])
             self.assertIn("Response: Light travels faster than sound.", docs[0])
             self.assertNotIn("CC0-1.0", docs[0])
+
+    def test_repeated_instruction_templates_stay_in_one_split(self) -> None:
+        documents = [
+            "Topic: Math\nInstruction: Calculate the sum and show a quick check\n"
+            f"Input: {left} + {right}\nResponse: {left + right}"
+            for left, right in ((1, 2), (4, 7), (10, 12), (13, 19))
+        ] + [
+            f"Instruction: Unique prompt {index}\nResponse: Unique answer {index}"
+            for index in range(8)
+        ]
+        train, validation = split_documents(documents, seed=31, validation_fraction=0.2)
+        train_groups = {document_group_key(document) for document in train}
+        validation_groups = {document_group_key(document) for document in validation}
+        self.assertTrue(train)
+        self.assertTrue(validation)
+        self.assertTrue(train_groups.isdisjoint(validation_groups))
+        self.assertEqual(
+            (train, validation),
+            split_documents(documents, seed=31, validation_fraction=0.2),
+        )
 
     def test_windows_are_padded_without_crossing_document_boundaries(self) -> None:
         docs = ["short", "another"]

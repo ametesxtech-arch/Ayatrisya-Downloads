@@ -4,7 +4,7 @@ import argparse
 import json
 from pathlib import Path
 
-from training.data import load_documents, split_documents
+from training.data import document_group_key, load_documents, split_documents
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -31,9 +31,16 @@ def main() -> int:
         "files": [str(path) for path in files],
         "dataset_sha256": dataset_hash,
         "distinct_documents": len(documents),
+        "distinct_instruction_groups": len(
+            {document_group_key(document) for document in documents}
+        ),
         "duplicate_documents_removed": removed,
         "train_documents": len(train),
         "validation_documents": len(validation),
+        "train_instruction_groups": len({document_group_key(document) for document in train}),
+        "validation_instruction_groups": len(
+            {document_group_key(document) for document in validation}
+        ),
         "sources_are_owner_supplied": True,
         "provenance_owner_statement": args.provenance,
         "provenance_verified_by_tool": False,

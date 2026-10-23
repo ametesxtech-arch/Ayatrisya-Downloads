@@ -1,0 +1,35 @@
+{
+  "model": {
+    "vocab_size": 260,
+    "d_model": 64,
+    "n_layers": 2,
+    "n_heads": 4,
+    "max_seq_len": 256,
+    "dropout": 0.05,
+    "pad_token_id": 256,
+    "bos_token_id": 257,
+    "eos_token_id": 258
+  },
+  "training": {
+    "max_steps": null,
+    "epochs": 20,
+    "batch_size": 2,
+    "gradient_accumulation_steps": 1,
+    "learning_rate": 0.001,
+    "weight_decay": 0.01,
+    "warmup_steps": 10,
+    "gradient_clip_norm": 1.0,
+    "seed": 41,
+    "num_workers": 0,
+    "use_mixed_precision": false,
+    "eval_batches": 32,
+    "checkpoint_every": 100
+  },
+  "data_files": [
+    "../attached_assets/Pasted--instruction-Why-do-we-see-lightning-before-hearing-thu_1792736481903.txt",
+    "../attached_assets/ayatrisya_seed_synthetic_v2_1792739038113.jsonl"
+  ],
+  "data_provenance": "User says the records were generated as synthetic examples for this project. Both datasets declare original_synthetic_example and CC0-1.0 in record metadata; those license claims have not been independently legally verified.",
+  "checkpoint": "checkpoints/seed-synthetic-v2-experimental.pt",
+  "device": "cpu"
+}
