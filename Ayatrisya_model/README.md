@@ -68,14 +68,31 @@ synthetic sample. It writes `checkpoints/seed-smoke.pt` and a neighboring
 `.run.json` record. Checkpoints are excluded from Git. To make a real training
 run, use only data you are authorized to use and record the source and license.
 
+For the user-provided instruction dataset in the Replit workspace, the bounded
+20-epoch experiment is configured separately:
+
+```bash
+python -m training.train --config configs/user-dataset-fit.json --dry-run
+python -m training.train --config configs/user-dataset-fit.json
+python -m training.evaluate \
+  --checkpoint checkpoints/seed-user-data-fit.pt \
+  --data ../attached_assets/Pasted--instruction-Why-do-we-see-lightning-before-hearing-thu_1792735843206.txt
+```
+
+The input files are not copied into this project. Their license/provenance
+metadata are owner-provided claims, not independently verified by the tool.
+
 Validate provided text without downloading anything:
 
 ```bash
 python -m training.prepare_data path/to/authorized-data.txt
 ```
 
-Supported inputs are UTF-8 `.txt` files split into documents by blank lines and
-UTF-8 `.jsonl` files with one object containing a string `text` field per line.
+Supported inputs are UTF-8 `.txt` files split into documents by blank lines
+and UTF-8 JSONL (including newline-delimited JSON saved with a `.txt`
+extension). A JSONL record may contain a `text` field or `instruction`,
+optional `input`, and `output` fields. Instruction records are serialized as
+plain text for next-byte training; this is not instruction fine-tuning.
 Exact duplicate documents are removed. Documents are split before training to
 avoid document-level train/validation leakage. At least two distinct documents
 are required. Every training configuration must include a

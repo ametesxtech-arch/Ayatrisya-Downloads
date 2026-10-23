@@ -39,9 +39,8 @@ def load_documents(paths: Iterable[Path]) -> tuple[list[str], str, int]:
         source_hash.update(raw)
         content = raw.decode("utf-8", errors="strict")
         suffix = path.suffix.lower()
-        if suffix == ".txt":
-            entries = [part.strip() for part in content.split("\n\n")]
-        elif suffix == ".jsonl":
+        looks_like_jsonl = content.lstrip().startswith("{")
+        if suffix == ".jsonl" or (suffix == ".txt" and looks_like_jsonl):
             entries = []
             for line_number, line in enumerate(content.splitlines(), start=1):
                 if not line.strip():
@@ -50,10 +49,37 @@ def load_documents(paths: Iterable[Path]) -> tuple[list[str], str, int]:
                     item = json.loads(line)
                 except json.JSONDecodeError as error:
                     raise ValueError(f"invalid JSONL at {path}:{line_number}") from error
-                text = item.get("text") if isinstance(item, dict) else None
-                if not isinstance(text, str):
-                    raise ValueError(f"JSONL record at {path}:{line_number} needs a string 'text'")
-                entries.append(text.strip())
+                if not isinstance(item, dict):
+                    raise ValueError(f"JSONL record at {path}:{line_number} must be an object")
+                if isinstance(item.get("text"), str) and item["text"].strip():
+                    text = item["text"].strip()
+                else:
+                    instruction = item.get("instruction")
+                    user_input = item.get("input", "")
+                    output = item.get("output")
+                    if (
+                        not isinstance(instruction, str)
+                        or not instruction.strip()
+                        or not isinstance(user_input, str)
+                        or not isinstance(output, str)
+                        or not output.strip()
+                    ):
+                        raise ValueError(
+                            f"JSONL record at {path}:{line_number} needs either "
+                            "a non-empty 'text' or 'instruction' and 'output' strings"
+                        )
+                    category = item.get("category")
+                    parts = []
+                    if isinstance(category, str) and category.strip():
+                        parts.append(f"Topic: {category.strip()}")
+                    parts.append(f"Instruction: {instruction.strip()}")
+                    if user_input.strip():
+                        parts.append(f"Input: {user_input.strip()}")
+                    parts.append(f"Response: {output.strip()}")
+                    text = "\n".join(parts)
+                entries.append(text)
+        elif suffix == ".txt":
+            entries = [part.strip() for part in content.split("\n\n")]
         else:
             raise ValueError(f"only .txt and .jsonl datasets are supported: {path}")
 

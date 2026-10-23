@@ -11,7 +11,10 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Validate owner-supplied UTF-8 TXT/JSONL documents without downloading data."
+        description=(
+            "Validate owner-supplied UTF-8 TXT/JSONL documents without downloading data. "
+            "JSONL may contain text or instruction/input/output fields."
+        )
     )
     parser.add_argument("files", nargs="+", type=Path)
     parser.add_argument("--seed", type=int, default=17)

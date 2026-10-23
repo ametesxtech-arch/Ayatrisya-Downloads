@@ -37,6 +37,38 @@ class DataAndTrainingTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 load_documents([bad])
 
+    def test_instruction_jsonl_saved_as_txt_is_serialized_as_training_text(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "provided.txt"
+            records = [
+                {
+                    "instruction": "Why does lightning arrive before thunder?",
+                    "input": "",
+                    "output": "Light travels faster than sound.",
+                    "category": "Science",
+                    "license": "CC0-1.0",
+                    "provenance": "original_synthetic_example",
+                },
+                {
+                    "instruction": "What is a held-out set?",
+                    "input": "For a model experiment.",
+                    "output": "Examples reserved for evaluation.",
+                    "category": "Data handling",
+                    "license": "CC0-1.0",
+                    "provenance": "original_synthetic_example",
+                },
+            ]
+            path.write_text(
+                "\n".join(json.dumps(record) for record in records) + "\n",
+                encoding="utf-8",
+            )
+            docs, _, duplicates = load_documents([path])
+            self.assertEqual(duplicates, 0)
+            self.assertEqual(len(docs), 2)
+            self.assertIn("Instruction: Why does lightning arrive before thunder?", docs[0])
+            self.assertIn("Response: Light travels faster than sound.", docs[0])
+            self.assertNotIn("CC0-1.0", docs[0])
+
     def test_windows_are_padded_without_crossing_document_boundaries(self) -> None:
         docs = ["short", "another"]
         dataset = TextWindowDataset(docs, ByteTokenizer(), block_size=16)
