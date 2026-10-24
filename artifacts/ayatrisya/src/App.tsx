@@ -95,6 +95,78 @@ function PrefsEffects() {
   return null;
 }
 
+function MotionEffects() {
+  useEffect(() => {
+    const root = document.documentElement;
+    if (!('IntersectionObserver' in window)) return;
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const candidates = [
+      '.landing-page main section',
+      '.public-page-frame main > div',
+      '.desktop-downloads main > div > section',
+      '.auth-panel',
+      '.workspace-main-content > div > *',
+      '.workspace-main-content section',
+      '.workspace-home > div > section',
+      '.chat-welcome',
+      '.chat-message',
+    ].join(',');
+    const revealObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        const element = entry.target as HTMLElement;
+        element.dataset.motionEntrance = 'visible';
+        revealObserver.unobserve(element);
+      });
+    }, { threshold: 0.08, rootMargin: '0px 0px -5% 0px' });
+
+    const motionAllowed = () => !media.matches &&
+      root.dataset.motion !== 'reduced' &&
+      root.dataset.intensity !== 'none';
+    const markVisible = () => {
+      document.querySelectorAll<HTMLElement>('[data-motion-entrance="pending"]').forEach((element) => {
+        element.dataset.motionEntrance = 'visible';
+        revealObserver.unobserve(element);
+      });
+    };
+    const scan = (scope: ParentNode) => {
+      if (!motionAllowed()) {
+        markVisible();
+        return;
+      }
+      const found: HTMLElement[] = [];
+      if (scope instanceof HTMLElement && scope.matches(candidates)) found.push(scope);
+      scope.querySelectorAll<HTMLElement>(candidates).forEach((element) => found.push(element));
+      found.forEach((element) => {
+        if (element.dataset.motionEntrance) return;
+        element.dataset.motionEntrance = 'pending';
+        revealObserver.observe(element);
+      });
+    };
+    const observer = new MutationObserver((records) => {
+      records.forEach((record) => record.addedNodes.forEach((node) => {
+        if (node instanceof HTMLElement) scan(node);
+      }));
+    });
+    const sync = () => {
+      if (motionAllowed()) scan(document);
+      else markVisible();
+    };
+    const settingsObserver = new MutationObserver(sync);
+    observer.observe(document.body, { childList: true, subtree: true });
+    settingsObserver.observe(root, { attributes: true, attributeFilter: ['data-motion', 'data-intensity'] });
+    media.addEventListener('change', sync);
+    sync();
+    return () => {
+      observer.disconnect();
+      settingsObserver.disconnect();
+      revealObserver.disconnect();
+      media.removeEventListener('change', sync);
+    };
+  }, []);
+  return null;
+}
+
 function Router() {
   return (
     <RoutedBoundary>
@@ -131,6 +203,7 @@ function App() {
           <TooltipProvider>
             <CloudPreferenceSyncProvider>
               <PrefsEffects />
+              <MotionEffects />
               <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
                 <Router />
               </WouterRouter>

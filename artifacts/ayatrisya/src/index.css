@@ -53,11 +53,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
 .display{font-family:var(--app-font-display)}
 .mono{font-family:var(--app-font-mono)}
 .app-noise:before{content:"";position:fixed;inset:0;pointer-events:none;z-index:40;opacity:.022;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E")}
-.reveal{animation:rise .55s both cubic-bezier(.2,.7,.2,1)}
-@keyframes rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
-@media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 html[data-appearance="light"]{background:#e9e8ee}
-html[data-motion="reduced"] *,html[data-motion="reduced"] *:before,html[data-motion="reduced"] *:after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
 .safe-b{padding-bottom:max(env(safe-area-inset-bottom),.75rem)}
 .safe-t{padding-top:env(safe-area-inset-top)}
 @keyframes orbit{to{transform:rotate(360deg)}}
@@ -107,12 +103,9 @@ html[data-appearance="light"] ::placeholder{color:#6a7089}
 .wm-reveal{animation:wm-in 800ms var(--ease-out) 1900ms both}
 @keyframes wm-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 html[data-hidden] .brand-mark{animation-play-state:paused!important}
-html[data-intensity="none"] .brand-mark,html[data-intensity="none"] .wm-reveal{animation:none!important;opacity:1}
-@media(prefers-reduced-motion:reduce){.brand-mark,.wm-reveal{animation:none!important;opacity:1}}
 .pend-dot{width:6px;height:6px;border-radius:9999px;background:#a99cff;animation:pend 1s ease-in-out infinite}
 @keyframes pend{0%,100%{opacity:.25;transform:translateY(0)}50%{opacity:1;transform:translateY(-3px)}}
 html[data-hidden] .pend-dot{animation-play-state:paused}
-@media(prefers-reduced-motion:reduce){.pend-dot{animation:none}}
 
 html[data-wallpaper-active="true"] .workspace-shell {
   background-color: #101116 !important;
@@ -140,25 +133,20 @@ html[data-appearance="light"][data-wallpaper-active="true"] .workspace-shell mai
   background-color: rgba(238,239,247,.10);
 }
 
-/* Route entrance, staggered lists, tooltips, control transitions */
+/* Route entrances, staggered lists, tooltips, and control transitions */
 .route-in{animation:route-in var(--dur-slow) var(--ease-out) both}
-@keyframes route-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-.stagger>*{animation:rise var(--dur-slow) var(--ease-out) both}
-.stagger>*:nth-child(2){animation-delay:40ms}.stagger>*:nth-child(3){animation-delay:80ms}.stagger>*:nth-child(4){animation-delay:120ms}.stagger>*:nth-child(5){animation-delay:160ms}.stagger>*:nth-child(6){animation-delay:200ms}.stagger>*:nth-child(n+7){animation-delay:240ms}
-@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes route-in{from{opacity:.45;transform:translateY(8px)}to{opacity:1;transform:none}}
+.stagger>*{animation:rise var(--dur-base) var(--ease-out) both}
+.stagger>*:nth-child(2){animation-delay:35ms}.stagger>*:nth-child(3){animation-delay:70ms}.stagger>*:nth-child(4){animation-delay:105ms}.stagger>*:nth-child(5){animation-delay:140ms}.stagger>*:nth-child(6){animation-delay:175ms}.stagger>*:nth-child(n+7){animation-delay:210ms}
+@keyframes rise{from{opacity:.55;transform:translateY(6px)}to{opacity:1;transform:none}}
 [data-tip]{position:relative}
 [data-tip]::after{content:attr(data-tip);position:absolute;top:100%;left:50%;margin-top:6px;padding:4px 8px;border-radius:6px;background:#23262f;color:#e7e8ee;font-size:11px;line-height:1.3;white-space:nowrap;border:1px solid rgba(255,255,255,.08);opacity:0;transform:translate(-50%,4px);transition:opacity var(--dur-fast) var(--ease-out) 350ms,transform var(--dur-fast) var(--ease-out) 350ms;pointer-events:none;z-index:var(--z-menu)}
 [data-tip]:hover::after,[data-tip]:focus-visible::after{opacity:1;transform:translate(-50%,0)}
 [data-tip][aria-expanded="true"]::after{opacity:0}
-button,a,select,input[type=checkbox]{transition:background-color var(--dur-fast) var(--ease-soft),color var(--dur-fast) var(--ease-soft),border-color var(--dur-fast) var(--ease-soft),opacity var(--dur-fast) var(--ease-soft),transform var(--dur-fast) var(--ease-out)}
-button:not(:disabled):active{transform:scale(.97)}
 [role=menu]{animation:menu-in var(--dur-fast) var(--ease-out) both;transform-origin:top right}
 @keyframes menu-in{from{opacity:0;transform:scale(.97) translateY(-4px)}to{opacity:1;transform:none}}
 [role=dialog]{animation:menu-in var(--dur-base) var(--ease-out) both}
-html[data-intensity="none"] .route-in,html[data-intensity="none"] .stagger>*,html[data-intensity="none"] [role=menu],html[data-intensity="none"] [role=dialog]{animation:none}
 html[data-intensity="subtle"] .stagger>*{animation-delay:0ms!important}
-html[data-motion="reduced"] .route-in,html[data-motion="reduced"] .stagger>*,html[data-motion="reduced"] [role=menu],html[data-motion="reduced"] [role=dialog]{animation:none!important}
-@media(prefers-reduced-motion:reduce){.route-in,.stagger>*,[role=menu],[role=dialog]{animation:none!important}[data-tip]::after{transition:none}}
 
 /* Workspace modes change usable space and density without hiding the mode control. */
 .workspace-sidebar{transition:width var(--dur-base) var(--ease-out),opacity var(--dur-base) var(--ease-out),border-color var(--dur-base) var(--ease-out)}
@@ -470,10 +458,6 @@ html[data-appearance="light"] .chat-thinking small,html[data-appearance="light"]
   .chat-composer-tool{width:34px}
   .chat-send-button{min-width:38px;width:38px}
 }
-@media(prefers-reduced-motion:reduce){
-  .chat-thinking-orbit i{animation:none}
-}
-
 /* Ayatrisya cinematic system: editorial type, mineral charcoal, restrained light. */
 :root{
   --dur-fast:160ms;
@@ -592,9 +576,6 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
   .app-noise main.flex{padding-top:max(4rem,env(safe-area-inset-top));padding-bottom:max(2rem,env(safe-area-inset-bottom))}
   .app-noise main.flex>div.w-full{padding:24px}
 }
-@media(prefers-reduced-motion:reduce){
-  .landing-hero,.product-preview,.landing-capabilities .mt-12.grid>div{animation:none!important;transform:none!important}
-}
 .public-site-header{background:rgba(16,16,20,.92)!important;border-color:rgba(229,223,240,.09)!important}
 .public-site-footer{background:#0d0d11!important;border-color:rgba(229,223,240,.09)!important;padding-bottom:max(2rem,env(safe-area-inset-bottom))}
 .public-page-frame{background:#101014!important}
@@ -648,3 +629,95 @@ html[data-appearance="light"] .desktop-downloads main>div>section:first-of-type{
 html[data-appearance="light"] .auth-page{background:radial-gradient(ellipse at 50% 12%,rgba(94,79,179,.09),transparent 38%),#f2f2f7!important}
 html[data-appearance="light"] .auth-panel{background:rgba(255,255,255,.96)!important;border-color:rgba(46,39,63,.15)!important;box-shadow:0 28px 90px rgba(44,37,62,.12)}
 html[data-appearance="light"] .auth-panel input{background:#f7f6fa;color:#22202c}
+
+/* One motion system across public, account, and workspace surfaces. */
+:root{
+  --motion-control:180ms;
+  --motion-enter:480ms;
+  --motion-distance:14px;
+}
+button,a,summary,[role="button"],select,input[type="checkbox"]{
+  transition:
+    background-color var(--motion-control) var(--ease-soft),
+    color var(--motion-control) var(--ease-soft),
+    border-color var(--motion-control) var(--ease-soft),
+    opacity var(--motion-control) var(--ease-soft),
+    transform var(--motion-control) var(--ease-out),
+    box-shadow var(--motion-control) var(--ease-soft);
+}
+button:focus-visible,a:focus-visible,summary:focus-visible,[role="button"]:focus-visible,
+select:focus-visible,input:focus-visible,textarea:focus-visible{
+  outline-color:#91e3e6;
+  box-shadow:0 0 0 3px rgba(145,227,230,.16);
+}
+button:not(:disabled):active,[role="button"]:active{transform:scale(.965)}
+
+@media(hover:hover) and (pointer:fine){
+  button:not(:disabled):hover,[role="button"]:hover{
+    transform:translateY(-2px) scale(1.015);
+    filter:brightness(1.045);
+    box-shadow:0 9px 24px rgba(145,116,219,.16);
+  }
+  a[href]:hover,summary:hover{transform:translateY(-1px);filter:brightness(1.06)}
+  .landing-capabilities .mt-12.grid>div:hover{transform:translateY(-3px)}
+  .workspace-home button:not(:disabled):hover{transform:translateY(-1px)}
+}
+[data-motion-entrance="pending"]{
+  opacity:0;
+  transform:translateY(var(--motion-distance));
+  transition:opacity var(--motion-enter) var(--ease-out),transform var(--motion-enter) var(--ease-out);
+}
+[data-motion-entrance="visible"]{
+  opacity:1;
+  transform:none;
+}
+html[data-intensity="subtle"]{
+  --motion-control:120ms;
+  --motion-enter:300ms;
+  --motion-distance:5px;
+}
+html[data-intensity="subtle"] .route-in{animation-duration:360ms}
+html[data-intensity="subtle"] .stagger>*{animation-duration:220ms}
+@media(hover:hover) and (pointer:fine){
+  html[data-intensity="subtle"] button:not(:disabled):hover,
+  html[data-intensity="subtle"] [role="button"]:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(145,116,219,.09)}
+}
+html[data-intensity="none"] *,
+html[data-motion="reduced"] *,
+html[data-intensity="none"] *::before,
+html[data-intensity="none"] *::after,
+html[data-motion="reduced"] *::before,
+html[data-motion="reduced"] *::after{
+  animation:none!important;
+  transition:none!important;
+  scroll-behavior:auto!important;
+}
+html[data-intensity="none"] [data-motion-entrance],
+html[data-motion="reduced"] [data-motion-entrance]{
+  opacity:1!important;
+  transform:none!important;
+}
+html[data-intensity="none"] button:not(:disabled):active,
+html[data-intensity="none"] [role="button"]:active,
+html[data-motion="reduced"] button:not(:disabled):active,
+html[data-motion="reduced"] [role="button"]:active{transform:none!important}
+html[data-intensity="none"] button:not(:disabled):hover,
+html[data-intensity="none"] a[href]:hover,
+html[data-intensity="none"] summary:hover,
+html[data-motion="reduced"] button:not(:disabled):hover,
+html[data-motion="reduced"] a[href]:hover,
+html[data-motion="reduced"] summary:hover{transform:none!important}
+html[data-intensity="none"] *:hover,
+html[data-intensity="none"] *:active,
+html[data-motion="reduced"] *:hover,
+html[data-motion="reduced"] *:active{transform:none!important}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+  [data-motion-entrance]{opacity:1!important;transform:none!important}
+  button:not(:disabled):active,[role="button"]:active{transform:none!important}
+  button:not(:disabled):hover,a[href]:hover,summary:hover{transform:none!important}
+  *:hover,*:active{transform:none!important}
+}
+@media(max-width:767px){
+  .landing-capabilities .mt-12.grid>div:hover{transform:none}
+}
