@@ -20,7 +20,7 @@ const legalLinks = [
 
 export function PublicSiteHeader() {
   return (
-    <header className="border-b border-white/[.07] bg-[#101116]/90 backdrop-blur-xl">
+    <header className="public-site-header border-b border-white/[.07] bg-[#101116]/90 backdrop-blur-xl">
       <div className="mx-auto flex min-h-[68px] max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
         <Link href="/" aria-label="Ayatrisya home" className="shrink-0">
           <Brand compact />
@@ -51,7 +51,7 @@ export function PublicSiteHeader() {
 
 export function PublicSiteFooter() {
   return (
-    <footer className="border-t border-white/[.07] bg-[#0d0e12] px-4 py-8 sm:px-6 lg:px-8">
+    <footer className="public-site-footer border-t border-white/[.07] bg-[#0d0e12] px-4 py-8 sm:px-6 lg:px-8">
       <div className="mx-auto flex max-w-7xl flex-col gap-6">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-col gap-2">
@@ -90,7 +90,7 @@ export function PublicPageFrame({
   children: ReactNode;
 }) {
   return (
-    <div className="min-h-[100dvh] bg-[#101116] text-slate-100">
+    <div className="public-page-frame min-h-[100dvh] bg-[#101116] text-slate-100">
       <PublicSiteHeader />
       <main className="mx-auto min-h-[60dvh] max-w-7xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8 lg:py-16">
         <div className="mx-auto max-w-4xl">

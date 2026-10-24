@@ -28,7 +28,7 @@ export function Landing() {
   const [, setPath] = useLocation();
   const { startGuest, user } = useAuth();
   return (
-    <div className="app-noise min-h-[100dvh] overflow-hidden bg-[#101116] text-slate-100">
+    <div className="landing-page app-noise min-h-[100dvh] overflow-hidden bg-[#101116] text-slate-100">
       <header className="landing-header relative z-10 mx-auto flex max-w-[1240px] items-center justify-between gap-3 px-3 py-4 sm:px-5 sm:py-5 lg:px-9">
         <Link href="/" aria-label="Ayatrisya home">
           <Brand />
@@ -59,7 +59,7 @@ export function Landing() {
             <a href="#capabilities" className="rounded-lg px-3 py-2.5 text-xs text-slate-300 hover:bg-white/[.05]">Product</a>
             <a href="#desktop" className="rounded-lg px-3 py-2.5 text-xs text-slate-300 hover:bg-white/[.05]">Desktop</a>
             <Link href="/documentation" className="rounded-lg px-3 py-2.5 text-xs text-slate-300 hover:bg-white/[.05]">Documentation</Link>
-            <a href="#about" className="rounded-lg px-3 py-2.5 text-xs text-slate-300 hover:bg-white/[.05]">Privacy</a>
+            <Link href="/privacy" className="rounded-lg px-3 py-2.5 text-xs text-slate-300 hover:bg-white/[.05]">Privacy</Link>
           </nav>
         </details>
         <div className="landing-header-actions flex shrink-0 items-center gap-1.5 sm:gap-2">
@@ -74,14 +74,17 @@ export function Landing() {
           </Link>
           <Link
             href="/auth/create-account"
+            aria-label="Create account"
             className="landing-account-cta inline-flex shrink-0 items-center whitespace-nowrap rounded-lg bg-[#7768db] px-2.5 py-2.5 text-[10px] font-semibold text-white transition hover:bg-[#887be8] sm:px-4 sm:text-xs"
           >
-            Create account <ArrowRight size={14} className="ml-1 inline" />
+            <span className="landing-account-label-long">Create account</span>
+            <span className="landing-account-label-short">Join</span>
+            <ArrowRight size={14} className="ml-1 inline" />
           </Link>
         </div>
       </header>
       <main>
-        <section className="relative mx-auto grid max-w-[1240px] gap-10 px-5 pb-16 pt-10 sm:pb-24 sm:pt-14 lg:grid-cols-[.95fr_1.05fr] lg:items-center lg:gap-14 lg:px-9 lg:pb-32 lg:pt-24">
+        <section className="landing-hero relative mx-auto grid max-w-[1240px] gap-10 px-5 pb-16 pt-10 sm:pb-24 sm:pt-14 lg:grid-cols-[.95fr_1.05fr] lg:items-center lg:gap-14 lg:px-9 lg:pb-32 lg:pt-24">
           <div className="pointer-events-none absolute -left-24 top-16 h-80 w-80 rounded-full bg-violet-500/[.08] blur-[110px]" />
           <div className="relative reveal">
             <Eyebrow>Ametesx · a workspace for considered work</Eyebrow>
@@ -117,7 +120,7 @@ export function Landing() {
         </section>
         <section
           id="capabilities"
-          className="border-y border-white/[.06] bg-[#13151b] px-5 py-20 md:px-9 md:py-24"
+          className="landing-capabilities border-y border-white/[.06] bg-[#13151b] px-5 py-20 md:px-9 md:py-24"
         >
           <div className="mx-auto max-w-[1160px]">
             <div className="grid gap-4 lg:grid-cols-[.8fr_1.2fr] lg:items-end">
@@ -192,7 +195,7 @@ export function Landing() {
         </section>
         <section
           id="desktop"
-          className="mx-auto grid max-w-[1160px] gap-10 px-5 py-16 sm:py-20 lg:grid-cols-2 lg:items-center lg:gap-12 lg:px-9 lg:py-28"
+          className="landing-desktop mx-auto grid max-w-[1160px] gap-10 px-5 py-16 sm:py-20 lg:grid-cols-2 lg:items-center lg:gap-12 lg:px-9 lg:py-28"
         >
           <div>
             <Eyebrow>Ayatrisya Desktop</Eyebrow>
@@ -257,7 +260,7 @@ export function Landing() {
         </section>
         <section
           id="about"
-          className="border-y border-white/[.06] bg-[#13151b] px-5 py-20 md:px-9 md:py-24"
+          className="landing-about border-y border-white/[.06] bg-[#13151b] px-5 py-20 md:px-9 md:py-24"
         >
           <div className="mx-auto grid max-w-[1160px] gap-8 lg:grid-cols-[.8fr_1.2fr] lg:gap-10">
             <div>
@@ -288,7 +291,7 @@ export function Landing() {
             </div>
           </div>
         </section>
-        <section className="mx-auto max-w-[1160px] px-5 py-20 md:px-9 md:py-28">
+        <section className="landing-close mx-auto max-w-[1160px] px-5 py-20 md:px-9 md:py-28">
           <div className="rounded-2xl border border-violet-300/10 bg-[radial-gradient(ellipse_at_20%_0%,rgba(122,108,222,.13),transparent_55%),#14161c] px-7 py-12 text-center md:py-16">
             <Eyebrow>Private by default</Eyebrow>
             <h2 className="display mx-auto max-w-2xl text-4xl font-semibold tracking-[-.06em] md:text-5xl">
@@ -317,7 +320,7 @@ export function Landing() {
 
 export function ProductPreview() {
   return (
-    <div className="relative reveal [animation-delay:120ms]">
+    <div className="product-preview relative reveal [animation-delay:120ms]">
       <div className="absolute -inset-8 rounded-[40px] bg-violet-500/[.08] blur-[70px]" />
       <div className="relative overflow-hidden rounded-2xl border border-white/[.1] bg-[#14161c] shadow-[0_35px_100px_rgba(0,0,0,.55)]">
         <div className="flex h-11 items-center gap-2 border-b border-white/[.06] px-4">

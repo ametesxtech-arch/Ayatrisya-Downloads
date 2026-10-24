@@ -53,7 +53,7 @@ export function DesktopDownloadsPage() {
   const recommendedPlatform = device === "ios" || device === "android" ? "pwa" : device;
 
   return (
-    <div className="min-h-[100dvh] bg-[#0d0e12] text-slate-100">
+    <div className="desktop-downloads min-h-[100dvh] bg-[#0d0e12] text-slate-100">
       <PublicSiteHeader />
       <main className="px-5 py-8 sm:px-8 sm:py-12">
        <div className="mx-auto max-w-4xl">
