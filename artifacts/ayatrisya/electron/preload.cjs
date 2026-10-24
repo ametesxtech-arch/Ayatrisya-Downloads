@@ -30,6 +30,14 @@ contextBridge.exposeInMainWorld(
       ipcRenderer.invoke("desktop:model-endpoint:request", path, method, body, requestId),
     cancelLocalModelRequest: (requestId) =>
       ipcRenderer.invoke("desktop:model-endpoint:cancel", requestId),
+    getSeedModelHostStatus: () => ipcRenderer.invoke("desktop:seed-host:status"),
+    chooseSeedModelCheckpoint: () => ipcRenderer.invoke("desktop:seed-host:choose-checkpoint"),
+    setSeedModelHostAutoStart: (enabled) => ipcRenderer.invoke("desktop:seed-host:auto-start", enabled),
+    startSeedModelHost: () => ipcRenderer.invoke("desktop:seed-host:start"),
+    stopSeedModelHost: () => ipcRenderer.invoke("desktop:seed-host:stop"),
+    generateSeedModelText: (prompt, requestId) =>
+      ipcRenderer.invoke("desktop:seed-host:generate", prompt, requestId),
+    cancelSeedModelText: (requestId) => ipcRenderer.invoke("desktop:seed-host:cancel", requestId),
     getWarModeStatus: () => ipcRenderer.invoke("desktop:war-mode:status"),
     chooseWarModeFolder: () => ipcRenderer.invoke("desktop:war-mode:choose-folder"),
     scanWarModeFolder: (folderId) => ipcRenderer.invoke("desktop:war-mode:scan-folder", folderId),

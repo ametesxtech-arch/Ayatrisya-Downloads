@@ -29,6 +29,7 @@ const {
 } = require("./war-mode.cjs");
 const { createWarModeYaraService } = require("./war-mode-yara.cjs");
 const { DEFAULT_PORT: COMPANION_PORT, createCompanionServer } = require("./companion-server.cjs");
+const { createSeedModelHost } = require("./seed-model-host.cjs");
 
 const MAX_TEXT_FILE_BYTES = 1024 * 1024;
 const MAX_TERMINAL_OUTPUT_BYTES = 128 * 1024;
@@ -78,6 +79,7 @@ let mainWindow = null;
 let uiOrigin = null;
 let staticServer = null;
 let companionServer = null;
+let seedModelHost = null;
 let projectGrants = [];
 const localModelRequests = new Map();
 const activeCommandRuns = new Map();
@@ -85,6 +87,16 @@ const warModeFolderGrants = new Map();
 let warModeScanRunning = false;
 let activeWarModeChild = null;
 let activeYaraScanId = null;
+
+function getSeedModelHost() {
+  if (!seedModelHost) {
+    seedModelHost = createSeedModelHost({
+      userDataDir: app.getPath("userData"),
+      platform: process.platform,
+    });
+  }
+  return seedModelHost;
+}
 
 app.setName("Ayatrisya");
 app.enableSandbox();
@@ -402,6 +414,7 @@ async function getDesktopRuntimeInfo() {
     platform: process.platform,
     capabilities: [
       "local-model-ipc",
+      "local-seed-model-host",
       "local-project-files",
       "confirmed-command-runner",
       ...(process.platform === "win32" ? ["war-mode-yara", "microsoft-defender"] : []),
@@ -868,6 +881,34 @@ registerIpc("desktop:model-endpoint:get", getLocalModelEndpoint);
 registerIpc("desktop:model-endpoint:set", setLocalModelEndpoint);
 registerIpc("desktop:model-endpoint:request", requestLocalModel);
 registerIpc("desktop:model-endpoint:cancel", cancelLocalModelRequest);
+registerIpc("desktop:seed-host:status", () => getSeedModelHost().getStatus());
+registerIpc("desktop:seed-host:choose-checkpoint", async () => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: "Choose a trusted Ayatrisya Seed checkpoint",
+    properties: ["openFile"],
+    filters: [{ name: "Ayatrisya Seed checkpoint", extensions: ["pt"] }],
+  });
+  if (result.canceled || !result.filePaths[0]) return null;
+  return getSeedModelHost().configureCheckpoint(result.filePaths[0]);
+});
+registerIpc("desktop:seed-host:auto-start", (enabled) => getSeedModelHost().setAutoStart(enabled));
+registerIpc("desktop:seed-host:start", async () => {
+  const confirmation = await dialog.showMessageBox(mainWindow, {
+    type: "warning",
+    title: "Run the local Ayatrisya Seed model?",
+    message: "This starts Python code from the selected local model project.",
+    detail: "Continue only if you trust the project's source files and checkpoint. The runner stays on this computer and binds only to 127.0.0.1:49382.",
+    buttons: ["Cancel", "Start local runner"],
+    defaultId: 0,
+    cancelId: 0,
+    noLink: true,
+  });
+  if (confirmation.response !== 1) return getSeedModelHost().getStatus();
+  return getSeedModelHost().start();
+});
+registerIpc("desktop:seed-host:stop", () => getSeedModelHost().stop());
+registerIpc("desktop:seed-host:generate", (prompt, requestId) => getSeedModelHost().generateText(prompt, requestId));
+registerIpc("desktop:seed-host:cancel", (requestId) => getSeedModelHost().cancel(requestId));
 
 registerIpc("desktop:projects:list", listProjects);
 async function chooseProjectFolder() {
@@ -1421,6 +1462,7 @@ if (!hasSingleInstanceLock) {
   });
   app.whenReady().then(async () => {
     await loadGrants();
+    await getSeedModelHost().load();
     if (warModeIntegrationTestMode) {
       const reportPath = path.join(warModeTestDirectory, "war-mode-report.json");
       try {
@@ -1448,6 +1490,7 @@ if (!hasSingleInstanceLock) {
       return;
     }
     await createMainWindow();
+    void getSeedModelHost().startSaved();
     app.on("activate", () => {
       if (BrowserWindow.getAllWindows().length === 0) void createMainWindow();
     });
@@ -1467,5 +1510,6 @@ app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();
 });
 app.on("will-quit", () => {
+  if (seedModelHost) void seedModelHost.stop().catch(() => undefined);
   void disableLocalCompanion().catch(() => undefined);
 });

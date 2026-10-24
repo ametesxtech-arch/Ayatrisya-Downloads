@@ -75,9 +75,18 @@ source files, plus separately confirmed checks. No third-party inference
 fallback exists.
 **Unit-tested:** local protocol validation, generated file shape/signature,
 planner parsing, guest image quota, and desktop file path protections.
-**Live integration-tested:** no; the Ayatrisya-owned inference runtime and model
-weights are not supplied in this workspace. The generation UI remains honestly
-unavailable until that runtime reports the matching modality.
+**Experimental local Seed host:** the desktop Settings panel can start a
+user-selected Ayatrisya Seed Python runner through context-isolated IPC. It binds
+to loopback only, is not connected to workspace chat, and does not save the
+prompt or sample. The desktop package does not bundle Python, PyTorch, model
+source, or weights.
+**Live integration-tested:** yes, in the Linux development workspace using the
+`seed-synthetic-v2-experimental.pt` checkpoint. The local runner reported ready
+and returned generated text, but the output was incoherent and is not suitable
+for real assistance. This verifies the experimental local test path only; the
+normal generation UI remains unavailable until a compatible Ayatrisya model
+reports the matching modality.
+**Not verified:** Windows-native or packaged-app host startup/inference.
 
 ## War Mode (Windows MVP)
 **Implemented:** a desktop-only Settings panel checks Microsoft Defender through

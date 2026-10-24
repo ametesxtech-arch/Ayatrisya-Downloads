@@ -110,6 +110,7 @@ export const documentationArticles: DocArticle[] = [
         heading: 'Local and hosted model processing',
         paragraphs: [
           'Ayatrisya Desktop can connect to a model service on the same computer through a loopback-only endpoint. In this route, the renderer does not send the request to the hosted gateway.',
+          'Desktop also has a separate experimental Ayatrisya Seed prompt-test host. It uses a user-selected local checkpoint and executes Python source from that model project after native confirmation. Its output is not connected to workspace chat and must not be relied on as factual advice.',
           'The web app cannot access a visitor’s localhost model service. A hosted model request is sent to Ayatrisya’s same-origin API after the user invokes a model feature. The API verifies a Firebase ID token and forwards the request to the deployment-configured Ayatrisya model endpoint. Prompts and relevant conversation context are therefore processed outside the browser when hosted inference is used.',
           'The model endpoint operator, infrastructure region, retention period, and applicable service terms are deployment-specific and have not been verified in this workspace. The owner must complete those disclosures before treating this page as a final privacy policy.',
         ],
@@ -230,6 +231,7 @@ export const documentationArticles: DocArticle[] = [
         heading: 'Local model setup',
         paragraphs: [
           'In Ayatrisya Desktop, open Settings → Models → Desktop-only local model and enter a loopback URL such as http://127.0.0.1:1234. The app checks health, capabilities, and live inference. It does not send a local model API key.',
+          'For an isolated experiment, use Settings → Models → Ayatrisya Seed · experimental local host. Choose a trusted local checkpoint, install Python and PyTorch as documented, and start the host after reviewing the native source-execution confirmation. This test tool does not provide workspace chat or remote access.',
           'Cloud inference is a separate route and is not used as a silent fallback when desktop-local inference is unavailable.',
         ],
       },

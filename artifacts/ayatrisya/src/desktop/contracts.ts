@@ -61,6 +61,29 @@ export interface DesktopRuntimeInfo {
   };
 }
 
+export type SeedModelHostState = "STOPPED" | "STARTING" | "READY" | "ERROR";
+export interface SeedModelHostStatus {
+  state: SeedModelHostState;
+  configured: boolean;
+  autoStart: boolean;
+  checkpointName: string | null;
+  model: {
+    name: string;
+    parameterCount: number | null;
+    trainingSteps: number | null;
+    device: string;
+    readiness: string;
+  } | null;
+  activeRequests: number;
+  message: string;
+}
+export interface SeedModelGenerationResult {
+  requestId: string;
+  generatedText: string;
+  promptTruncated: boolean;
+  modelStatus: "experimental";
+}
+
 export type WarModeState = "STARTING" | "READY" | "SCANNING" | "THREAT CONTAINED" | "ATTENTION_REQUIRED" | "OFFLINE" | "ERROR";
 export interface WarModeStatus {
   state: WarModeState;
@@ -212,6 +235,13 @@ export interface AyatrisyaDesktopApi {
   setLocalModelEndpoint(endpoint: string): Promise<string>;
   requestLocalModel(path: LocalModelPath, method: LocalModelMethod, body: unknown, requestId: string): Promise<LocalModelResponse>;
   cancelLocalModelRequest(requestId: string): Promise<void>;
+  getSeedModelHostStatus(): Promise<SeedModelHostStatus>;
+  chooseSeedModelCheckpoint(): Promise<SeedModelHostStatus | null>;
+  setSeedModelHostAutoStart(enabled: boolean): Promise<SeedModelHostStatus>;
+  startSeedModelHost(): Promise<SeedModelHostStatus>;
+  stopSeedModelHost(): Promise<SeedModelHostStatus>;
+  generateSeedModelText(prompt: string, requestId: string): Promise<SeedModelGenerationResult>;
+  cancelSeedModelText(requestId: string): Promise<boolean>;
   getWarModeStatus(): Promise<WarModeStatus>;
   chooseWarModeFolder(): Promise<WarModeFolder | null>;
   scanWarModeFolder(folderId: string): Promise<WarModeScanResult>;

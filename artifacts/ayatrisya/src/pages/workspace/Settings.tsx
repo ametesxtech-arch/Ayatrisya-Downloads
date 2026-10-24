@@ -13,6 +13,7 @@ import { errMsg, formatBytes } from '@/lib/format';
 import type { ChatMode, ModelId, Preferences } from '@/storage/types';
 import { modelClient } from '@/ai/client';
 import { useDesktopRuntime } from '@/desktop/use-runtime';
+import type { SeedModelHostStatus } from '@/desktop/contracts';
 import { WarModePanel } from '@/components/WarModePanel';
 import { proprietarySoftwareShortNotice } from '@/data/copyright-policy';
 
@@ -71,6 +72,7 @@ function Models() {
   const [demoOpen, setDemoOpen] = useState(false);
   return <>
     <DesktopLocalModel />
+    <SeedModelHostPanel />
     <Card title="Defaults">
       <label className="block py-3 text-xs font-medium text-slate-400">Default model<select value={prefs.model} onChange={(e) => void save({ model: e.target.value as ModelId })} className={`${inputCls} mt-1.5 max-w-xs`}><option value="v1-fast">V1 Fast</option><option value="v2-best">V2 Best Result</option></select></label>
       <label className="block py-3 text-xs font-medium text-slate-400">Default chat mode<select value={prefs.mode} onChange={(e) => void save({ mode: e.target.value as ChatMode })} className={`${inputCls} mt-1.5 max-w-xs`}><option>Normal</option><option>Savage</option><option>Joke</option></select><span className="mt-1 block text-[11px] text-slate-500">Mode is passed to the model as configuration. It does not change anything without a connected model.</span></label>
@@ -126,6 +128,182 @@ function LiveModelTest({ model }: { model: ModelId }) {
     <Button onClick={() => void runTest()} disabled={busy}>{busy ? "Testing model…" : "Run live inference test"}</Button>
     {status && <p className="mt-3 text-xs text-teal-200" role="status">{status}</p>}
     {error && <p className="mt-3 text-xs text-rose-200" role="alert">{error}</p>}
+  </Card>;
+}
+
+function SeedModelHostPanel() {
+  const { desktop, runtime, checking } = useDesktopRuntime();
+  const [status, setStatus] = useState<SeedModelHostStatus | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [prompt, setPrompt] = useState("");
+  const [result, setResult] = useState("");
+  const [requestId, setRequestId] = useState("");
+  const [error, setError] = useState("");
+  const supported = Boolean(
+    runtime?.info.capabilities.includes("local-seed-model-host") &&
+    desktop &&
+    typeof desktop.getSeedModelHostStatus === "function",
+  );
+
+  useEffect(() => {
+    if (checking) return;
+    if (!desktop || !supported) {
+      setLoading(false);
+      return;
+    }
+    let active = true;
+    const refresh = () => desktop.getSeedModelHostStatus().then((next) => {
+      if (active) setStatus(next);
+    }).catch((cause) => {
+      if (active) setError(errMsg(cause));
+    }).finally(() => {
+      if (active) setLoading(false);
+    });
+    void refresh();
+    const timer = window.setInterval(() => void refresh(), 2_000);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, [checking, desktop, supported]);
+
+  async function chooseCheckpoint() {
+    if (!desktop) return;
+    setBusy(true);
+    setError("");
+    setResult("");
+    try {
+      const selected = await desktop.chooseSeedModelCheckpoint();
+      if (selected) setStatus(selected);
+    } catch (cause) {
+      setError(errMsg(cause));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function startHost() {
+    if (!desktop) return;
+    setBusy(true);
+    setError("");
+    try {
+      setStatus(await desktop.startSeedModelHost());
+    } catch (cause) {
+      setError(errMsg(cause));
+      const latest = await desktop.getSeedModelHostStatus().catch(() => null);
+      if (latest) setStatus(latest);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function stopHost() {
+    if (!desktop) return;
+    setBusy(true);
+    setError("");
+    try {
+      setStatus(await desktop.stopSeedModelHost());
+      setRequestId("");
+    } catch (cause) {
+      setError(errMsg(cause));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function toggleAutoStart(enabled: boolean) {
+    if (!desktop) return;
+    setError("");
+    try {
+      setStatus(await desktop.setSeedModelHostAutoStart(enabled));
+    } catch (cause) {
+      setError(errMsg(cause));
+    }
+  }
+
+  async function runTestPrompt() {
+    if (!desktop || !prompt.trim()) return;
+    const id = crypto.randomUUID().replaceAll("-", "");
+    setRequestId(id);
+    setBusy(true);
+    setError("");
+    setResult("");
+    try {
+      const generated = await desktop.generateSeedModelText(prompt, id);
+      const sample = generated.generatedText || "(The model returned no text.)";
+      setResult(`${generated.promptTruncated ? "The prompt was shortened to fit the model's context.\n\n" : ""}${sample}`);
+    } catch (cause) {
+      setError(errMsg(cause));
+    } finally {
+      setRequestId("");
+      setBusy(false);
+    }
+  }
+
+  async function cancelTestPrompt() {
+    if (!desktop || !requestId) return;
+    try {
+      const cancelled = await desktop.cancelSeedModelText(requestId);
+      if (!cancelled) setError("The local model did not confirm cancellation; the request may still be running.");
+    } catch (cause) {
+      setError(errMsg(cause));
+    }
+  }
+
+  return <Card title="Ayatrisya Seed · experimental local host">
+    <div className="space-y-3 py-3">
+      <p className="text-xs leading-5 text-slate-400">
+        Runs the locally selected Ayatrisya Seed checkpoint through its Python runner, bound to 127.0.0.1 only. This small experimental model is not a dependable assistant and is not connected to workspace chat. The test prompt and generated sample stay local and are not saved by Ayatrisya.
+      </p>
+      {!desktop
+        ? <p className="text-xs text-slate-500">Available only in Ayatrisya Desktop. The website cannot access your computer’s model files or localhost service.</p>
+        : checking || loading
+        ? <p className="text-xs text-slate-500" role="status">Checking the desktop model host…</p>
+        : !supported
+        ? <p className="text-xs text-amber-200" role="status">Update Ayatrisya Desktop to use the experimental local host.</p>
+        : <>
+          <div className="rounded-lg border border-white/[.06] bg-black/10 px-3 py-2 text-xs" role="status">
+            <p className="font-medium text-slate-200">{status?.state ?? "STOPPED"} · {status?.message ?? "No model host status is available."}</p>
+            {status?.checkpointName && <p className="mt-1 text-slate-500">Checkpoint: {status.checkpointName}</p>}
+            {status?.model && <p className="mt-1 text-slate-500">{status.model.parameterCount?.toLocaleString() ?? "Unknown"} parameters · {status.model.trainingSteps ?? "Unknown"} training steps · {status.model.device}</p>}
+          </div>
+          <p className="text-[11px] leading-5 text-slate-500">
+            Starting the host executes Python source from the selected model project; continue only if you trust those files and the checkpoint. Python 3.10+ and PyTorch 2.6+ must already be installed; Ayatrisya does not download model files or install packages.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={() => void chooseCheckpoint()} disabled={busy}>{status?.configured ? "Change checkpoint" : "Choose checkpoint"}</Button>
+            {status?.state === "READY"
+              ? <Button variant="outline" onClick={() => void stopHost()} disabled={busy}>Stop local host</Button>
+              : <Button onClick={() => void startHost()} disabled={busy || !status?.configured}>{busy ? "Starting…" : "Start local host"}</Button>}
+          </div>
+          {status?.configured && <Switch
+            label="Start this model with Ayatrisya Desktop"
+            description="When enabled, the saved local runner starts on app launch and stops when the app quits."
+            checked={status.autoStart}
+            onChange={(enabled) => void toggleAutoStart(enabled)}
+          />}
+          {status?.state === "READY" && <div className="space-y-2 border-t border-white/[.05] pt-3">
+            <label htmlFor="seed-model-test-prompt" className="block text-xs font-medium text-slate-300">Local model test prompt</label>
+            <textarea
+              id="seed-model-test-prompt"
+              value={prompt}
+              onChange={(event) => setPrompt(event.target.value)}
+              maxLength={8192}
+              rows={3}
+              placeholder="Write a short prompt to test the experimental model…"
+              className={`${inputCls} w-full resize-y`}
+              disabled={busy}
+            />
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={() => void runTestPrompt()} disabled={busy || !prompt.trim()}>{busy ? "Generating locally…" : "Run local test"}</Button>
+              {busy && requestId && <Button variant="outline" onClick={() => void cancelTestPrompt()}>Cancel</Button>}
+            </div>
+            {result && <pre className="max-h-64 overflow-auto whitespace-pre-wrap rounded-lg border border-white/[.06] bg-black/20 p-3 text-xs leading-5 text-slate-300">{result}</pre>}
+          </div>}
+        </>}
+      {error && <p className="text-xs text-rose-200" role="alert">{error}</p>}
+    </div>
   </Card>;
 }
 

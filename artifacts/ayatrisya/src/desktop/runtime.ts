@@ -7,6 +7,7 @@ export interface VerifiedDesktopRuntime {
 
 const allowedCapabilities = new Set([
   "local-model-ipc",
+  "local-seed-model-host",
   "local-project-files",
   "confirmed-command-runner",
   "war-mode-yara",

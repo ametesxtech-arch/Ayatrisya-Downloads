@@ -16,7 +16,8 @@ or training corpus were assumed.
   smoke run. It is not useful pretraining data.
 - A smoke-trained checkpoint is an experimental artifact, ignored by Git, and
   must not be used to answer real users.
-- This project is not connected to the Ayatrisya website or desktop application.
+- The desktop application can manage this local runner as a separate experimental
+  prompt-test tool. It is not connected to website chat or normal desktop chat.
 - No external model or AI inference API is called. The API server binds only to
   `127.0.0.1`.
 - Windows commands are documented, but this Linux workspace does not verify
@@ -112,8 +113,8 @@ The server listens on `127.0.0.1:49382`; it cannot bind to a LAN or public
 interface. It does not enable browser CORS by default. An exact browser origin
 can be added with `--allow-origin`, but that exposes a no-login local generation
 route to scripts running on that origin; do not use it for the public website.
-The future desktop integration should use Ayatrisya's authenticated,
-permission-controlled local bridge instead.
+Ayatrisya Desktop uses its context-isolated, permission-controlled local bridge
+to manage this runner. Do not enable `--allow-origin` for the website or PWA.
 
 `GET /health` returns ready only when a compatible checkpoint loaded.
 `POST /v1/generate` accepts JSON:
@@ -137,8 +138,10 @@ not written to logs, bodies/prompts/outputs have size bounds, and generated
 tokens are capped. A missing or invalid checkpoint returns not-ready/errors;
 the server never silently substitutes random weights or canned responses.
 
-This API is a local development interface only. It has not been connected to
-Ayatrisya's authenticated model gateway or desktop bridge. Do not forward
+Ayatrisya Desktop can start and stop this runner after the user selects a local
+checkpoint. The desktop main process calls it through a fixed loopback address
+via the context-isolated IPC bridge; it is not connected to workspace chat. The
+website, PWA, phone, and remote pairing do not use this service. Do not forward
 private conversations to it from a browser or network service.
 
 ## Training and evaluation

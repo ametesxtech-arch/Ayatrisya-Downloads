@@ -32,6 +32,39 @@ Before launch, an OS confirmation shows the exact command and directory.
 Commands stop after 60 seconds and output is capped at 128 KB. This is not an
 interactive shell/PTY. Do not paste commands you do not understand.
 
+## Experimental local Seed host
+
+In Ayatrisya Desktop, open **Settings → Models → Ayatrisya Seed · experimental
+local host** and choose a trusted `.pt` checkpoint from a complete local
+`Ayatrisya_model` project. Start the host once to verify it. If automatic start
+is enabled, the selected runner starts on later desktop launches and is stopped
+when Ayatrisya exits.
+
+Starting the host executes Python files from the selected model project. Ayatrisya
+shows a native confirmation before a manual start; proceed only when you trust
+the project's source and checkpoint. Automatic start is off by default and can
+be enabled separately after selection.
+
+The desktop application does not bundle Python, PyTorch, the model source, or
+checkpoint weights. Install Python 3.10+ and PyTorch 2.6+ in the selected model
+project as described in `Ayatrisya_model/README.md`. The host uses that project's
+`.venv` when present, otherwise the platform Python launcher. Missing runtime
+dependencies or an invalid checkpoint are reported as errors; no fallback
+response is generated.
+
+The runner binds only to `127.0.0.1:49382`. Electron communicates with it from
+the main process through a narrow, context-isolated IPC interface. The desktop
+panel is an explicit single-prompt experiment; it does not add model output to
+chat, read project files, run tools, or use network services. Ayatrisya Seed is
+not a dependable assistant and must not be used for factual advice or
+production chat. The selected prompt and generated sample are not saved by the
+app. Prompts are limited to 8,192 characters, generated samples to 32 tokens,
+checkpoints to 512 MB, and only one request runs at a time. The checkpoint path
+is stored only in this desktop's user-data folder.
+
+The package does not upload model files. Windows-native runtime and inference
+testing is still required before claiming the local host works on Windows.
+
 ## Build installers
 
 Build outputs go to `generated-artifacts/ayatrisya-desktop/`.

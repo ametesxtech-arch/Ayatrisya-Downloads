@@ -13,7 +13,7 @@
     "test": "vitest run --config vitest.config.ts",
     "test:pwa": "node scripts/check-pwa.mjs",
     "test:browser": "node scripts/browser-check.mjs",
-    "test:desktop:security": "node --test electron/path-policy.test.cjs electron/model-endpoint-policy.test.cjs electron/war-mode.test.cjs electron/war-mode-assets.test.cjs electron/companion-server.test.cjs",
+    "test:desktop:security": "node --test electron/path-policy.test.cjs electron/model-endpoint-policy.test.cjs electron/seed-model-host.test.cjs electron/war-mode.test.cjs electron/war-mode-assets.test.cjs electron/companion-server.test.cjs",
     "desktop:dev": "node scripts/desktop-dev.mjs",
     "desktop:package:linux": "node scripts/desktop-package.mjs linux",
     "desktop:package:windows": "node scripts/desktop-package.mjs windows",
