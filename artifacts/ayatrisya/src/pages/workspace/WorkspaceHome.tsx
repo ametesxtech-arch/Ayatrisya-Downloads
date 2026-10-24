@@ -5,6 +5,7 @@ import {
   Pin, Plus, Presentation, Search, Sparkles, StickyNote, Waves,
 } from 'lucide-react';
 import { Emblem } from '@/components/Brand';
+import { MotionText } from '@/components/MotionText';
 import type { Conversation, Project, ProjectItem, StorageStats } from '@/storage/types';
 
 type Action = 'new-chat' | 'new-project' | 'create-document' | 'library' | 'projects' | 'image-studio' | 'voice-studio' | 'coding' | 'search';
@@ -142,7 +143,7 @@ export function WorkspaceHome({
               {modelAvailable ? 'Model connection available' : 'Workspace ready · model unavailable'}
             </div>
             <h1 className="display text-[clamp(1.8rem,4vw,2.65rem)] font-semibold leading-[1.08] tracking-[-.055em] text-slate-100">
-              {displayName.trim() ? <>Good to see you, <span className="text-violet-200">{displayName.trim()}</span>.</> : <>A clear space<br className="hidden sm:block" /> for what comes next.</>}
+              <MotionText>{displayName.trim() ? <>Good to see you, <span className="text-violet-200">{displayName.trim()}</span>.</> : <>A clear space<br className="hidden sm:block" /> for what comes next.</>}</MotionText>
             </h1>
             <p className="mt-3 max-w-lg text-[13px] leading-6 text-slate-400">
               Your conversations, research, and projects stay together here—saved locally in this browser.

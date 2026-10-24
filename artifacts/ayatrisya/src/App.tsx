@@ -105,11 +105,11 @@ function MotionEffects() {
       '.public-page-frame main > div',
       '.desktop-downloads main > div > section',
       '.auth-panel',
-      '.workspace-main-content > div > *',
+      '.workspace-main-content > div > *:not(.chat-page)',
       '.workspace-main-content section',
       '.workspace-home > div > section',
       '.chat-welcome',
-      '.chat-message',
+      '[data-motion-text]',
     ].join(',');
     const revealObserver = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {

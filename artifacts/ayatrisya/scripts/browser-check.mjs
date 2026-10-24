@@ -54,6 +54,18 @@ try {
   await setViewport(1440,1000,false);
   await call('Page.navigate',{url:'http://127.0.0.1:80/'});
   await wait(`document.querySelector('a[aria-label="Get Ayatrisya Desktop"]')`,'desktop download action');
+  await wait(`document.querySelector('.landing-hero h1 [data-motion-text]')?.dataset.motionEntrance==='visible'`,'hero letter morph entrance');
+  const heroMorph=await evaluate(`(()=>{const title=document.querySelector('.landing-hero h1 [data-motion-text]'),visual=title?.querySelector('.motion-text-visual'),letters=Array.from(visual?.querySelectorAll('.motion-letter')??[]);return {entrance:title?.dataset.motionEntrance,letters:letters.length,visualHidden:visual?.getAttribute('aria-hidden'),label:title?.querySelector('.sr-only')?.textContent??'',duration:letters[0]?getComputedStyle(letters[0]).transitionDuration:'0s',firstDelay:letters[0]?getComputedStyle(letters[0]).transitionDelay:'0s',lastDelay:letters.length?getComputedStyle(letters[letters.length-1]).transitionDelay:'0s'};})()`);
+  assert.equal(heroMorph.entrance,'visible','Hero heading should reveal when it enters view');
+  assert(heroMorph.letters>10,'Hero heading should morph as individual letters');
+  assert.equal(heroMorph.visualHidden,'true','Animated glyphs must be hidden from assistive technology');
+  assert(heroMorph.label.startsWith('One space for'),'Heading must retain one readable text equivalent');
+  if(await evaluate(`!matchMedia('(prefers-reduced-motion: reduce)').matches&&document.documentElement.dataset.motion!=='reduced'&&document.documentElement.dataset.intensity!=='none'`)){
+    assert.notEqual(heroMorph.duration,'0s','Motion-enabled heading should have a letter transition');
+    assert.notEqual(heroMorph.firstDelay,heroMorph.lastDelay,'Heading glyphs should use staggered letter delays');
+  }
+  await delay(900);
+  assert.equal(await evaluate(`(()=>{const letters=document.querySelectorAll('.landing-hero h1 .motion-letter');return getComputedStyle(letters[letters.length-1]).opacity;})()`),'1','Hero letters should finish visibly');
   assert(await evaluate(`!/(maximum-scale\\s*=\\s*1|user-scalable\\s*=\\s*no)/i.test(document.querySelector('meta[name="viewport"]')?.content||'')`),'Mobile zoom must remain available');
   const faviconResponses=await evaluate(`Promise.all([...document.querySelectorAll('link[rel~="icon"]')].map(async link=>{const response=await fetch(link.href);return {path:new URL(link.href).pathname,ok:response.ok};}))`);
   assert(faviconResponses.some(icon=>icon.path.endsWith('/favicon.ico')&&icon.ok),'ICO Ayatrisya favicon must load');
@@ -74,6 +86,15 @@ try {
   assert.equal(desktopHeroTracks,2,'Landing hero should use two columns on wide screens');
   await setViewport(1440,1000,false);
   passed.push('Landing layout adapts without horizontal overflow from 320px phones through desktop');
+  await setViewport(390,844,true);
+  await evaluate(`window.scrollTo(0,document.documentElement.scrollHeight)`);
+  await wait(`document.querySelector('.landing-close h2 [data-motion-text]')?.dataset.motionEntrance==='visible'`,'scroll-triggered closing heading morph');
+  const motionAttributes=await evaluate(`({motion:document.documentElement.getAttribute('data-motion'),intensity:document.documentElement.getAttribute('data-intensity')})`);
+  await evaluate(`document.documentElement.dataset.motion='reduced'`);
+  await wait(`getComputedStyle(document.querySelector('.landing-close h2 .motion-letter')).transitionDuration==='0s'`,'reduced-motion letter override');
+  assert.equal(await evaluate(`getComputedStyle(document.querySelector('.landing-close h2 .motion-letter')).opacity`),'1','Reduced motion must reveal letters immediately');
+  await evaluate(`(value=>{if(value.motion===null)delete document.documentElement.dataset.motion;else document.documentElement.dataset.motion=value.motion;if(value.intensity===null)delete document.documentElement.dataset.intensity;else document.documentElement.dataset.intensity=value.intensity;})(${JSON.stringify(motionAttributes)})`);
+  passed.push('Scroll-triggered letter morphs keep an accessible text equivalent and fully disable under reduced motion');
   const desktopUrl=await evaluate(`document.querySelector('a[aria-label="Get Ayatrisya Desktop"]').href`);
   if(new URL(desktopUrl).pathname==='/desktop'){
     await click('a[aria-label="Get Ayatrisya Desktop"]');

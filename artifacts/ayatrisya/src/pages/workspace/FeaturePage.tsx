@@ -3,6 +3,7 @@ import { ChatPage } from '@/pages/workspace/Chat';
 import { Skeleton } from '@/components/Primitives';
 import NotFound from '@/pages/not-found';
 import { useAuth } from '@/integrations/firebase/AuthProvider';
+import { MotionText } from '@/components/MotionText';
 
 const Research = lazy(() => import('@/pages/workspace/Research').then((m) => ({ default: m.ResearchPage })));
 const Coding = lazy(() => import('@/pages/workspace/Coding').then((m) => ({ default: m.CodingPage })));
@@ -42,7 +43,7 @@ export function FeaturePage({ path, goto, notify }: { path: string; goto: (href:
 function GuestImageAccess({ notify }: { notify: (message: string) => void }) {
   return <section className="mx-auto max-w-5xl p-5 sm:p-10">
     <p className="text-[10px] font-bold uppercase tracking-[.18em] text-violet-200">Guest image allowance</p>
-    <h2 className="display mt-3 text-3xl font-semibold tracking-tight">Two image generations</h2>
+    <h2 className="display mt-3 text-3xl font-semibold tracking-tight"><MotionText>Two image generations</MotionText></h2>
     <p className="mt-3 text-sm leading-6 text-slate-400">Guest access is limited to chat and up to two image generations. Images can be downloaded; other studios, local files, and project tools require an account.</p>
     <Studios kind="image" notify={notify} guestLimited />
   </section>;

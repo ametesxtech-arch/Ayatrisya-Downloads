@@ -4,6 +4,7 @@ import { PublicSiteFooter, PublicSiteHeader } from "@/components/PublicSite";
 import { Button } from "@/components/Primitives";
 import { detectDevicePlatform } from "@/pwa/device";
 import { usePwa } from "@/pwa/PwaProvider";
+import { MotionText } from "@/components/MotionText";
 
 const env = import.meta.env as unknown as {
   VITE_DESKTOP_DOWNLOAD_URL?: string;
@@ -73,7 +74,7 @@ export function DesktopDownloadsPage() {
             Ayatrisya Desktop
           </p>
           <h1 className="display mt-2 text-4xl font-semibold tracking-[-.06em] sm:text-5xl">
-            Get Ayatrisya Desktop
+            <MotionText>Get Ayatrisya Desktop</MotionText>
           </h1>
           <p className="mt-5 max-w-2xl text-sm leading-7 text-slate-400">
             Ayatrisya Desktop can open folders you choose and run commands only
@@ -109,7 +110,7 @@ export function DesktopDownloadsPage() {
             id="platform-status"
             className="text-sm font-semibold text-slate-200"
           >
-            Installer status
+            <MotionText>Installer status</MotionText>
           </h2>
           <ul className="mt-4 divide-y divide-white/[.06]">
             {platforms.map((platform) => (
@@ -155,7 +156,7 @@ export function DesktopDownloadsPage() {
         <section className="mt-6 rounded-2xl border border-violet-300/15 bg-violet-300/[.025] p-5 sm:p-7" aria-labelledby="pwa-install-title">
           <p className="text-[10px] font-semibold uppercase tracking-[.18em] text-violet-200">Web app</p>
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <h2 id="pwa-install-title" className="display text-xl font-semibold">Install Ayatrisya in your browser</h2>
+            <h2 id="pwa-install-title" className="display text-xl font-semibold"><MotionText>Install Ayatrisya in your browser</MotionText></h2>
             {recommendedPlatform === "pwa" && <span className="rounded-full border border-violet-300/20 bg-violet-300/[.07] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-violet-100" data-testid="status-recommended-pwa">Recommended for this device</span>}
           </div>
           <p className="mt-2 max-w-2xl text-xs leading-5 text-slate-400">

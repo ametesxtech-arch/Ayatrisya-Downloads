@@ -3,6 +3,7 @@ import { ArrowLeft, ArrowUpRight } from 'lucide-react';
 import { Link } from 'wouter';
 import { Brand } from '@/components/Brand';
 import { copyrightNotice, proprietarySoftwareShortNotice } from '@/data/copyright-policy';
+import { MotionText } from '@/components/MotionText';
 
 const footerLinks = [
   { href: '/#capabilities', label: 'Product' },
@@ -99,7 +100,7 @@ export function PublicPageFrame({
           </Link>
           <div className="mt-8 border-b border-white/[.07] pb-7">
             <p className="text-[10px] font-semibold uppercase tracking-[.2em] text-violet-300">{eyebrow}</p>
-            <h1 className="display mt-3 text-4xl font-semibold tracking-[-.055em] text-slate-50 sm:text-5xl">{title}</h1>
+            <h1 className="display mt-3 text-4xl font-semibold tracking-[-.055em] text-slate-50 sm:text-5xl"><MotionText>{title}</MotionText></h1>
             <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-400">{description}</p>
           </div>
           <div className="public-reading mt-8">{children}</div>

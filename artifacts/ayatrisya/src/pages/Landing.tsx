@@ -23,6 +23,7 @@ import { cx } from '@/lib/cx';
 import { Mark, Brand } from '@/components/Brand';
 import { PublicSiteFooter } from '@/components/PublicSite';
 import { useAuth } from '@/integrations/firebase/AuthProvider';
+import { MotionText } from '@/components/MotionText';
 
 export function Landing() {
   const [, setPath] = useLocation();
@@ -89,9 +90,7 @@ export function Landing() {
           <div className="relative reveal">
             <Eyebrow>Ametesx · a workspace for considered work</Eyebrow>
             <h1 className="display max-w-[690px] text-[clamp(3.25rem,7vw,6.3rem)] font-semibold leading-[.99] tracking-[-.075em] text-slate-50">
-              One space for
-              <br />
-              <span className="text-slate-400">thought to take shape.</span>
+              <MotionText>One space for<br /><span className="text-slate-400">thought to take shape.</span></MotionText>
             </h1>
             <p className="mt-7 max-w-[470px] text-[15px] leading-7 text-slate-400">
               Conversation, research, code, visuals and documents—brought
@@ -127,7 +126,7 @@ export function Landing() {
               <div>
                 <Eyebrow>One workspace, many kinds of work</Eyebrow>
                 <h2 className="display max-w-lg text-4xl font-semibold tracking-[-.055em] md:text-5xl">
-                  The work stays connected.
+                  <MotionText>The work stays connected.</MotionText>
                 </h2>
               </div>
               <p className="max-w-xl text-sm leading-7 text-slate-400">
@@ -200,7 +199,7 @@ export function Landing() {
           <div>
             <Eyebrow>Ayatrisya Desktop</Eyebrow>
             <h2 className="display max-w-md text-4xl font-semibold tracking-[-.06em] md:text-5xl">
-              Your projects stay on your machine.
+              <MotionText>Your projects stay on your machine.</MotionText>
             </h2>
             <p className="mt-5 max-w-lg text-sm leading-7 text-slate-400">
               Work with folders you choose and commands you approve. The web
@@ -266,7 +265,7 @@ export function Landing() {
             <div>
               <Eyebrow>Privacy, by design</Eyebrow>
               <h2 className="display max-w-md text-4xl font-semibold tracking-[-.06em] md:text-5xl">
-                Built toward local-first work.
+                <MotionText>Built toward local-first work.</MotionText>
               </h2>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -295,9 +294,7 @@ export function Landing() {
           <div className="rounded-2xl border border-violet-300/10 bg-[radial-gradient(ellipse_at_20%_0%,rgba(122,108,222,.13),transparent_55%),#14161c] px-7 py-12 text-center md:py-16">
             <Eyebrow>Private by default</Eyebrow>
             <h2 className="display mx-auto max-w-2xl text-4xl font-semibold tracking-[-.06em] md:text-5xl">
-              Start with a thought.
-              <br />
-              See where it takes you.
+              <MotionText>Start with a thought.<br />See where it takes you.</MotionText>
             </h2>
             <p className="mx-auto mt-4 max-w-md text-sm leading-6 text-slate-400">
               Your work is saved locally in this browser. AI models and

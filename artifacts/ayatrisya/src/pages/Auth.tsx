@@ -7,6 +7,7 @@ import { useAuth } from '@/integrations/firebase/AuthProvider';
 import { usePrefs } from '@/hooks/use-prefs';
 import { errMsg } from '@/lib/format';
 import { PublicSiteFooter } from '@/components/PublicSite';
+import { MotionText } from '@/components/MotionText';
 
 export function AuthPage() {
   const [path, setPath] = useLocation();
@@ -36,7 +37,7 @@ export function AuthPage() {
   async function google() { setError(''); setBusy(true); try { await auth.googleSignIn(); } catch (er) { setError(errMsg(er)); } finally { setBusy(false); } }
   async function github() { setError(''); setBusy(true); try { await auth.githubSignIn(); } catch (er) { setError(errMsg(er)); } finally { setBusy(false); } }
   if (isCheck) return <AuthFrame>
-    <h1 className="display text-2xl font-semibold tracking-[-.04em]">Verify your email</h1>
+    <h1 className="display text-2xl font-semibold tracking-[-.04em]"><MotionText>Verify your email</MotionText></h1>
     {auth.user ? <><p className="mt-3 text-sm leading-6 text-slate-400">Verification is for <b>{auth.user.email}</b>. Status: {auth.user.emailVerified ? 'verified' : 'not yet verified'}.</p>
       {error && <p role="alert" className="mt-3 text-xs text-rose-300">{error}</p>}{notice && <div className="mt-3"><Notice>{notice}</Notice></div>}
       <div className="mt-5 flex flex-wrap gap-2">{!auth.user.emailVerified && <><Button variant="outline" onClick={async () => { try { await auth.sendVerification(); setNotice('Verification email requested.'); } catch (er) { setError(errMsg(er)); } }}>Send again</Button><Button onClick={async () => { try { await auth.refreshUser(); } catch (er) { setError(errMsg(er)); } }}>I have verified</Button></>}<Button variant={auth.user.emailVerified ? 'solid' : 'quiet'} onClick={() => setPath(prefs.onboardingComplete ? '/workspace' : '/onboarding')}>Continue</Button></div></>
@@ -44,7 +45,7 @@ export function AuthPage() {
   </AuthFrame>;
   return <AuthFrame>
     <Eyebrow>{isReset ? 'Recovery' : isCreate ? 'Create account' : 'Sign in'}</Eyebrow>
-    <h1 className="display text-2xl font-semibold tracking-[-.04em]">{isReset ? 'Reset your password' : isCreate ? 'Create your account' : 'Welcome back'}</h1>
+    <h1 className="display text-2xl font-semibold tracking-[-.04em]"><MotionText>{isReset ? 'Reset your password' : isCreate ? 'Create your account' : 'Welcome back'}</MotionText></h1>
     {!auth.loading && !auth.configured && <div className="mt-4"><Notice>Firebase Authentication is not configured, so sign-in and account creation are unavailable. You can still use limited guest access.</Notice></div>}
     {!isReset && <button type="button" onClick={google} disabled={busy || !auth.configured} className="mt-5 flex h-11 w-full items-center justify-center rounded-lg border border-white/10 text-sm font-semibold hover:bg-white/[.05] disabled:opacity-45">Continue with Google</button>}
     {!isReset && <button type="button" onClick={github} disabled={busy || !auth.configured} className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-white/10 text-sm font-semibold hover:bg-white/[.05] disabled:opacity-45"><Github size={16} />Continue with GitHub</button>}

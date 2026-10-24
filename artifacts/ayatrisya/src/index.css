@@ -636,6 +636,29 @@ html[data-appearance="light"] .auth-panel input{background:#f7f6fa;color:#22202c
   --motion-enter:480ms;
   --motion-distance:14px;
 }
+.motion-text-visual{white-space:pre-wrap}
+.motion-word{display:inline-block;white-space:nowrap}
+.motion-letter{
+  display:inline-block;
+  transform-origin:50% 65%;
+  transition:opacity 460ms var(--ease-out),transform 460ms var(--ease-out),filter 460ms var(--ease-out);
+  transition-delay:0ms;
+}
+[data-motion-entrance="pending"] .motion-letter{
+  opacity:0;
+  filter:blur(4px);
+  transform:perspective(700px) rotateX(-32deg) translateY(.24em);
+}
+[data-motion-entrance="visible"] .motion-letter{
+  opacity:1;
+  filter:blur(0);
+  transform:none;
+  transition-delay:var(--motion-letter-delay,0ms);
+}
+html[data-intensity="subtle"] [data-motion-entrance="visible"] .motion-letter{
+  transition-duration:300ms;
+  transition-delay:var(--motion-letter-delay-subtle,0ms);
+}
 button,a,summary,[role="button"],select,input[type="checkbox"]{
   transition:
     background-color var(--motion-control) var(--ease-soft),
@@ -697,6 +720,8 @@ html[data-motion="reduced"] [data-motion-entrance]{
   opacity:1!important;
   transform:none!important;
 }
+html[data-intensity="none"] [data-motion-entrance] .motion-letter,
+html[data-motion="reduced"] [data-motion-entrance] .motion-letter{filter:none!important}
 html[data-intensity="none"] button:not(:disabled):active,
 html[data-intensity="none"] [role="button"]:active,
 html[data-motion="reduced"] button:not(:disabled):active,
@@ -714,6 +739,7 @@ html[data-motion="reduced"] *:active{transform:none!important}
 @media(prefers-reduced-motion:reduce){
   *,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
   [data-motion-entrance]{opacity:1!important;transform:none!important}
+  [data-motion-entrance] .motion-letter{filter:none!important}
   button:not(:disabled):active,[role="button"]:active{transform:none!important}
   button:not(:disabled):hover,a[href]:hover,summary:hover{transform:none!important}
   *:hover,*:active{transform:none!important}

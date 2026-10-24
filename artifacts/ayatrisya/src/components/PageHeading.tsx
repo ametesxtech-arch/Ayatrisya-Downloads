@@ -1,5 +1,6 @@
 import { type ReactNode } from 'react';
 import { Eyebrow } from '@/components/Primitives';
+import { MotionText } from '@/components/MotionText';
 
 export function PageHeading({
   eyebrow,
@@ -17,7 +18,7 @@ export function PageHeading({
       <div>
         <Eyebrow>{eyebrow}</Eyebrow>
         <h1 className="display text-3xl font-semibold tracking-[-.055em] sm:text-[34px]">
-          {title}
+          <MotionText>{title}</MotionText>
         </h1>
         <p className="mt-2 max-w-2xl text-xs leading-6 text-slate-500">
           {description}

@@ -24,6 +24,7 @@ import { useAuth } from '@/integrations/firebase/AuthProvider';
 import type { ChatMode, ModelId, WorkspaceMode } from '@/storage/types';
 import { WorkspaceHome } from '@/pages/workspace/WorkspaceHome';
 import { GuestWorkspace } from '@/components/GuestWorkspace';
+import { MotionText } from '@/components/MotionText';
 
 const modelNames: Record<ModelId, string> = { 'v1-fast': 'V1 Fast', 'v2-best': 'V2 Best Result' };
 const workspaceModeNames: Record<WorkspaceMode, string> = {
@@ -231,7 +232,7 @@ export function Workspace() {
         <header className="safe-t flex min-h-[66px] shrink-0 items-center justify-between gap-2 border-b border-white/[.06] px-3 sm:px-6">
           <div className="flex min-w-0 items-center gap-2">
             <button ref={menuBtn} aria-label="Open navigation" className="grid size-9 place-items-center rounded-lg text-slate-400 hover:bg-white/[.07] lg:hidden" onClick={() => setMobileOpen(true)}><Menu size={17} /></button>
-            <h1 className="truncate text-[13px] font-medium text-slate-200">{title}</h1>
+            <h1 className="truncate text-[13px] font-medium text-slate-200"><MotionText>{title}</MotionText></h1>
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2">
             <select aria-label="Workspace mode" value={prefs.workspaceMode} onChange={(e) => void save({ workspaceMode: e.target.value as WorkspaceMode })} className="hidden max-w-[126px] rounded-md border border-white/[.08] bg-[#171920] px-2 py-2 text-[11px] text-slate-200 lg:block">

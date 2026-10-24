@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { BookOpen, ChevronRight, FileText, Search } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
 import { PublicPageFrame } from '@/components/PublicSite';
+import { MotionText } from '@/components/MotionText';
 import { documentationArticles, publicLegalPages, type DocArticle, type PublicLegalPage } from '@/data/public-docs';
 
 const categoryOrder = ['Getting started', 'Products', 'Privacy and storage', 'Security', 'Developer documentation'];
@@ -25,7 +26,7 @@ function SectionContent({ sections }: { sections: { heading: string; paragraphs?
     <div className="space-y-8">
       {sections.map((section) => (
         <section key={section.heading} className="scroll-mt-24">
-          <h2 className="display text-xl font-semibold tracking-[-.03em] text-slate-100">{section.heading}</h2>
+          <h2 className="display text-xl font-semibold tracking-[-.03em] text-slate-100"><MotionText>{section.heading}</MotionText></h2>
           <div className="mt-3 space-y-3 text-[13px] leading-7 text-slate-400">
             {(section.paragraphs ?? []).map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
             {section.bullets && (
@@ -107,7 +108,7 @@ function DocumentationPage() {
               <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[.16em] text-violet-300">
                 <BookOpen size={13} /> {activeArticle.category}
               </div>
-              <h2 className="display mt-3 text-2xl font-semibold tracking-[-.045em] text-slate-50 sm:text-3xl">{activeArticle.title}</h2>
+              <h2 className="display mt-3 text-2xl font-semibold tracking-[-.045em] text-slate-50 sm:text-3xl"><MotionText>{activeArticle.title}</MotionText></h2>
               <p className="mt-2 border-b border-white/[.06] pb-5 text-xs leading-6 text-slate-500">{activeArticle.summary}</p>
               <div className="pt-6"><SectionContent sections={activeArticle.sections} /></div>
             </>
@@ -158,7 +159,7 @@ function UnpublishedPage({
         data-testid="legal-page-unpublished"
       >
         <p className="inline-flex rounded-full border border-violet-300/15 bg-violet-300/[.06] px-2.5 py-1 text-[10px] font-medium tracking-wide text-violet-200">Official information</p>
-        <h2 className="display mt-4 text-xl font-semibold tracking-[-.03em] text-slate-100">{statusTitle}</h2>
+        <h2 className="display mt-4 text-xl font-semibold tracking-[-.03em] text-slate-100"><MotionText>{statusTitle}</MotionText></h2>
         <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-400">{detail}</p>
       </section>
     </PublicPageFrame>

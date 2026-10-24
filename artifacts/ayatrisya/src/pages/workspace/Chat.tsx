@@ -15,6 +15,7 @@ import { MAX_UPLOAD, ago, errMsg, formatBytes } from '@/lib/format';
 import { ActionMenu } from '@/components/Menus';
 import { useConvActions } from '@/hooks/use-conv-actions';
 import type { Message } from '@/storage/types';
+import { MotionText } from '@/components/MotionText';
 
 function nodeText(n: ReactNode): string { if (typeof n === 'string' || typeof n === 'number') return String(n); if (Array.isArray(n)) return n.map(nodeText).join(''); if (n && typeof n === 'object' && 'props' in n) return nodeText((n as { props: { children?: ReactNode } }).props.children); return ''; }
 function highlightedCode(source: string): ReactNode[] {
@@ -166,7 +167,7 @@ export function ChatPage({ path, goto, notify }: { path: string; goto: (h: strin
       {(!id || (msgs.data && list.length === 0)) && <section className="chat-welcome reveal" aria-labelledby="welcome-title" data-testid="empty-chat-welcome">
         <div className="chat-welcome-mark" aria-hidden><Sparkles size={19} /></div>
         <p className="chat-kicker"><span /> A space to think clearly</p>
-        <h2 id="welcome-title" className="display">{prefs.displayName ? `Good to see you, ${prefs.displayName}.` : 'Where should we start?'}</h2>
+         <h2 id="welcome-title" className="display"><MotionText>{prefs.displayName ? `Good to see you, ${prefs.displayName}.` : 'Where should we start?'}</MotionText></h2>
         <p className="chat-welcome-copy">Bring a question, a rough draft, or a problem you are working through. Your conversations stay in this browser unless you choose to send context to a model.</p>
          {!available && <div className="chat-model-notice" data-testid="status-model-unavailable"><span className="chat-notice-indicator" aria-hidden /><div><b>{prefs.model === 'v1-fast' ? 'V1 Fast' : 'V2 Best Result'} is unavailable.</b><p>{cap?.reason ?? 'No model connection is configured for this deployment.'} You can still write and save {guest ? 'chats in this browser' : 'messages and drafts'}.{!guest && <> <Link href="/workspace/settings" className="underline" data-testid="link-model-settings">Review model status</Link></>}</p></div></div>}
         <div className="chat-starter-grid" aria-label="Prompt suggestions">{starters.map(({ label, prompt, icon: Icon }, index) => <button key={label} type="button" data-testid={`button-prompt-${index + 1}`} onClick={() => { setText(prompt); taRef.current?.focus(); }} className="chat-starter"><span className="chat-starter-icon"><Icon size={15} /></span><span>{label}</span><ArrowUpRight size={13} className="chat-starter-arrow" aria-hidden /></button>)}</div>
