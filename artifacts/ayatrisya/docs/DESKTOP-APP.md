@@ -122,9 +122,29 @@ not a full interactive application test.
 
 For website downloads, configure HTTPS URLs for
 `VITE_DESKTOP_DOWNLOAD_LINUX_URL`, `VITE_DESKTOP_DOWNLOAD_WINDOWS_URL`, and
-`VITE_DESKTOP_DOWNLOAD_MAC_URL`. `VITE_DESKTOP_DOWNLOAD_URL` can point to a
-general release page. Unsigned Windows and macOS installers may show operating
-system security warnings.
+`VITE_DESKTOP_DOWNLOAD_MAC_URL`. Each platform also requires its release
+version, byte size, SHA-256, and HTTPS release-notes URL before its download
+button is enabled:
+
+| Platform suffix | Direct installer URL | Metadata variables |
+| --- | --- | --- |
+| `LINUX` | `VITE_DESKTOP_DOWNLOAD_LINUX_URL` | `VITE_DESKTOP_DOWNLOAD_LINUX_VERSION`, `VITE_DESKTOP_DOWNLOAD_LINUX_SIZE_BYTES`, `VITE_DESKTOP_DOWNLOAD_LINUX_SHA256`, `VITE_DESKTOP_DOWNLOAD_LINUX_NOTES_URL` |
+| `WINDOWS` | `VITE_DESKTOP_DOWNLOAD_WINDOWS_URL` | `VITE_DESKTOP_DOWNLOAD_WINDOWS_VERSION`, `VITE_DESKTOP_DOWNLOAD_WINDOWS_SIZE_BYTES`, `VITE_DESKTOP_DOWNLOAD_WINDOWS_SHA256`, `VITE_DESKTOP_DOWNLOAD_WINDOWS_NOTES_URL` |
+| `MAC` | `VITE_DESKTOP_DOWNLOAD_MAC_URL` | `VITE_DESKTOP_DOWNLOAD_MAC_VERSION`, `VITE_DESKTOP_DOWNLOAD_MAC_SIZE_BYTES`, `VITE_DESKTOP_DOWNLOAD_MAC_SHA256`, `VITE_DESKTOP_DOWNLOAD_MAC_NOTES_URL` |
+
+The direct URL must use HTTPS and end in the platform's installer extension.
+The notes URL may fall back to `VITE_DESKTOP_DOWNLOAD_URL`, which can point to
+a general HTTPS release page. To display a verified status, configure the
+platform's `VITE_DESKTOP_DOWNLOAD_<PLATFORM>_VERIFICATION_REPORT_URL` and
+`VITE_DESKTOP_DOWNLOAD_<PLATFORM>_VERIFICATION_SUMMARY` only after native
+install/launch tests have actually passed and the report is available. A build
+target or a configured URL alone is not verification. Never publish invented
+checksums or release details.
+
+The public download page includes safety guidance. Unsigned Windows and macOS
+installers may show operating-system warnings. Do not ask users to disable
+Defender, SmartScreen, or Gatekeeper; advise them to stop if the download's
+source or published checksum cannot be verified.
 
 ## Authentication and Drive
 

@@ -224,6 +224,8 @@ export const documentationArticles: DocArticle[] = [
         heading: 'Desktop app',
         paragraphs: [
           'Ayatrisya Desktop is an Electron application with a context-isolated UI/native bridge. Installers are built per operating system; availability is shown on the Desktop page. A build artifact is not by itself proof that an installer was launched and tested on that operating system.',
+          'The Desktop page enables a platform download only when a direct HTTPS installer URL and complete release metadata (version, file size, SHA-256, and HTTPS release notes) are configured. A configured URL alone does not make a release available. “Verified” requires a linked native test report and summary; check the actual report and keep the operating system’s security protections enabled.',
+          'If Windows SmartScreen, Defender, or macOS Gatekeeper warns about an installer, do not disable the protection to continue. Stop if you cannot confirm the source and compare a published SHA-256 where available. A matching checksum detects changes relative to that published value; it does not prove the software is safe.',
           'Choose folders through the native folder picker. The app reports permission errors and does not claim web pages can browse local files.',
         ],
       },

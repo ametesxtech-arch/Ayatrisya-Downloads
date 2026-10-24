@@ -99,11 +99,38 @@ try {
   if(new URL(desktopUrl).pathname==='/desktop'){
     await click('a[aria-label="Get Ayatrisya Desktop"]');
     await wait(`location.pathname==='/desktop'`,'desktop download page');
-    assert(await evaluate(`document.body.innerText.includes('Installer status')`),'Desktop installer status is missing');
-     for(const width of [320,768,1440]){await setViewport(width,width<640?844:1000,width<1024);await assertNoHorizontalOverflow(`Desktop downloads at ${width}px`);}
   }else{
     assert.equal(new URL(desktopUrl).protocol,'https:','Desktop download links must use HTTPS');
+    await call('Page.navigate',{url:'http://127.0.0.1:80/desktop'});
+    await wait(`location.pathname==='/desktop'`,'desktop download page');
   }
+  assert(await evaluate(`document.body.innerText.includes('Installer availability')`),'Desktop installer availability is missing');
+  assert(await evaluate(`!!document.querySelector('[data-testid="security-guide"] summary')`),'Desktop security guide is missing');
+  assert(await evaluate(`!!document.querySelector('[data-testid="pwa-install-section"]')`),'Desktop page PWA install section is missing');
+  for(const id of ['linux','windows','macos']){
+    const entry=await evaluate(`(()=>{const status=document.querySelector('[data-testid="platform-status-${id}"]');const action=document.querySelector('[data-testid="download-action-${id}"]');const metadata=document.querySelector('[data-testid="release-metadata-${id}"]');const reason=document.querySelector('[data-testid="release-unavailable-reason-${id}"]');return {status:status?.textContent?.trim(),tag:action?.tagName,disabled:action?.disabled,href:action?.href,metadata:!!metadata,reason:!!reason};})()`);
+    assert(entry.status,`${id} installer status is missing`);
+    assert(entry.tag,`${id} installer action is missing`);
+    if(entry.tag==='BUTTON'){
+      assert.equal(entry.disabled,true,`${id} installer action must be disabled without a complete public release`);
+      assert.equal(entry.status,'Not available yet',`${id} missing release must be labelled unavailable`);
+      assert(entry.reason,`${id} unavailable release needs an explanation`);
+    }else{
+      assert.equal(entry.tag,'A',`${id} download action must be a link`);
+      assert.equal(new URL(entry.href).protocol,'https:',`${id} download URL must use HTTPS`);
+      assert(['Available — unverified','Verified'].includes(entry.status),`${id} public release must show its verification status`);
+      assert(entry.metadata,`${id} public release metadata is missing`);
+    }
+  }
+  const releaseHref=await evaluate(`document.querySelector('a[href^="https:"]')?.href`);
+  if(releaseHref)assert.equal(new URL(releaseHref).protocol,'https:','Release and installer links must use HTTPS');
+  await click('[data-testid="security-guide"] summary');
+  assert(await evaluate(`document.querySelector('[data-testid="security-guide"]').open`),'Desktop security guide should expand when selected');
+  assert(await evaluate(`document.querySelector('[data-testid="security-guide"]').innerText.includes('Never disable Windows Defender, SmartScreen, or macOS Gatekeeper')`),'Security guidance must not suggest disabling OS protections');
+  await evaluate(`window.scrollTo(0,document.documentElement.scrollHeight)`);
+  await wait(`document.querySelector('[data-testid="pwa-install-section"]')?.dataset.motionEntrance==='visible'`,'desktop PWA section scroll reveal');
+  assert(await evaluate(`(()=>{const section=document.querySelector('[data-testid="pwa-install-section"]');return !!section&&section.getBoundingClientRect().height>0&&getComputedStyle(section).visibility!=='hidden';})()`),'Desktop PWA installation guidance must become visible after scrolling');
+  for(const width of [320,360,390,768,1024,1440]){await setViewport(width,width<640?844:1000,width<1024);await assertNoHorizontalOverflow(`Desktop downloads at ${width}px`);}
   passed.push('Desktop action opens the download/status page or a secure configured installer URL');
   const publicInfoRoutes=[
     ['/documentation','Documentation'],
