@@ -7,8 +7,16 @@
  */
 import type { ModelMessageRole } from './modelMessageRole';
 
+export interface ModelMessageAttachment {
+  name: string;
+  mimeType: string;
+  dataBase64?: string;
+  textContent?: string;
+  size?: number;
+}
+
 export interface ModelMessage {
   role: ModelMessageRole;
-  /** @maxLength 100000 */
   content: string;
+  attachments?: ModelMessageAttachment[];
 }

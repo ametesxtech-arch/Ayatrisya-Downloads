@@ -19,12 +19,14 @@ import { PwaProvider } from '@/pwa/PwaProvider';
 const Workspace = lazy(() => import('@/components/WorkspaceShell').then((m) => ({ default: m.Workspace })));
 const AuthPage = lazy(() => import('@/pages/Auth').then((m) => ({ default: m.AuthPage })));
 const Onboarding = lazy(() => import('@/pages/Onboarding').then((m) => ({ default: m.Onboarding })));
+const DesktopHandoff = lazy(() => import('@/pages/DesktopHandoff').then((m) => ({ default: m.DesktopHandoff })));
 
 const queryClient = new QueryClient();
 
 function guestCanOpen(path: string) {
   return path === '/workspace/images' ||
     path === '/workspace/chat' ||
+    path === '/workspace/tasks' ||
     /^\/workspace\/chat\/[^/]+\/?$/.test(path);
 }
 
@@ -174,6 +176,8 @@ function Router() {
         <Switch>
           <Route path="/" component={Landing} />
           <Route path="/desktop" component={DesktopDownloadsPage} />
+          <Route path="/downloads" component={DesktopDownloadsPage} />
+          <Route path="/download" component={DesktopDownloadsPage} />
           <Route path="/documentation" component={PublicDocumentation} />
           <Route path="/privacy" component={PublicLegalRoute} />
           <Route path="/terms" component={PublicLegalRoute} />
@@ -183,9 +187,23 @@ function Router() {
           <Route path="/cookies" component={PublicLegalRoute} />
           <Route path="/intro" component={LegacyIntroRedirect} />
           <Route path="/auth/sign-in" component={AuthPage} />
+          <Route path="/auth/sign-in/" component={AuthPage} />
+          <Route path="/sign-in" component={AuthPage} />
+          <Route path="/signin" component={AuthPage} />
+          <Route path="/login" component={AuthPage} />
           <Route path="/auth/create-account" component={AuthPage} />
+          <Route path="/auth/create-account/" component={AuthPage} />
+          <Route path="/create-account" component={AuthPage} />
+          <Route path="/signup" component={AuthPage} />
+          <Route path="/register" component={AuthPage} />
           <Route path="/auth/reset-password" component={AuthPage} />
+          <Route path="/auth/reset-password/" component={AuthPage} />
+          <Route path="/reset-password" component={AuthPage} />
+          <Route path="/forgot-password" component={AuthPage} />
           <Route path="/auth/email-check" component={AuthPage} />
+          <Route path="/auth/email-check/" component={AuthPage} />
+          <Route path="/auth/desktop" component={DesktopHandoff} />
+          <Route path="/auth/desktop/" component={DesktopHandoff} />
           <Route path="/onboarding" component={ProtectedOnboarding} />
           <Route path={/^\/workspace(?:\/.*)?$/} component={ProtectedWorkspace} />
           <Route component={NotFound} />

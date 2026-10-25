@@ -16,6 +16,43 @@ describe("owned model boundary",()=>{
     vi.spyOn(globalThis,"fetch").mockResolvedValue(new Response('{"unexpected":true}',{headers:{"Content-Type":"application/json"}}));
     expect((await new AyatrisyaModelClient(async()=>"firebase-id-token").getModelCapabilities()).every(m=>!m.available)).toBe(true);
   });
+  it("handles HTML responses gracefully without throwing raw JSON syntax errors", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("<!DOCTYPE html><html><body>Error</body></html>", {
+        status: 200,
+        headers: { "Content-Type": "text/html; charset=utf-8" },
+      }),
+    );
+    const client = new AyatrisyaModelClient(async () => "firebase-id-token");
+    const caps = await client.getModelCapabilities();
+    expect(caps.every((m) => !m.available)).toBe(true);
+    expect(caps[0].reason).toContain("HTML");
+    expect(caps[0].reason).not.toContain("Unexpected token '<'");
+  });
+  it("handles HTTP 404 HTML response with an actionable error message", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("<!DOCTYPE html><html><body>404 Not Found</body></html>", {
+        status: 404,
+        headers: { "Content-Type": "text/html; charset=utf-8" },
+      }),
+    );
+    const client = new AyatrisyaModelClient(async () => "firebase-id-token");
+    const caps = await client.getModelCapabilities();
+    expect(caps.every((m) => !m.available)).toBe(true);
+    expect(caps[0].reason).toContain("404");
+  });
+  it("handles malformed JSON safely without throwing unexpected tokens", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("{ invalid-json-payload", {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    const client = new AyatrisyaModelClient(async () => "firebase-id-token");
+    const caps = await client.getModelCapabilities();
+    expect(caps.every((m) => !m.available)).toBe(true);
+    expect(caps[0].reason).toContain("invalid JSON");
+  });
   it("reports hosted model connection only after a non-empty inference response",async()=>{
     vi.spyOn(globalThis,"fetch").mockImplementation(async(url,init)=>{
       expect(new Headers(init?.headers).get("Authorization")).toBe("Bearer firebase-id-token");

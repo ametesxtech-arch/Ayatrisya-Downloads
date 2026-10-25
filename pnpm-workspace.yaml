@@ -154,3 +154,8 @@ overrides:
   # orval pins js-yaml to an exact version older than the CVE fix (>=4.3.2)
   js-yaml: '4.3.2'
   'markdown-it': '14.3.3'
+
+allowBuilds:
+  '@firebase/util': true
+  esbuild: true
+  protobufjs: true

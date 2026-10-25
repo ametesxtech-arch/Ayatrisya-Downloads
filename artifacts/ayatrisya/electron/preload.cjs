@@ -66,5 +66,21 @@ contextBridge.exposeInMainWorld(
       ipcRenderer.on("desktop:war-mode:yara-progress", listener);
       return () => ipcRenderer.removeListener("desktop:war-mode:yara-progress", listener);
     },
+    getAmetesxHardwareSpecs: () => ipcRenderer.invoke("desktop:ametesx:hardware"),
+    getAmetesxProvisioningStatus: () => ipcRenderer.invoke("desktop:ametesx:provisioning-status"),
+    startAmetesxProvisioning: (modelId) => ipcRenderer.invoke("desktop:ametesx:provision-start", modelId),
+    cancelAmetesxProvisioning: () => ipcRenderer.invoke("desktop:ametesx:provision-cancel"),
+    exportAmetesxProject: (request) => ipcRenderer.invoke("desktop:ametesx:export-project", request),
+    startBrowserAuth: (mode) => ipcRenderer.invoke("desktop:auth:start", mode),
+    cancelBrowserAuth: () => ipcRenderer.invoke("desktop:auth:cancel"),
+    onAuthCallback: (callback) => {
+      if (typeof callback !== "function") return () => {};
+      const listener = (_event, result) => {
+        if (result && typeof result === "object") callback(result);
+      };
+      ipcRenderer.on("desktop:auth:callback", listener);
+      return () => ipcRenderer.removeListener("desktop:auth:callback", listener);
+    },
   }),
 );
+

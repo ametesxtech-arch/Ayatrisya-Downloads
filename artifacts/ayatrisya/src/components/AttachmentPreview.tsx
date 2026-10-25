@@ -14,6 +14,37 @@ export function AttachmentChip({ attachment }: { attachment: Attachment }) {
   </>;
 }
 
+export function AttachmentThumbnail({ attachment }: { attachment: Attachment }) {
+  const [url, setUrl] = useState('');
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    let dead = false, made = '';
+    repository.getFile(attachment.id).then((b) => {
+      if (dead || !b) return;
+      made = URL.createObjectURL(b);
+      setUrl(made);
+    }).catch(() => undefined);
+    return () => { dead = true; if (made) URL.revokeObjectURL(made); };
+  }, [attachment.id]);
+
+  if (!url) return null;
+  return <>
+    <button
+      type="button"
+      onClick={() => setOpen(true)}
+      className="group relative block overflow-hidden rounded-xl border border-white/15 bg-black/40 shadow-md transition hover:border-violet-500/50"
+      title={`View ${attachment.name}`}
+      data-testid={`attachment-thumbnail-${attachment.id}`}
+    >
+      <img src={url} alt={attachment.name} className="max-h-52 max-w-xs rounded-xl object-contain sm:max-h-64" />
+      <span className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-1.5 text-[10px] text-slate-200 opacity-0 group-hover:opacity-100 transition-opacity truncate">
+        {attachment.name}
+      </span>
+    </button>
+    {open && <PreviewModal attachment={attachment} onClose={() => setOpen(false)} />}
+  </>;
+}
+
 export function PreviewModal({ attachment, onClose }: { attachment: Attachment; onClose: () => void }) {
   const [blob, setBlob] = useState<Blob | null | undefined>(undefined);
   const [url, setUrl] = useState('');

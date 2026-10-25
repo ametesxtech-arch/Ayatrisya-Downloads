@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
 import {
-  Box, Code2, Command as CommandIcon, FileText, History as HistoryIcon, Home, Pin, UserRound, FolderKanban, HardDrive, Image, Library, Menu, MessageSquare, Mic, Music2,
+  Box, Code2, Command as CommandIcon, FileText, History as HistoryIcon, Home, MoreHorizontal, Pin, UserRound, FolderKanban, HardDrive, Image, Library, Menu, MessageSquare, Mic, Music2,
   PanelLeftClose, PanelLeftOpen, Plus, Presentation, Search, Settings, StickyNote, X,
 } from 'lucide-react';
 import { Button, IconButton } from '@/components/Primitives';
@@ -134,6 +134,7 @@ export function Workspace() {
   if (guest) return <GuestWorkspace path={path} onNewChat={() => void newChat()} creating={creating}>
     <FeaturePage path={path} goto={goto} notify={notify} />
   </GuestWorkspace>;
+  const isChat = path === '/workspace/chat' || path.startsWith('/workspace/chat/');
   const commands: Command[] = [
     { id: 'home', category: 'Navigate', keywords: ['dashboard', 'overview'], label: 'Open workspace home', run: () => goto('/workspace') },
     { id: 'chat', category: 'Create', keywords: ['conversation'], label: 'New chat', hint: 'Ctrl N', run: () => void newChat() },
@@ -212,7 +213,35 @@ export function Workspace() {
             {convs.loading && !convs.data && <div className="space-y-1 px-1 pt-1"><div className="h-6 animate-pulse rounded bg-white/[.05]" /><div className="h-6 animate-pulse rounded bg-white/[.05]" /></div>}
             {convs.error && <button onClick={convs.refresh} className="px-2 py-2 text-left text-[11px] text-rose-300">Could not load chats. Retry</button>}
             {convs.data?.length === 0 && <p className="px-2 py-2 text-[11px] leading-5 text-slate-500">{chatPage ? 'No more conversations on this page.' : chatSearch ? 'No conversations match.' : 'No conversations yet. Start one and it is saved here, in this browser.'}</p>}
-            {convs.data?.slice(0,30).map((c) => <Link key={c.id} href={`/workspace/chat/${c.id}`} onContextMenu={ctx.open(acts.items(c))} onClick={() => setMobileOpen(false)} aria-current={chatId === c.id ? 'page' : undefined} className={cx('block truncate rounded-md px-2 py-2 text-[12px] hover:bg-white/[.04] hover:text-slate-100', chatId === c.id ? 'bg-white/[.06] text-slate-100' : 'text-slate-400')}>{c.pinned && <Pin size={10} className="mr-1 inline text-violet-300" aria-label="Pinned" />}{c.title}</Link>)}
+            {convs.data?.slice(0,30).map((c) => (
+              <div key={c.id} className="group relative flex items-center">
+                <Link
+                  href={`/workspace/chat/${c.id}`}
+                  onContextMenu={ctx.open(acts.items(c))}
+                  onClick={() => setMobileOpen(false)}
+                  aria-current={chatId === c.id ? 'page' : undefined}
+                  className={cx(
+                    'block min-w-0 flex-1 truncate rounded-md px-2 py-2 text-[12px] hover:bg-white/[.04] hover:text-slate-100',
+                    chatId === c.id ? 'bg-white/[.06] text-slate-100' : 'text-slate-400'
+                  )}
+                >
+                  {c.pinned && <Pin size={10} className="mr-1 inline text-violet-300" aria-label="Pinned" />}
+                  {c.title}
+                </Link>
+                <button
+                  type="button"
+                  aria-label={`Options for ${c.title}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    ctx.open(acts.items(c))(e as any);
+                  }}
+                  className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-1 text-slate-400 hover:text-white rounded transition-opacity"
+                >
+                  <MoreHorizontal size={14} />
+                </button>
+              </div>
+            ))}
             <Link href="/workspace/history" onClick={() => setMobileOpen(false)} className="mt-1 flex items-center gap-2 px-2 py-2 text-[11px] text-slate-400 hover:text-slate-100"><HistoryIcon size={12} />All conversations</Link>
             {(chatPage > 0 || (convs.data?.length ?? 0) > 30) && <div className="flex items-center justify-between gap-1 px-2 py-2 text-[11px] text-slate-400"><button disabled={!chatPage} onClick={() => setChatPage(p => Math.max(0,p-1))} className="disabled:opacity-40">Newer</button><span>Page {chatPage+1}</span><button disabled={(convs.data?.length ?? 0) <= 30} onClick={() => setChatPage(p => p+1)} className="disabled:opacity-40">Older</button></div>}
           </>}
@@ -254,7 +283,7 @@ export function Workspace() {
             <ActionMenu label="Profile menu" items={profileItems}><UserRound size={16} /></ActionMenu>
           </div>
         </header>
-        <main id="main" tabIndex={-1} className="workspace-main-content min-h-0 flex-1 overflow-y-auto focus:outline-none"><div ref={pageRef} className="min-h-full">
+        <main id="main" tabIndex={-1} className={cx('workspace-main-content min-h-0 flex-1 focus:outline-none', isChat ? 'flex flex-col h-full overflow-hidden' : 'overflow-y-auto')}><div ref={pageRef} className={cx(isChat ? 'flex-1 h-full min-h-0 flex flex-col' : 'min-h-full')}>
           {path === '/workspace' ? <WorkspaceHome
             displayName={user?.displayName || prefs.displayName || ''}
             projects={homeProjects.data ?? []}

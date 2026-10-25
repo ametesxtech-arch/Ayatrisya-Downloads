@@ -4,6 +4,7 @@ export const tools = [
   { name: 'Research notes', href: '/workspace/research', detail: 'Collect and organise notes' },
   { name: 'Conversation history', href: '/workspace/history', detail: 'Pin, archive, export, delete' },
   { name: 'Coding', href: '/workspace/coding', detail: 'Tasks and desktop handoff' },
+  { name: 'Scheduled tasks', href: '/workspace/tasks', detail: 'Automations and reminders' },
   { name: 'Image studio', href: '/workspace/images', detail: 'Image model status' },
   { name: '3D studio', href: '/workspace/3d', detail: '3D model status' },
   { name: 'Music studio', href: '/workspace/music', detail: 'Music model status' },
@@ -13,5 +14,6 @@ export const tools = [
   { name: 'Projects', href: '/workspace/projects', detail: 'Plans, notes and files' },
   { name: 'Library', href: '/workspace/library', detail: 'Everything stored in this browser' },
   { name: 'Storage and backup', href: '/workspace/storage', detail: 'Usage, export, import' },
+  { name: 'Models & Engines', href: '/workspace/models', detail: 'Local runtimes, setup and downloads' },
   { name: 'Settings', href: '/workspace/settings', detail: 'Appearance, models, privacy' },
 ];

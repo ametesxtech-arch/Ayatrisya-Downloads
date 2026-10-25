@@ -12,7 +12,9 @@ const allowedCapabilities = new Set([
   "confirmed-command-runner",
   "war-mode-yara",
   "microsoft-defender",
+  "ametesx-local-ai",
 ]);
+
 const allowedModalities = new Set(["chat", "image", "3d", "music", "stt", "tts"]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {

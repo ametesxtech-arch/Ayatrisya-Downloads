@@ -256,6 +256,20 @@ export interface AyatrisyaDesktopApi {
   prepareWarModeRuleUpdate(): Promise<WarModeRuleUpdatePreview>;
   applyWarModeRuleUpdate(proposalId: string): Promise<WarModeStatus | { cancelled: true }>;
   onWarModeYaraProgress(callback: (progress: WarModeYaraProgress) => void): () => void;
+  getAmetesxHardwareSpecs?(): Promise<unknown>;
+  getAmetesxProvisioningStatus?(): Promise<unknown>;
+  startAmetesxProvisioning?(modelId: string): Promise<unknown>;
+  cancelAmetesxProvisioning?(): Promise<void>;
+  exportAmetesxProject?(request: unknown): Promise<unknown>;
+  startBrowserAuth(mode?: "sign-in" | "create-account"): Promise<{ state: string }>;
+  cancelBrowserAuth(): Promise<void>;
+  onAuthCallback(
+    callback: (result: {
+      success: boolean;
+      session?: { uid: string; email?: string; token: string; expiresAt: number };
+      error?: string;
+    }) => void
+  ): () => void;
 }
 
 declare global {
@@ -263,3 +277,4 @@ declare global {
     ayatrisyaDesktop?: AyatrisyaDesktopApi;
   }
 }
+

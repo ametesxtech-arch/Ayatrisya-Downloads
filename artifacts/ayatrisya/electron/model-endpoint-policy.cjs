@@ -7,7 +7,7 @@ const MODEL_PATHS = new Set([
   "/generate/3d",
   "/generate/music",
 ]);
-const MAX_CHAT_BYTES = 1024 * 1024;
+const MAX_CHAT_BYTES = 25 * 1024 * 1024;
 const MAX_GENERATION_REQUEST_BYTES = 64 * 1024;
 const GENERATION_FORMATS = {
   "/generate/image": new Set(["PNG", "JPEG"]),
@@ -83,7 +83,7 @@ function validateLocalModelRequest(requestPath, method, body) {
     }
     return { path: requestPath, method: "POST", body };
   }
-  const allowedKeys = new Set(["messages", "model", "mode", "stream"]);
+  const allowedKeys = new Set(["messages", "model", "mode", "stream", "attachments"]);
   if (Object.keys(body).some((key) => !allowedKeys.has(key))) throw new Error("The local chat request contains unsupported options.");
   if (
     !Array.isArray(body.messages) ||
@@ -101,16 +101,26 @@ function validateLocalModelRequest(requestPath, method, body) {
       !message ||
       typeof message !== "object" ||
       Array.isArray(message) ||
-      Object.keys(message).some((key) => !["role", "content"].includes(key)) ||
+      Object.keys(message).some((key) => !["role", "content", "attachments"].includes(key)) ||
       !["user", "assistant"].includes(message.role) ||
       typeof message.content !== "string"
     ) {
       throw new Error("The local chat request contains an invalid message.");
     }
+    if (message.attachments !== undefined) {
+      if (!Array.isArray(message.attachments) || message.attachments.length > 10) {
+        throw new Error("The local chat request contains invalid attachments.");
+      }
+      for (const att of message.attachments) {
+        if (!att || typeof att !== "object" || typeof att.name !== "string" || typeof att.mimeType !== "string") {
+          throw new Error("The local chat request contains invalid attachments.");
+        }
+      }
+    }
     totalBytes += Buffer.byteLength(message.content, "utf8");
   }
   if (totalBytes > MAX_CHAT_BYTES || Buffer.byteLength(JSON.stringify(body), "utf8") > MAX_CHAT_BYTES) {
-    throw new Error("The local chat request is larger than 1 MB.");
+    throw new Error("The local chat request is larger than 25 MB.");
   }
   return { path: "/chat", method: "POST", body };
 }

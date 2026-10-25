@@ -44,7 +44,20 @@ export async function verifiedFirebaseUid(
       throw new Error("Invalid Firebase subject.");
     }
     return payload.sub;
-  } catch {
+  } catch (firebaseErr) {
+    const sessionSecret = process.env.SESSION_SECRET;
+    if (sessionSecret) {
+      try {
+        const secret = new TextEncoder().encode(sessionSecret);
+        const { payload } = await jwtVerify(match[1], secret, {
+          issuer: "ayatrisya-api",
+          audience: "ayatrisya-desktop",
+        });
+        if (typeof payload.sub === "string" && /^[\w-]{1,128}$/.test(payload.sub)) {
+          return payload.sub;
+        }
+      } catch {}
+    }
     res.status(401).json({ error: messages.invalid });
     return undefined;
   }

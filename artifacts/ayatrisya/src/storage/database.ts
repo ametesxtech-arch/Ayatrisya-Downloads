@@ -39,3 +39,20 @@ export function openLocalDatabase(name = "ayatrisya-local"): Promise<IDBPDatabas
     blocking() { connection?.close(); },
   }).then(db => { connection = db; return db; });
 }
+
+export function openTasksDatabase(name = "ayatrisya-tasks"): Promise<IDBPDatabase> {
+  let connection: IDBPDatabase | undefined;
+  return openDB(name, 1, {
+    upgrade(db) {
+      if (!db.objectStoreNames.contains("scheduledTasks")) {
+        const store = db.createObjectStore("scheduledTasks", { keyPath: ["ownerId", "id"] });
+        store.createIndex("ownerId", "ownerId");
+      }
+      if (!db.objectStoreNames.contains("taskLogs")) {
+        const store = db.createObjectStore("taskLogs", { keyPath: ["ownerId", "id"] });
+        store.createIndex("ownerId", "ownerId");
+      }
+    },
+    blocking() { connection?.close(); },
+  }).then(db => { connection = db; return db; });
+}

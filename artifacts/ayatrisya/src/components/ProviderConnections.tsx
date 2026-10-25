@@ -3,6 +3,7 @@ import { Check, ExternalLink, Unlink } from "lucide-react";
 import { SiFigma, SiGithub } from "react-icons/si";
 import type { User } from "firebase/auth";
 import { Button, Notice } from "@/components/Primitives";
+import { buildApiUrl } from "@/lib/api-config";
 
 type Provider = "github" | "figma";
 type ProviderStatus = {
@@ -76,9 +77,9 @@ export function ProviderConnections({ user }: { user: User | null }) {
     void (async () => {
       try {
         const token = await user.getIdToken();
-        const response = await fetch("/api/integrations/status", {
+        const response = await fetch(buildApiUrl("/api/integrations/status"), {
           headers: { Authorization: `Bearer ${token}` },
-          credentials: "same-origin",
+          credentials: "omit",
           cache: "no-store",
         });
         const body: unknown = await response.json().catch(() => null);
@@ -102,9 +103,9 @@ export function ProviderConnections({ user }: { user: User | null }) {
     setIssue(null);
     try {
       const token = await user.getIdToken();
-      const response = await fetch(`/api/integrations/${provider}/start`, {
+      const response = await fetch(buildApiUrl(`/api/integrations/${provider}/start`), {
         headers: { Authorization: `Bearer ${token}` },
-        credentials: "same-origin",
+        credentials: "omit",
         cache: "no-store",
       });
       const body: unknown = await response.json().catch(() => null);
@@ -125,10 +126,10 @@ export function ProviderConnections({ user }: { user: User | null }) {
     setIssue(null);
     try {
       const token = await user.getIdToken();
-      const response = await fetch(`/api/integrations/${provider}/disconnect`, {
+      const response = await fetch(buildApiUrl(`/api/integrations/${provider}/disconnect`), {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
-        credentials: "same-origin",
+        credentials: "omit",
       });
       if (!response.ok) {
         const body: unknown = await response.json().catch(() => null);

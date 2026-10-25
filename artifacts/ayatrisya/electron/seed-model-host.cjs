@@ -111,13 +111,28 @@ function pythonCommand(modelRoot, platform) {
   );
 }
 
-function safeRunnerEnvironment(source) {
+function safeRunnerEnvironment(source, platform = process.platform) {
   const env = {};
   for (const key of [
     "PATH", "PYTHONPATH", "SystemRoot", "TEMP", "TMP", "HOME",
     "USERPROFILE", "LOCALAPPDATA", "APPDATA",
   ]) {
     if (typeof source[key] === "string") env[key] = source[key];
+  }
+  if (platform === "win32" && typeof source.APPDATA === "string") {
+    const fsSync = require("node:fs");
+    const pyDir = path.join(source.APPDATA, "Python");
+    try {
+      if (fsSync.existsSync(pyDir)) {
+        const subdirs = fsSync.readdirSync(pyDir);
+        const siteDirs = subdirs
+          .map((dir) => path.join(pyDir, dir, "site-packages"))
+          .filter((dir) => fsSync.existsSync(dir));
+        if (siteDirs.length > 0) {
+          env.PYTHONPATH = [env.PYTHONPATH, ...siteDirs].filter(Boolean).join(path.delimiter);
+        }
+      }
+    } catch {}
   }
   env.PYTHONUNBUFFERED = "1";
   env.PYTHONDONTWRITEBYTECODE = "1";
@@ -185,7 +200,32 @@ function createSeedModelHost({
     try {
       saved = JSON.parse(await fs.readFile(configPath(), "utf8"));
     } catch (error) {
-      if (error.code === "ENOENT") return publicStatus(state);
+      if (error.code === "ENOENT") {
+        const candidatePaths = [
+          path.resolve("D:\\AYATRISYA AI\\Ayatrisya-AI-Workspace\\Ayatrisya_model\\checkpoints\\seed-expanded-experimental.pt"),
+          path.resolve(process.cwd(), "Ayatrisya_model", "checkpoints", "seed-expanded-experimental.pt"),
+          path.resolve(__dirname, "..", "..", "..", "Ayatrisya_model", "checkpoints", "seed-expanded-experimental.pt"),
+          path.resolve(__dirname, "..", "Ayatrisya_model", "checkpoints", "seed-expanded-experimental.pt"),
+          path.resolve(userDataDir, "..", "..", "Ayatrisya_model", "checkpoints", "seed-expanded-experimental.pt"),
+          path.resolve(userDataDir, "models", "seed-expanded-experimental.pt"),
+          path.resolve("D:\\AYATRISYA AI\\Ayatrisya-AI-Workspace\\Ayatrisya_model\\checkpoints\\seed-smoke.pt"),
+          path.resolve(process.cwd(), "Ayatrisya_model", "checkpoints", "seed-smoke.pt"),
+          path.resolve(__dirname, "..", "..", "..", "Ayatrisya_model", "checkpoints", "seed-smoke.pt"),
+          path.resolve(userDataDir, "..", "..", "Ayatrisya_model", "checkpoints", "seed-smoke.pt"),
+        ];
+        for (const candidate of candidatePaths) {
+          try {
+            const checked = await validateCheckpoint(candidate);
+            config = { ...checked, autoStart: true };
+            setState({ state: "STOPPED", message: "Ayatrisya model checkpoint initialized. Ready for local inference." });
+            await persist();
+            break;
+          } catch {
+            // try next candidate
+          }
+        }
+        return publicStatus(state);
+      }
       setState({ state: "ERROR", message: "The saved local model host settings could not be read. Choose a checkpoint again." });
       return publicStatus(state);
     }
@@ -313,7 +353,7 @@ function createSeedModelHost({
         if (startupOutput.includes(BIND_MARKER)) {
           try {
             const { response, body } = await probe();
-            if (response.ok && body?.status === "ready") {
+            if (response.ok && (body?.status === "ready" || body?.status === "ok")) {
               const model = {
                 name: typeof body.model === "string" ? body.model.slice(0, 80) : "Ayatrisya Seed",
                 parameterCount: Number.isInteger(body.parameter_count) ? body.parameter_count : null,

@@ -38,7 +38,7 @@ export function GuestWorkspace({ children, path, onNewChat, creating }: { childr
         <Link href="/workspace/images" className={`flex h-9 shrink-0 items-center gap-2 rounded-lg px-3 text-xs ${path === '/workspace/images' ? 'bg-violet-300/[.1] text-violet-100' : 'text-slate-400'}`}><Image size={14} />Images · 2</Link>
         {(chats.data ?? []).slice(0, 8).map((chat) => <Link key={chat.id} href={`/workspace/chat/${chat.id}`} className={`max-w-36 shrink-0 truncate rounded-lg px-3 py-2 text-xs ${path.endsWith(chat.id) ? 'text-violet-100' : 'text-slate-500'}`}>{chat.title || 'Chat'}</Link>)}
       </nav>
-      <main id="main" tabIndex={-1} className="min-h-0 flex-1 overflow-y-auto focus:outline-none">{children}</main>
+      <main id="main" tabIndex={-1} className={`min-h-0 flex-1 focus:outline-none ${activeChat ? 'flex flex-col h-full overflow-hidden' : 'overflow-y-auto'}`}>{children}</main>
     </div>
   </div>;
 }

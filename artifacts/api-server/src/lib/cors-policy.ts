@@ -57,7 +57,15 @@ export function isAllowedApiOrigin(
   }
 
   const configuredOrigins = [
-    configuredHttpsOrigin(environment.AYATRISYA_APP_ORIGIN),
+    "https://ayatrisya.web.app",
+    "https://ayatrisya-ai.web.app",
+    "https://ayatrisya.firebaseapp.com",
+    ...(environment.AYATRISYA_APP_ORIGIN ?? "")
+      .split(",")
+      .map((origin) => configuredHttpsOrigin(origin)),
+    ...(environment.ALLOWED_ORIGINS ?? "")
+      .split(",")
+      .map((origin) => configuredHttpsOrigin(origin)),
     ...(environment.REPLIT_DOMAINS ?? "")
       .split(",")
       .map((domain) => configuredHttpsOrigin(domain)),

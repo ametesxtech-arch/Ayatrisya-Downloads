@@ -3,9 +3,24 @@ export interface ModelCapability {
   id:ModelId; label:string; available:boolean; reason:string;
   streaming:boolean; attachments:boolean; modalities:string[];
 }
-export interface ModelMessage { role:"user"|"assistant"; content:string }
+export interface MessageAttachment {
+  name: string;
+  mimeType: string;
+  dataBase64?: string;
+  textContent?: string;
+  size?: number;
+}
+export interface ModelMessage {
+  role: "user" | "assistant";
+  content: string;
+  attachments?: MessageAttachment[];
+}
 export interface GenerationOptions {
-  model:ModelId; mode:ChatMode; onToken?:(token:string)=>void; signal?:AbortSignal;
+  model: ModelId;
+  mode: ChatMode;
+  onToken?: (token: string) => void;
+  signal?: AbortSignal;
+  attachments?: MessageAttachment[];
 }
 export type AssetGenerationKind = "image" | "3d" | "music";
 export interface AssetGenerationOptions {

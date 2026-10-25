@@ -49,6 +49,11 @@ jobs:
         run: pnpm --filter @workspace/ayatrisya run test:desktop:security
 
       - name: Build installer on native operating system
+        env:
+          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY || 'AIzaSyAsTIhiNu7UhTwOh-gfY5exLLIX9qGRtyk' }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN || 'ayatrisya.firebaseapp.com' }}
+          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID || 'ayatrisya' }}
+          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID || '1:663542830691:web:70912ddce81c1ecd284a56' }}
         run: pnpm --filter @workspace/ayatrisya run desktop:package:${{ matrix.target }}
 
       - name: Record Windows installer and WAR MODE resource sizes

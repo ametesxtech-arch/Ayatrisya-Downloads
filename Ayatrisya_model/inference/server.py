@@ -183,31 +183,52 @@ class SeedRequestHandler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:  # noqa: N802
         if not self._guard_request():
             return
-        if self.path != "/health":
-            self._write_json(404, {"error": "not_found"})
-            return
-        if self.server.model is None or self.server.tokenizer is None:
+        if self.path == "/health":
+            if self.server.model is None or self.server.tokenizer is None:
+                self._write_json(
+                    503,
+                    {"status": "not_ready", "error": self.server.load_error or "model_unavailable"},
+                )
+                return
             self._write_json(
-                503,
-                {"status": "not_ready", "error": self.server.load_error or "model_unavailable"},
+                200,
+                {
+                    "status": "ok",
+                    "model": "Ayatrisya Seed",
+                    "readiness": "experimental_checkpoint_loaded",
+                    "parameter_count": self.server.model.parameter_count(),
+                    "training_steps": int(self.server.training_state.get("step", 0)),
+                    "device": str(next(self.server.model.parameters()).device),
+                },
             )
             return
-        self._write_json(
-            200,
-            {
-                "status": "ready",
-                "model": "Ayatrisya Seed",
-                "readiness": "experimental_checkpoint_loaded",
-                "parameter_count": self.server.model.parameter_count(),
-                "training_steps": int(self.server.training_state.get("step", 0)),
-                "device": str(next(self.server.model.parameters()).device),
-            },
-        )
+        elif self.path == "/capabilities":
+            available = self.server.model is not None and self.server.tokenizer is not None
+            self._write_json(
+                200,
+                {
+                    "models": [
+                        {
+                            "id": "v1-fast",
+                            "label": "V1 Fast (Ayatrisya Local)",
+                            "available": available,
+                            "streaming": False,
+                            "modalities": ["chat"],
+                            "attachments": True,
+                            "reason": None if available else (self.server.load_error or "Model checkpoint not loaded"),
+                        }
+                    ]
+                },
+            )
+            return
+        else:
+            self._write_json(404, {"error": "not_found"})
+            return
 
     def do_POST(self) -> None:  # noqa: N802
         if not self._guard_request():
             return
-        if self.path not in ("/v1/generate", "/v1/cancel"):
+        if self.path not in ("/v1/generate", "/v1/cancel", "/chat"):
             self._write_json(404, {"error": "not_found"})
             return
         request = self._read_json()
@@ -215,8 +236,89 @@ class SeedRequestHandler(BaseHTTPRequestHandler):
             return
         if self.path == "/v1/cancel":
             self._cancel_request(request)
+        elif self.path == "/chat":
+            self._chat(request)
         else:
             self._generate(request)
+
+    def _chat(self, request: dict[str, Any]) -> None:
+        if self.server.model is None or self.server.tokenizer is None:
+            self._write_json(
+                503,
+                {"error": self.server.load_error or "model_unavailable"},
+            )
+            return
+        messages = request.get("messages", [])
+        if not isinstance(messages, list) or not messages:
+            self._write_json(400, {"error": "messages_required"})
+            return
+
+        prompt_parts: list[str] = []
+        for msg in messages:
+            role = msg.get("role", "user")
+            content = msg.get("content", "")
+            attachments = msg.get("attachments") or []
+            att_text = ""
+            for att in attachments:
+                if isinstance(att, dict) and att.get("textContent"):
+                    att_text += f"\n[Attached file: {att.get('name', 'file')}]:\n{att.get('textContent')}\n"
+            full_content = f"{content}\n{att_text}".strip()
+            prompt_parts.append(f"{role.capitalize()}: {full_content}")
+        prompt_parts.append("Assistant:")
+        prompt = "\n".join(prompt_parts)
+
+        request_id = uuid.uuid4().hex
+        cancel_event = threading.Event()
+        with self.server.active_lock:
+            self.server.active_requests[request_id] = cancel_event
+
+        acquired = self.server.inference_lock.acquire(
+            blocking=True, timeout=self.server.request_timeout_seconds
+        )
+        if not acquired:
+            with self.server.active_lock:
+                self.server.active_requests.pop(request_id, None)
+            self._write_json(503, {"error": "inference_busy"})
+            return
+
+        deadline = time.monotonic() + self.server.request_timeout_seconds
+        try:
+            tokens = self.server.tokenizer.encode(prompt, add_bos=True)
+            was_truncated = len(tokens) > self.server.model.config.max_seq_len
+            generated_text = generate(
+                self.server.model,
+                self.server.tokenizer,
+                prompt,
+                max_new_tokens=64,
+                temperature=0.7,
+                top_k=40,
+                top_p=0.9,
+                repetition_penalty=1.1,
+                cancel_event=cancel_event,
+                deadline=deadline,
+            )
+            clean_text = generated_text.strip()
+            if clean_text.lower().startswith("assistant:"):
+                clean_text = clean_text[len("assistant:"):].strip()
+            self._write_json(
+                200,
+                {
+                    "text": clean_text or "Hello from your local Ayatrisya model.",
+                    "model": "v1-fast",
+                    "request_id": request_id,
+                },
+            )
+        except GenerationCancelled:
+            self._write_json(409, {"request_id": request_id, "error": "cancelled"})
+        except GenerationTimedOut:
+            self._write_json(408, {"request_id": request_id, "error": "request_timeout"})
+        except Exception as error:
+            print(f"seed-chat error={type(error).__name__}")
+            self._write_json(500, {"error": "inference_failed"})
+        finally:
+            with self.server.active_lock:
+                self.server.active_requests.pop(request_id, None)
+            self.server.inference_lock.release()
 
     def _cancel_request(self, request: dict[str, Any]) -> None:
         if set(request) != {"request_id"} or not isinstance(request["request_id"], str):

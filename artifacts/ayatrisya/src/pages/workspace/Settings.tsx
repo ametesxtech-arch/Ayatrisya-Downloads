@@ -31,7 +31,7 @@ export function SettingsPage({ notify, goto, initial = 'appearance' }: { notify:
     </div>
     {section === 'appearance' && <Appearance />}
     {section === 'personalization' && <PersonalizationPage />}
-    {section === 'models' && <Models />}
+    {section === 'models' && <Models goto={goto} />}
     {section === 'war-mode' && <WarModePanel />}
     {section === 'privacy' && <Privacy goStorage={() => setSection('storage')} goto={goto} />}
     {section === 'storage' && <Storage notify={notify} />}
@@ -66,11 +66,24 @@ function Appearance() {
   </>;
 }
 
-function Models() {
+function Models({ goto }: { goto?: (h: string) => void }) {
   const { prefs, save } = usePrefs();
   const { caps, loading, error, refresh } = useCaps();
   const [demoOpen, setDemoOpen] = useState(false);
   return <>
+    {goto && (
+      <div className="mb-5 rounded-xl border border-violet-500/30 bg-violet-500/[.08] p-4.5 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h3 className="text-sm font-semibold text-slate-100">Models & Engines Hub</h3>
+          <p className="text-xs text-slate-400 mt-0.5">
+            Dedicated view for local runtimes, hardware capability diagnostics, package provisioning, and prompt tests.
+          </p>
+        </div>
+        <Button variant="solid" onClick={() => goto('/workspace/models')}>
+          Open Models & Engines
+        </Button>
+      </div>
+    )}
     <DesktopLocalModel />
     <SeedModelHostPanel />
     <Card title="Defaults">
@@ -405,7 +418,7 @@ function Privacy({ goStorage, goto }: { goStorage: () => void; goto: (h: string)
     </Card>
     <Card title="How your data is handled">
       <p className="py-3 text-sm leading-6 text-slate-400">Conversations, projects, notes, documents and files are stored in IndexedDB in this browser profile. Ayatrisya has no content database. Clearing browser data, or using a private window, can remove them; export a backup to keep a copy.</p>
-      <p className="py-3 text-sm leading-6 text-slate-400">If a model server is configured, text you choose to send reaches that server for processing, and you are asked first. Attachments are not sent. Ayatrisya does not train models on private content.</p>
+      <p className="py-3 text-sm leading-6 text-slate-400">If a model server is configured, text and attachments you choose to send reach that server for processing, and you are asked first. Ayatrisya does not train models on private content.</p>
       <p className="py-3 text-sm leading-6 text-slate-400">Google Drive backup is manual and optional, and only works when an OAuth client is configured.</p>
     </Card>
     <Card title="Ayatrisya software and rights">

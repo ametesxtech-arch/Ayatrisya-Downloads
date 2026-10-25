@@ -53,7 +53,15 @@ export const GetModelCapabilitiesResponse = zod.object({
 /**
  * @summary Send a chat request to an Ayatrisya model
  */
-export const sendModelChatBodyMessagesItemContentMax = 100000;
+export const ModelChatAttachmentSchema = zod.object({
+  "name": zod.string().max(255),
+  "mimeType": zod.string().max(100),
+  "dataBase64": zod.string().max(25000000).optional(),
+  "textContent": zod.string().max(2000000).optional(),
+  "size": zod.number().max(25000000).optional()
+});
+
+export const sendModelChatBodyMessagesItemContentMax = 2000000;
 
 export const sendModelChatBodyMessagesMax = 128;
 
@@ -61,12 +69,14 @@ export const sendModelChatBodyMessagesMax = 128;
 
 export const SendModelChatBody = zod.object({
   "messages": zod.array(zod.object({
-  "role": zod.enum(['user', 'assistant']),
-  "content": zod.string().max(sendModelChatBodyMessagesItemContentMax)
-})).min(1).max(sendModelChatBodyMessagesMax),
+    "role": zod.enum(['user', 'assistant']),
+    "content": zod.string().max(sendModelChatBodyMessagesItemContentMax),
+    "attachments": zod.array(ModelChatAttachmentSchema).max(10).optional()
+  })).min(1).max(sendModelChatBodyMessagesMax),
   "model": zod.enum(['v1-fast', 'v2-best']),
   "mode": zod.enum(['Normal', 'Savage', 'Joke']),
-  "stream": zod.boolean()
+  "stream": zod.boolean(),
+  "attachments": zod.array(ModelChatAttachmentSchema).max(10).optional()
 })
 
 export const sendModelChatResponseTextMax = 2000000;

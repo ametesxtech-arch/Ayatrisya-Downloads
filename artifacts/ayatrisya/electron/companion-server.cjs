@@ -85,6 +85,7 @@ function createCompanionServer({
 }) {
   const origins = new Set(allowedOrigins);
   const sessions = new Map();
+  const activePairingCodes = new Map();
   const activeCommands = new Map();
   const audit = [];
   const permit = createRateLimiter({ now });
@@ -205,13 +206,55 @@ function createCompanionServer({
         return;
       }
 
+      if (request.method === "POST" && pathname === "/v1/pair/code") {
+        if (!permit(`${request.socket.remoteAddress}:pair-code`, 10)) {
+          send(response, 429, { error: "Too many pairing code requests. Wait and try again." });
+          return;
+        }
+        const body = await requireBody(request, response);
+        assertKeys(body, []);
+        const code = randomBytes(6).toString("hex").toUpperCase();
+        const expiresAt = now() + 5 * 60 * 1000;
+        activePairingCodes.set(code, { code, expiresAt, used: false });
+        send(response, 200, {
+          code,
+          expiresAt: new Date(expiresAt).toISOString(),
+        });
+        return;
+      }
+
       if (request.method === "POST" && pathname === "/v1/pair") {
         if (!permit(`${request.socket.remoteAddress}:pair`, 5)) {
           send(response, 429, { error: "Too many pairing requests. Wait and try again." });
           return;
         }
         const body = await requireBody(request, response);
-        assertKeys(body, []);
+        assertKeys(body, [], ["pairingCode"]);
+        if (body.pairingCode !== undefined) {
+          if (typeof body.pairingCode !== "string" || body.pairingCode.length > 64) {
+            throw Object.assign(new Error("The pairing code is invalid."), { statusCode: 400 });
+          }
+          const codeUpper = body.pairingCode.trim().toUpperCase();
+          const codeEntry = activePairingCodes.get(codeUpper);
+          if (!codeEntry) {
+            record("pair", "invalid-code");
+            send(response, 403, { error: "The pairing code is invalid or unrecognized." });
+            return;
+          }
+          if (codeEntry.used) {
+            record("pair", "reused-code");
+            send(response, 403, { error: "This pairing code has already been used. Generate a new code." });
+            return;
+          }
+          if (codeEntry.expiresAt <= now()) {
+            activePairingCodes.delete(codeUpper);
+            record("pair", "expired-code");
+            send(response, 403, { error: "This pairing code has expired. Generate a new code." });
+            return;
+          }
+          codeEntry.used = true;
+          activePairingCodes.delete(codeUpper);
+        }
         for (const [key, session] of sessions) {
           if (session.expiresAt <= now()) sessions.delete(key);
         }

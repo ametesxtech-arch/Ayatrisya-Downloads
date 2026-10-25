@@ -1,3 +1,14 @@
+try {
+  process.loadEnvFile();
+} catch {}
+try {
+  process.loadEnvFile("../../.env");
+} catch {}
+
+if (!process.env.SESSION_SECRET || process.env.SESSION_SECRET.length < 32) {
+  process.env.SESSION_SECRET = "ayatrisya_super_secret_session_key_32bytes_min_length_secure";
+}
+
 // Proprietary notice: applies only to original material Ametesx owns or is authorized to license; third-party and prior licenses remain in force.
 import express, { type Express } from "express";
 import cors from "cors";
@@ -46,9 +57,29 @@ app.use((_req, res, next) => {
   });
   next();
 });
-app.use(express.json({ limit: "1mb" }));
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: "25mb" }));
+app.use(express.urlencoded({ extended: true, limit: "25mb" }));
+
+app.get(["/health", "/healthz"], (_req, res) => {
+  res.status(200).json({ status: "ok" });
+});
 
 app.use("/api", router);
+
+app.use("/api", (_req, res) => {
+  res.status(404).set({
+    "Cache-Control": "no-store",
+    "Content-Type": "application/json; charset=utf-8",
+  }).json({ error: "The requested API endpoint was not found." });
+});
+
+app.use("/api", (err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  if (!res.headersSent) {
+    res.status(500).set({
+      "Cache-Control": "no-store",
+      "Content-Type": "application/json; charset=utf-8",
+    }).json({ error: "An unexpected API error occurred." });
+  }
+});
 
 export default app;

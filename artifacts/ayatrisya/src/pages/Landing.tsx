@@ -24,10 +24,13 @@ import { Mark, Brand } from '@/components/Brand';
 import { PublicSiteFooter } from '@/components/PublicSite';
 import { useAuth } from '@/integrations/firebase/AuthProvider';
 import { MotionText } from '@/components/MotionText';
+import { useCaps } from '@/hooks/use-prefs';
 
 export function Landing() {
   const [, setPath] = useLocation();
   const { startGuest, user } = useAuth();
+  const { caps } = useCaps();
+  const anyReady = caps.some((c) => c.available);
   return (
     <div className="landing-page app-noise min-h-[100dvh] overflow-hidden bg-[#101116] text-slate-100">
       <header className="landing-header relative z-10 mx-auto flex max-w-[1240px] items-center justify-between gap-3 px-3 py-4 sm:px-5 sm:py-5 lg:px-9">
@@ -111,11 +114,11 @@ export function Landing() {
               </a>
             </div>
             <div className="mt-9 flex items-center gap-3 text-[11px] text-slate-500">
-              <span className="h-px w-8 bg-slate-700" /> Local storage works · AI models
-              are not connected
+              <span className={cx("size-2 rounded-full transition-colors", anyReady ? "bg-teal-400 shadow-[0_0_8px_rgba(45,212,191,0.6)]" : "bg-slate-700")} />
+              {anyReady ? "Local storage active · AI models connected and ready" : "Local storage works · AI models are not connected"}
             </div>
           </div>
-          <ProductPreview />
+          <ProductPreview anyReady={anyReady} />
         </section>
         <section
           id="capabilities"
@@ -315,7 +318,7 @@ export function Landing() {
   );
 }
 
-export function ProductPreview() {
+export function ProductPreview({ anyReady = false }: { anyReady?: boolean }) {
   return (
     <div className="product-preview relative reveal [animation-delay:120ms]">
       <div className="absolute -inset-8 rounded-[40px] bg-violet-500/[.08] blur-[70px]" />
@@ -370,8 +373,8 @@ export function ProductPreview() {
               <span className="text-[10px] text-slate-500">
                 New conversation
               </span>
-              <span className="rounded-md border border-white/[.07] px-2 py-1 text-[9px] text-slate-500">
-                V1 Fast · unavailable
+              <span className={cx("rounded-md border px-2 py-1 text-[9px]", anyReady ? "border-teal-400/30 text-teal-300 bg-teal-400/[.06]" : "border-white/[.07] text-slate-500")}>
+                V1 Fast · {anyReady ? 'ready' : 'unavailable'}
               </span>
             </div>
             <div className="mx-auto mt-12 max-w-[390px]">

@@ -21,7 +21,7 @@ export function useConvActions({ notify, goto, onDeleted }: { notify: (m: string
   const items = (c: Conversation): MenuItem[] => [
     { label: 'Open', onSelect: () => goto(`/workspace/chat/${c.id}`) },
     { label: 'Rename', onSelect: () => setRename(c) },
-    { label: c.pinned ? 'Unpin' : 'Pin to top', onSelect: () => run(() => repository.updateConversation(c.id, { pinned: !c.pinned })) },
+    { label: c.pinned ? 'Unpin' : 'Pin to top', onSelect: () => run(() => repository.updateConversation(c.id, { pinned: !c.pinned }), c.pinned ? 'Conversation unpinned.' : 'Conversation pinned to top.') },
     { label: c.archived ? 'Restore from archive' : 'Archive', onSelect: () => run(async () => { await repository.updateConversation(c.id, { archived: !c.archived }); pushNotice(c.archived ? 'Conversation restored.' : 'Conversation archived.', { label: 'Undo', run: () => repository.updateConversation(c.id, { archived: c.archived }).catch((e) => notify(errMsg(e))) }); }) },
     { label: 'Duplicate', onSelect: () => run(async () => { const d = await repository.duplicateConversation(c.id); pushNotice('Conversation duplicated.', { label: 'Open', run: () => goto(`/workspace/chat/${d.id}`) }); }) },
     { label: 'Export as JSON', onSelect: () => run(async () => downloadBlob(await exportConversation(c.id), `${safeName(c.title)}.conversation.json`), 'Conversation exported. The file contains private data and is not encrypted.') },
@@ -30,7 +30,7 @@ export function useConvActions({ notify, goto, onDeleted }: { notify: (m: string
     { label: 'Delete', danger: true, onSelect: () => setDel([c]) },
   ];
   const dialogs: ReactNode = <>
-    {rename && <RenameDialog title="Rename conversation" initial={rename.title} onClose={() => setRename(null)} onSubmit={(v) => repository.renameConversation(rename.id, v)} />}
+    {rename && <RenameDialog title="Rename conversation" initial={rename.title} onClose={() => setRename(null)} onSubmit={(v) => repository.renameConversation(rename.id, v).then(() => notify('Conversation renamed.'))} />}
     {clear && <ConfirmDialog danger title="Clear conversation" confirmLabel="Clear messages" body={<>Remove every message and attached file from <b>{clear.title}</b>? The conversation itself stays. This cannot be undone. Drive copies are not affected.</>} onConfirm={async () => { if (await run(() => repository.clearConversation(clear.id), 'Conversation cleared.')) setClear(null); }} onClose={() => setClear(null)} />}
     {del && <ConfirmDialog danger title={del.length === 1 ? 'Delete conversation' : `Delete ${del.length} conversations`} confirmLabel={`Delete ${del.length}`} body={<>This permanently deletes {del.length === 1 ? <b>{del[0].title}</b> : `${del.length} conversations`}, their messages, and files attached in {del.length === 1 ? 'it' : 'them'}, including the matching Library entries. This cannot be undone. Export first if you may need a copy. Copies already backed up to Google Drive are not affected.</>} onConfirm={async () => { const ids = del.map((c) => c.id); if (await run(() => repository.deleteConversations(ids), `Deleted ${ids.length} conversation${ids.length > 1 ? 's' : ''}.`)) { onDeleted?.(ids); setDel(null); } }} onClose={() => setDel(null)} />}
   </>;

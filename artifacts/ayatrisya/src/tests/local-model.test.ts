@@ -103,4 +103,124 @@ describe("desktop-local model transport", () => {
     expect(tokenProvider).not.toHaveBeenCalled();
     expect(fetch).not.toHaveBeenCalled();
   });
+
+  it("attempts exactly one controlled local recovery and succeeds without cloud fallback", async () => {
+    let callCount = 0;
+    const startSeedModelHost = vi.fn().mockResolvedValue({ state: "READY" });
+    const requestLocalModel = vi.fn(async (path: string) => {
+      if (path === "/capabilities") {
+        return {
+          status: 200,
+          contentType: "application/json",
+          body: { models: [{ id: "v1-fast", available: true, modalities: ["chat"] }] },
+        };
+      }
+      if (path === "/health") {
+        return { status: 200, contentType: "application/json", body: { status: "ok" } };
+      }
+      if (path === "/chat") {
+        callCount++;
+        if (callCount === 1) {
+          throw new Error("Temporary crash");
+        }
+        return { status: 200, contentType: "application/json", body: { text: "Recovered local response" } };
+      }
+      return { status: 404, contentType: "application/json", body: { error: "not_found" } };
+    });
+
+    const bridge = {
+      isDesktop: true as const,
+      getRuntimeInfo: vi.fn().mockResolvedValue({
+        bridgeName: "ayatrisya-desktop",
+        apiVersion: 1,
+        appVersion: "1.0.0",
+        platform: "win32",
+        capabilities: ["local-model-ipc", "local-seed-model-host"],
+        localModel: { endpointConfigured: true, models: [{ id: "v1-fast", available: true, modalities: ["chat"] }] },
+      }),
+      getLocalModelEndpoint: vi.fn().mockResolvedValue("http://127.0.0.1:49382"),
+      startSeedModelHost,
+      requestLocalModel,
+      cancelLocalModelRequest: vi.fn().mockResolvedValue(undefined),
+    };
+    const previousWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
+    Object.defineProperty(globalThis, "window", { configurable: true, value: { ayatrisyaDesktop: bridge } });
+    resetDesktopRuntimeCache();
+
+    try {
+      const client = new AyatrisyaModelClient();
+      const text = await client.generateResponse(
+        [{ role: "user", content: "Test recovery" }],
+        { model: "v1-fast", mode: "Normal" },
+      );
+      expect(text).toBe("Recovered local response");
+      expect(startSeedModelHost).toHaveBeenCalledTimes(1);
+      expect(callCount).toBe(2);
+    } finally {
+      resetDesktopRuntimeCache();
+      if (previousWindow) Object.defineProperty(globalThis, "window", previousWindow);
+      else Reflect.deleteProperty(globalThis, "window");
+    }
+  });
+
+  it("asks for permission and routes to cloud fallback when user approves, but stays local when declined", async () => {
+    const fetchMock = vi.fn(async (_url: string) => {
+      return new Response(JSON.stringify({ text: "Cloud planner response" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const bridge = {
+      isDesktop: true as const,
+      getRuntimeInfo: vi.fn().mockResolvedValue({
+        bridgeName: "ayatrisya-desktop",
+        apiVersion: 1,
+        appVersion: "1.0.0",
+        platform: "win32",
+        capabilities: ["local-model-ipc", "local-seed-model-host"],
+        localModel: { endpointConfigured: true, models: [{ id: "v1-fast", available: true, modalities: ["chat"] }] },
+      }),
+      getLocalModelEndpoint: vi.fn().mockResolvedValue("http://127.0.0.1:49382"),
+      startSeedModelHost: vi.fn().mockRejectedValue(new Error("Host won't start")),
+      requestLocalModel: vi.fn(async (path: string) => {
+        if (path === "/capabilities") {
+          return { status: 200, contentType: "application/json", body: { models: [{ id: "v1-fast", available: true, modalities: ["chat"] }] } };
+        }
+        throw new Error("Local model failed permanently");
+      }),
+      cancelLocalModelRequest: vi.fn().mockResolvedValue(undefined),
+    };
+    const previousWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
+    Object.defineProperty(globalThis, "window", { configurable: true, value: { ayatrisyaDesktop: bridge } });
+    resetDesktopRuntimeCache();
+
+    try {
+      const client = new AyatrisyaModelClient(async () => "cloud-token");
+
+      // 1. User declines fallback
+      client.setFallbackConsentHandler(async () => false);
+      await expect(client.generateResponse(
+        [{ role: "user", content: "Prompt with declined fallback" }],
+        { model: "v1-fast", mode: "Normal" },
+      )).rejects.toThrow("Cloud fallback was declined.");
+      expect(fetchMock).not.toHaveBeenCalled();
+
+      // 2. User approves fallback
+      client.setFallbackConsentHandler(async () => true);
+      const cloudResult = await client.generateResponse(
+        [{ role: "user", content: "Prompt with approved fallback" }],
+        { model: "v1-fast", mode: "Normal" },
+      );
+      expect(cloudResult).toBe("Cloud planner response");
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.unstubAllGlobals();
+      resetDesktopRuntimeCache();
+      if (previousWindow) Object.defineProperty(globalThis, "window", previousWindow);
+      else Reflect.deleteProperty(globalThis, "window");
+    }
+  });
 });
+

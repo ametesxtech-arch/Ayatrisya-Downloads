@@ -185,3 +185,41 @@ test("command cancellation is scoped to the paired session", async () => {
   assert.deepEqual(cancelled.body, { cancelled: true });
   assert.equal((await running).body.cancelled, true);
 });
+
+test("supports one-time pairing code, enforces single-use, and rejects reused or expired codes", async () => {
+  const { port } = await start({ handlers: { confirmPair: async () => true } });
+  
+  // 1. Generate one-time code
+  const codeRes = await request(port, { method: "POST", path: "/v1/pair/code", body: {} });
+  assert.equal(codeRes.status, 200);
+  assert.match(codeRes.body.code, /^[A-F0-9]{12}$/);
+  assert.ok(codeRes.body.expiresAt);
+
+  // 2. Reject invalid code
+  const invalidPair = await request(port, {
+    method: "POST",
+    path: "/v1/pair",
+    body: { pairingCode: "INVALIDCODE12" },
+  });
+  assert.equal(invalidPair.status, 403);
+  assert.match(invalidPair.body.error, /invalid or unrecognized/i);
+
+  // 3. Successful pairing with code
+  const validPair = await request(port, {
+    method: "POST",
+    path: "/v1/pair",
+    body: { pairingCode: codeRes.body.code },
+  });
+  assert.equal(validPair.status, 200);
+  assert.match(validPair.body.token, /^[A-Za-z0-9_-]{43}$/);
+
+  // 4. Reject reuse of same code
+  const reusePair = await request(port, {
+    method: "POST",
+    path: "/v1/pair",
+    body: { pairingCode: codeRes.body.code },
+  });
+  assert.equal(reusePair.status, 403);
+  assert.match(reusePair.body.error, /invalid or unrecognized|already been used/i);
+});
+

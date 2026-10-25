@@ -1,55 +1,64 @@
-# See https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
+# Ayatrisya desktop runtime and browser data
+.config/
+**/Cookies
+**/Cookies-journal
+**/Local State
+**/Session Storage/
+**/Local Storage/
+**/IndexedDB/
+**/Cache/
+**/Code Cache/
+**/GPUCache/
+**/Crash Reports/
+**/desktop-server.json
 
-# compiled output
-dist
-/generated-artifacts/
-tmp
-out-tsc
+# Local secrets and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+firebase_key.json
+service-account*.json
+
+# Dependencies
+node_modules/
+**/node_modules/
+.pnpm-store/
+
+# Build outputs, caches, and TypeScript build info
+dist/
+**/dist/
 *.tsbuildinfo
-.expo
-.expo-shared
-artifacts/ayatrisya/desktop/build/
+**/*.tsbuildinfo
+.tsbuildinfo
+
+# Downloaded binaries and installer artifacts
+generated-artifacts/
 artifacts/ayatrisya/war-mode-assets/
+*.AppImage
+*.dmg
+*.exe
 
-# dependencies
-node_modules
-
-# IDEs and editors
-/.idea
-.project
-.classpath
-.c9/
-*.launch
-.settings/
-*.sublime-workspace
-
-# IDE - VSCode
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
-
-# misc
-/.sass-cache
-/connect.lock
-/coverage
-/libpeerconnection.log
-npm-debug.log
-yarn-error.log
-testem.log
-/typings
-
-# System Files
+# Editor and OS metadata
+.vscode/
+.idea/
 .DS_Store
 Thumbs.db
 
-.cursor/rules/nx-rules.mdc
-.github/instructions/nx.instructions.md
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
-# Replit
-.cache/
-.local/
-.env
-.env.*
-!/.env.example
+# Python & Temporary Caches
+__pycache__/
+*.pyc
+.pytest_cache/
+.firebase/
+scratch_test/
+artifacts/ayatrisya/build/
+attached_assets/
+artifacts/api-server/data/

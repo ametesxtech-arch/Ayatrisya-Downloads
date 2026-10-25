@@ -12,7 +12,9 @@ import { detectDevicePlatform } from "@/pwa/device";
 import { usePwa } from "@/pwa/PwaProvider";
 import { MotionText } from "@/components/MotionText";
 import {
+  DEFAULT_PUBLISHED_RELEASES,
   formatInstallerSize,
+  OFFICIAL_RELEASE_TAG_URL,
   resolveDesktopRelease,
   secureHttpsUrl,
 } from "@/data/desktop-releases";
@@ -42,21 +44,37 @@ const env = import.meta.env as unknown as {
   VITE_DESKTOP_DOWNLOAD_MAC_VERIFICATION_SUMMARY?: string;
 };
 
-const releasePageUrl = secureHttpsUrl(env.VITE_DESKTOP_DOWNLOAD_URL);
+const getVal = (val?: string, fallback?: string) => (val && val.trim() ? val.trim() : fallback);
+
+const releasePageUrl =
+  secureHttpsUrl(env.VITE_DESKTOP_DOWNLOAD_URL) ?? OFFICIAL_RELEASE_TAG_URL;
 const platforms = [
   {
     name: "Linux",
     id: "linux",
     target: "Linux x64 · AppImage",
     release: resolveDesktopRelease({
-      downloadUrl: env.VITE_DESKTOP_DOWNLOAD_LINUX_URL,
+      downloadUrl: getVal(
+        env.VITE_DESKTOP_DOWNLOAD_LINUX_URL,
+        DEFAULT_PUBLISHED_RELEASES.linux.downloadUrl,
+      ),
       expectedExtension: ".appimage",
-      version: env.VITE_DESKTOP_DOWNLOAD_LINUX_VERSION,
-      sizeBytes: env.VITE_DESKTOP_DOWNLOAD_LINUX_SIZE_BYTES,
-      sha256: env.VITE_DESKTOP_DOWNLOAD_LINUX_SHA256,
-      releaseNotesUrl:
-        env.VITE_DESKTOP_DOWNLOAD_LINUX_NOTES_URL ??
+      version: getVal(
+        env.VITE_DESKTOP_DOWNLOAD_LINUX_VERSION,
+        DEFAULT_PUBLISHED_RELEASES.linux.version,
+      ),
+      sizeBytes: getVal(
+        env.VITE_DESKTOP_DOWNLOAD_LINUX_SIZE_BYTES,
+        DEFAULT_PUBLISHED_RELEASES.linux.sizeBytes,
+      ),
+      sha256: getVal(
+        env.VITE_DESKTOP_DOWNLOAD_LINUX_SHA256,
+        DEFAULT_PUBLISHED_RELEASES.linux.sha256,
+      ),
+      releaseNotesUrl: getVal(
+        env.VITE_DESKTOP_DOWNLOAD_LINUX_NOTES_URL,
         releasePageUrl,
+      ),
       verificationReportUrl:
         env.VITE_DESKTOP_DOWNLOAD_LINUX_VERIFICATION_REPORT_URL,
       verificationSummary:
@@ -68,14 +86,27 @@ const platforms = [
     id: "windows",
     target: "Windows x64 · NSIS installer (.exe)",
     release: resolveDesktopRelease({
-      downloadUrl: env.VITE_DESKTOP_DOWNLOAD_WINDOWS_URL,
+      downloadUrl: getVal(
+        env.VITE_DESKTOP_DOWNLOAD_WINDOWS_URL,
+        DEFAULT_PUBLISHED_RELEASES.windows.downloadUrl,
+      ),
       expectedExtension: ".exe",
-      version: env.VITE_DESKTOP_DOWNLOAD_WINDOWS_VERSION,
-      sizeBytes: env.VITE_DESKTOP_DOWNLOAD_WINDOWS_SIZE_BYTES,
-      sha256: env.VITE_DESKTOP_DOWNLOAD_WINDOWS_SHA256,
-      releaseNotesUrl:
-        env.VITE_DESKTOP_DOWNLOAD_WINDOWS_NOTES_URL ??
+      version: getVal(
+        env.VITE_DESKTOP_DOWNLOAD_WINDOWS_VERSION,
+        DEFAULT_PUBLISHED_RELEASES.windows.version,
+      ),
+      sizeBytes: getVal(
+        env.VITE_DESKTOP_DOWNLOAD_WINDOWS_SIZE_BYTES,
+        DEFAULT_PUBLISHED_RELEASES.windows.sizeBytes,
+      ),
+      sha256: getVal(
+        env.VITE_DESKTOP_DOWNLOAD_WINDOWS_SHA256,
+        DEFAULT_PUBLISHED_RELEASES.windows.sha256,
+      ),
+      releaseNotesUrl: getVal(
+        env.VITE_DESKTOP_DOWNLOAD_WINDOWS_NOTES_URL,
         releasePageUrl,
+      ),
       verificationReportUrl:
         env.VITE_DESKTOP_DOWNLOAD_WINDOWS_VERIFICATION_REPORT_URL,
       verificationSummary:
@@ -87,14 +118,27 @@ const platforms = [
     id: "macos",
     target: "macOS universal · DMG",
     release: resolveDesktopRelease({
-      downloadUrl: env.VITE_DESKTOP_DOWNLOAD_MAC_URL,
+      downloadUrl: getVal(
+        env.VITE_DESKTOP_DOWNLOAD_MAC_URL,
+        DEFAULT_PUBLISHED_RELEASES.macos.downloadUrl,
+      ),
       expectedExtension: ".dmg",
-      version: env.VITE_DESKTOP_DOWNLOAD_MAC_VERSION,
-      sizeBytes: env.VITE_DESKTOP_DOWNLOAD_MAC_SIZE_BYTES,
-      sha256: env.VITE_DESKTOP_DOWNLOAD_MAC_SHA256,
-      releaseNotesUrl:
-        env.VITE_DESKTOP_DOWNLOAD_MAC_NOTES_URL ??
+      version: getVal(
+        env.VITE_DESKTOP_DOWNLOAD_MAC_VERSION,
+        DEFAULT_PUBLISHED_RELEASES.macos.version,
+      ),
+      sizeBytes: getVal(
+        env.VITE_DESKTOP_DOWNLOAD_MAC_SIZE_BYTES,
+        DEFAULT_PUBLISHED_RELEASES.macos.sizeBytes,
+      ),
+      sha256: getVal(
+        env.VITE_DESKTOP_DOWNLOAD_MAC_SHA256,
+        DEFAULT_PUBLISHED_RELEASES.macos.sha256,
+      ),
+      releaseNotesUrl: getVal(
+        env.VITE_DESKTOP_DOWNLOAD_MAC_NOTES_URL,
         releasePageUrl,
+      ),
       verificationReportUrl:
         env.VITE_DESKTOP_DOWNLOAD_MAC_VERIFICATION_REPORT_URL,
       verificationSummary:
@@ -284,7 +328,9 @@ export function DesktopDownloadsPage() {
                 {platform.release.downloadUrl ? (
                   <a
                     href={platform.release.downloadUrl}
+                    target="_blank"
                     rel="noopener noreferrer"
+                    download
                     className="inline-flex min-h-10 w-full shrink-0 items-center justify-center gap-2 self-start rounded-lg border border-violet-300/20 bg-violet-400/10 px-3 text-xs font-semibold text-violet-100 transition-colors hover:border-violet-200/40 hover:bg-violet-400/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 motion-reduce:transition-none sm:w-auto sm:self-auto"
                     data-testid={`download-action-${platform.id}`}
                   >

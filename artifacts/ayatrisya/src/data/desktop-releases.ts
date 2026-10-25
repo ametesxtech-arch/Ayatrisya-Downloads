@@ -26,6 +26,39 @@ export interface DesktopReleaseInput {
   verificationSummary?: string;
 }
 
+export const OFFICIAL_RELEASE_TAG_URL =
+  "https://github.com/ametesxtech-arch/Ayatrisya-Downloads/releases/tag/v0.0.0";
+
+export const DEFAULT_PUBLISHED_RELEASES = {
+  windows: {
+    downloadUrl:
+      "https://github.com/ametesxtech-arch/Ayatrisya-Downloads/releases/download/v0.0.0/Ayatrisya.Setup.0.0.0.exe",
+    expectedExtension: ".exe",
+    version: "0.0.0",
+    sizeBytes: "124837324",
+    sha256: "bef8bd59c3f31c77fbf52fff996388830f0f88ab174a5b77354a07882c6f9698",
+    releaseNotesUrl: OFFICIAL_RELEASE_TAG_URL,
+  },
+  linux: {
+    downloadUrl:
+      "https://github.com/ametesxtech-arch/Ayatrisya-Downloads/releases/download/v0.0.0/Ayatrisya-0.0.0.AppImage",
+    expectedExtension: ".appimage",
+    version: "0.0.0",
+    sizeBytes: "128640085",
+    sha256: "0b1ec99a93fa6dee7191df2db905301ac51bb6d359c3caab6544eefd05518ead",
+    releaseNotesUrl: OFFICIAL_RELEASE_TAG_URL,
+  },
+  macos: {
+    downloadUrl:
+      "https://github.com/ametesxtech-arch/Ayatrisya-Downloads/releases/download/v0.0.0/Ayatrisya-0.0.0-universal.dmg",
+    expectedExtension: ".dmg",
+    version: "0.0.0",
+    sizeBytes: "220588534",
+    sha256: "aef55ab1adaa51ff2eccbb9383ac37455f1bc32cc6942b27cad735ff193a9f9c",
+    releaseNotesUrl: OFFICIAL_RELEASE_TAG_URL,
+  },
+} as const;
+
 export function secureHttpsUrl(value?: string): string | undefined {
   if (!value?.trim()) return undefined;
   try {
