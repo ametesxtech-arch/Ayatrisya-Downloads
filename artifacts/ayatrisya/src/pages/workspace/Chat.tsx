@@ -468,10 +468,10 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
   return (
     <div className="flex h-full w-full min-h-0 overflow-hidden">
       <div className="chat-page flex flex-col flex-1 min-h-0 h-full min-w-0 transition-all duration-200">
-        <div className="chat-conversation-bar flex items-center justify-between gap-2 px-4 py-2 text-xs text-slate-500 border-b border-white/[.05] bg-[#121319]/60 backdrop-blur-sm">
-          <div className="flex items-center gap-2 min-w-0">
+        <div className="chat-conversation-bar flex items-center justify-between gap-1.5 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 text-xs text-slate-500 border-b border-white/[.05] bg-[#121319]/60 backdrop-blur-sm overflow-x-auto scrollbar-none">
+          <div className="flex items-center gap-1.5 shrink-0">
             {/* Persistent, clearly visible Chat Mode Selector */}
-            <div className="flex items-center rounded-lg border border-white/10 bg-white/[.03] p-0.5" data-testid="chat-mode-selector">
+            <div className="flex items-center rounded-lg border border-white/10 bg-white/[.03] p-0.5 shrink-0" data-testid="chat-mode-selector">
 
               {CHAT_MODES.map((mode) => {
                 const Icon = mode.icon;
@@ -483,7 +483,7 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
                     onClick={() => void setConversationMode(mode.id)}
                     title={`${mode.label} Mode: ${mode.desc}`}
                     data-testid={`mode-tab-${mode.id.toLowerCase()}`}
-                    className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md transition-all ${
+                    className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 text-xs font-medium rounded-md whitespace-nowrap transition-all ${
                       isSelected
                         ? mode.id === 'Savage'
                           ? 'bg-rose-500/20 text-rose-300 shadow-sm border border-rose-500/30'
@@ -509,15 +509,25 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
               }}
               data-testid="button-toggle-canvas"
               title="Open full-screen Canvas IDE in a dedicated workspace tab"
+              className="whitespace-nowrap text-xs h-7 px-2"
             >
               <Code2 size={13} className="text-teal-300" />
               <span>Canvas IDE</span>
-              <ExternalLink size={10} className="text-slate-400 ml-0.5" />
+              <ExternalLink size={10} className="text-slate-400 ml-0.5 hidden sm:inline" />
             </Button>
-            <Button variant="quiet" onClick={openSts} data-testid="button-header-sts" title="Start real-time Voice Conversation"><Radio size={13} className="text-teal-300 animate-pulse" /><span>Voice</span></Button>
+            <Button variant="quiet" onClick={openSts} data-testid="button-header-sts" title="Start real-time Voice Conversation" className="whitespace-nowrap text-xs h-7 px-2">
+              <Radio size={13} className="text-teal-300 animate-pulse" />
+              <span className="hidden sm:inline">Voice</span>
+            </Button>
             {id && !guest && <>
-              <Button variant="quiet" onClick={() => setRenaming(conv.data?.title ?? '')}><Pencil size={13} />Rename</Button>
-              <Button variant="quiet" onClick={() => setConfirmDel(true)}><Trash2 size={13} />Delete</Button>
+              <Button variant="quiet" onClick={() => setRenaming(conv.data?.title ?? '')} className="whitespace-nowrap text-xs h-7 px-2">
+                <Pencil size={13} />
+                <span className="hidden sm:inline">Rename</span>
+              </Button>
+              <Button variant="quiet" onClick={() => setConfirmDel(true)} className="whitespace-nowrap text-xs h-7 px-2">
+                <Trash2 size={13} />
+                <span className="hidden sm:inline">Delete</span>
+              </Button>
               {conv.data && <ActionMenu label="More conversation actions" items={acts.items(conv.data)}><MoreHorizontal size={15} /></ActionMenu>}
             </>}
           </div>
@@ -631,70 +641,117 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
           <div className={`chat-composer-wrap mx-auto ${studioWidth ? 'max-w-[1060px]' : 'max-w-[820px]'}`}>
             {id && !available && <p className="chat-model-footnote" data-testid="status-model-local-only">Selected model unavailable. New messages are saved locally and not sent.</p>}
             {files.length > 0 && <div className="chat-attachments" data-testid="list-pending-attachments">{files.map((f, i) => <span key={`${f.name}-${i}`} className="chat-attachment"><Paperclip size={13} /><span className="truncate">{f.name}</span><span className="shrink-0">{formatBytes(f.size)}</span><button type="button" aria-label={`Remove ${f.name}`} data-testid={`button-remove-attachment-${i}`} onClick={() => setFiles(files.filter((_, j) => j !== i))}><X size={14} /></button></span>)}<span className="chat-attachment-note">Attachments will be analyzed by Ayatrisya's vision and document engine when you send.</span></div>}
-            <div className="chat-composer relative" data-testid="chat-composer">
-                {!guest && <><input ref={fileRef} type="file" multiple hidden onChange={(e) => pick(e.target.files)} data-testid="input-attachments" />
-                <input id="chat-zip-attachment" type="file" accept=".zip,application/zip" className="sr-only" onChange={(e) => { pick(e.target.files); e.currentTarget.value = ''; }} data-testid="input-zip-attachment" />
-                <IconButton label="Attach files" onClick={() => fileRef.current?.click()} className="chat-composer-tool" data-testid="button-attach"><Paperclip size={17} /></IconButton>
-                <label htmlFor="chat-zip-attachment" aria-label="Upload ZIP archive" title="Upload ZIP archive" data-testid="button-upload-zip" className="chat-composer-tool grid size-9 shrink-0 cursor-pointer place-items-center rounded-lg text-slate-400 hover:bg-white/[.07] hover:text-white focus-within:ring-2 focus-within:ring-violet-400"><Archive size={17} /></label>
-                
-                {/* Dedicated Generate Image button in chat composer */}
-                <IconButton
-                  label="Generate an image (/image)"
-                  onClick={() => {
-                    setText((prev) => (prev.trim() ? `${prev.trim()} /image ` : '/image '));
-                    taRef.current?.focus();
-                  }}
-                  className="chat-composer-tool text-violet-300 hover:text-violet-200"
-                  data-testid="button-composer-image"
-                >
-                  <ImageIcon size={17} />
-                </IconButton>
-
-                <ActionMenu label="Other chat actions" up items={[
-                  { label: canvas.isOpen ? 'Close Code Canvas' : 'Open Code Canvas', onSelect: () => canvas.isOpen ? canvas.closeCanvas() : canvas.openCanvas() },
-                  { label: 'Generate image with Cloudflare (/image)', onSelect: () => { setText('/image '); taRef.current?.focus(); } },
-                  { label: 'Voice Conversation (STS)', onSelect: openSts },
-                  { label: 'Open Image Studio', onSelect: () => goto('/workspace/images') },
-                  { label: 'Open voice studio', onSelect: () => goto('/workspace/voice') },
-                  { label: 'Open coding workspace', onSelect: () => goto('/workspace/coding') },
-                ]} className="!flex !h-10 !w-auto gap-1 px-2"><MoreHorizontal size={16} /><span className="text-[11px]">Other</span></ActionMenu></>}
-              <label className="sr-only" htmlFor="composer">Message</label>
-              <textarea id="composer" ref={taRef} rows={1} value={text} onChange={(e) => setText(e.target.value)} onPaste={(e) => {
-                const items = e.clipboardData?.items;
-                if (items) {
-                  const pastedFiles: File[] = [];
-                  for (const it of Array.from(items)) {
-                    if (it.type.startsWith('image/')) {
-                      const f = it.getAsFile();
-                      if (f) pastedFiles.push(f);
+            <div className="chat-composer flex flex-col p-2.5 sm:p-2 rounded-2xl relative shadow-xl" data-testid="chat-composer">
+              {/* TOP: Full-width Textarea */}
+              <div className="w-full flex-1 min-h-[44px]">
+                <label className="sr-only" htmlFor="composer">Message</label>
+                <textarea
+                  id="composer"
+                  ref={taRef}
+                  rows={1}
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  onPaste={(e) => {
+                    const items = e.clipboardData?.items;
+                    if (items) {
+                      const pastedFiles: File[] = [];
+                      for (const it of Array.from(items)) {
+                        if (it.type.startsWith('image/')) {
+                          const f = it.getAsFile();
+                          if (f) pastedFiles.push(f);
+                        }
+                      }
+                      if (pastedFiles.length > 0) {
+                        setFiles((prev) => [...prev, ...pastedFiles]);
+                      }
                     }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.nativeEvent.isComposing && (prefs.enterToSend ? !e.shiftKey : (e.ctrlKey || e.metaKey))) {
+                      e.preventDefault();
+                      void send();
+                    }
+                  }}
+                  placeholder={
+                    activeMode === 'Savage'
+                      ? "Enter prompt for Savage mode (roasts, bold wit)..."
+                      : activeMode === 'Joke'
+                        ? "Enter prompt for Joke mode (humor, punchlines)..."
+                        : "Write a message or type /image to generate visuals..."
                   }
-                  if (pastedFiles.length > 0) {
-                    setFiles((prev) => [...prev, ...pastedFiles]);
-                  }
-                }
-              }} onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing && (prefs.enterToSend ? !e.shiftKey : (e.ctrlKey || e.metaKey))) { e.preventDefault(); void send(); } }} placeholder={activeMode === 'Savage' ? "Enter prompt for Savage mode (roasts, bold wit)..." : activeMode === 'Joke' ? "Enter prompt for Joke mode (humor, punchlines)..." : "Write a message or type /image to generate visuals..."} className="chat-composer-input" data-testid="input-message" aria-describedby="composer-hint" />
-              <VoiceInputButton
-                onSendTranscript={(transcript) => void send(transcript)}
-                onInsertInComposer={(transcript) => {
-                  setText((prev) => (prev ? `${prev} ${transcript}` : transcript));
-                  taRef.current?.focus();
-                }}
-                disabled={busy}
-              />
-              <button
-                type="button"
-                onClick={openSts}
-                aria-label="Start Voice Conversation (STS)"
-                title="Real-time Voice Conversation (STS)"
-                data-testid="button-sts-composer"
-                className="chat-composer-tool grid size-10 shrink-0 place-items-center rounded-xl text-teal-300 hover:bg-teal-500/10 hover:text-teal-200"
-              >
-                <Radio size={17} />
-              </button>
-              {!guest && <Link href="/workspace/voice" aria-label="Open voice studio" title="Voice studio" data-testid="link-voice-studio" className="chat-composer-tool grid size-10 shrink-0 place-items-center rounded-xl text-slate-400 hover:bg-white/[.07] hover:text-white"><Mic size={17} /></Link>}
-              {busy ? <button type="button" onClick={stop} aria-label="Stop generation" data-testid="button-stop-generation" className="chat-send-button chat-stop-button"><Square size={14} /><span>Stop</span></button>
-                : <button type="button" onClick={() => void send()} disabled={saving || !!ask || (!text.trim() && !files.length)} aria-label="Send message" className="chat-send-button" data-testid="button-send"><Send size={16} /><span>Send</span></button>}
+                  className="chat-composer-input w-full min-h-[44px] !p-1.5 focus:ring-0"
+                  data-testid="input-message"
+                  aria-describedby="composer-hint"
+                />
+              </div>
+
+              {/* BOTTOM: Action Bar */}
+              <div className="flex items-center justify-between gap-1 pt-1.5 border-t border-white/[.05] mt-1">
+                {/* Left: Tools */}
+                <div className="flex items-center gap-0.5 sm:gap-1">
+                  {!guest && (
+                    <>
+                      <input ref={fileRef} type="file" multiple hidden onChange={(e) => pick(e.target.files)} data-testid="input-attachments" />
+                      <input id="chat-zip-attachment" type="file" accept=".zip,application/zip" className="sr-only" onChange={(e) => { pick(e.target.files); e.currentTarget.value = ''; }} data-testid="input-zip-attachment" />
+                      <IconButton label="Attach files" onClick={() => fileRef.current?.click()} className="chat-composer-tool" data-testid="button-attach"><Paperclip size={16} /></IconButton>
+                      <label htmlFor="chat-zip-attachment" aria-label="Upload ZIP archive" title="Upload ZIP archive" data-testid="button-upload-zip" className="chat-composer-tool hidden sm:grid size-9 shrink-0 cursor-pointer place-items-center rounded-lg text-slate-400 hover:bg-white/[.07] hover:text-white"><Archive size={16} /></label>
+                      <IconButton
+                        label="Generate an image (/image)"
+                        onClick={() => {
+                          setText((prev) => (prev.trim() ? `${prev.trim()} /image ` : '/image '));
+                          taRef.current?.focus();
+                        }}
+                        className="chat-composer-tool text-violet-300 hover:text-violet-200"
+                        data-testid="button-composer-image"
+                      >
+                        <ImageIcon size={16} />
+                      </IconButton>
+                      <ActionMenu label="Other chat actions" up items={[
+                        { label: canvas.isOpen ? 'Close Code Canvas' : 'Open Code Canvas', onSelect: () => canvas.isOpen ? canvas.closeCanvas() : canvas.openCanvas() },
+                        { label: 'Upload ZIP archive', onSelect: () => document.getElementById('chat-zip-attachment')?.click() },
+                        { label: 'Generate image with AI (/image)', onSelect: () => { setText('/image '); taRef.current?.focus(); } },
+                        { label: 'Voice Conversation (STS)', onSelect: openSts },
+                        { label: 'Open Image Studio', onSelect: () => goto('/workspace/images') },
+                        { label: 'Open voice studio', onSelect: () => goto('/workspace/voice') },
+                        { label: 'Open coding workspace', onSelect: () => goto('/workspace/coding') },
+                      ]} className="!flex !h-9 !w-auto gap-1 px-1.5"><MoreHorizontal size={15} /><span className="hidden sm:inline text-[11px]">Other</span></ActionMenu>
+                    </>
+                  )}
+                </div>
+
+                {/* Right: Voice Input + Send */}
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <VoiceInputButton
+                    onSendTranscript={(transcript) => void send(transcript)}
+                    onInsertInComposer={(transcript) => {
+                      setText((prev) => (prev ? `${prev} ${transcript}` : transcript));
+                      taRef.current?.focus();
+                    }}
+                    disabled={busy}
+                  />
+                  <button
+                    type="button"
+                    onClick={openSts}
+                    aria-label="Start Voice Conversation (STS)"
+                    title="Real-time Voice Conversation (STS)"
+                    data-testid="button-sts-composer"
+                    className="chat-composer-tool hidden sm:grid size-9 shrink-0 place-items-center rounded-xl text-teal-300 hover:bg-teal-500/10 hover:text-teal-200"
+                  >
+                    <Radio size={16} />
+                  </button>
+                  {busy ? (
+                    <button type="button" onClick={stop} aria-label="Stop generation" data-testid="button-stop-generation" className="chat-send-button chat-stop-button">
+                      <Square size={14} />
+                      <span className="hidden sm:inline">Stop</span>
+                    </button>
+                  ) : (
+                    <button type="button" onClick={() => void send()} disabled={saving || !!ask || (!text.trim() && !files.length)} aria-label="Send message" className="chat-send-button" data-testid="button-send">
+                      <Send size={15} />
+                      <span className="hidden sm:inline">Send</span>
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
             <p id="composer-hint" className="chat-composer-hint" aria-live="polite" data-testid="status-composer-hint">{saving ? (files.length ? `Saving ${files.length} file${files.length > 1 ? 's' : ''} and your message to this browser…` : 'Saving to this browser…') : <>{prefs.enterToSend ? 'Enter to send' : 'Ctrl+Enter to send'} <span aria-hidden>·</span> {prefs.enterToSend ? 'Shift+Enter for a new line' : 'Enter for a new line'} <span className="chat-local-promise"><ShieldCheck size={12} /> Stored locally</span></>}</p>
           </div>

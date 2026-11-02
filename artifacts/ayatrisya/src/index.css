@@ -377,18 +377,18 @@ html[data-appearance="light"] .chat-prose .katex-display>.katex{color:#0d9488}
 .chat-attachment>svg{flex:none;color:#aaa0cc}.chat-attachment button{display:grid;width:26px;height:26px;flex:none;place-items:center;border-radius:6px;color:#93909d}.chat-attachment button:hover{background:rgba(255,255,255,.07);color:#fff}
 .chat-attachment-note{color:#858290;font-size:10px}
 .chat-composer{
-  display:flex;min-height:58px;align-items:flex-end;gap:5px;
-  padding:7px;
+  display:flex;flex-direction:column;min-height:58px;gap:5px;
+  padding:10px 12px;
   border:1px solid rgba(213,206,231,.15);
   border-radius:18px;
   background:linear-gradient(145deg,#1b1b24,#17171e);
   box-shadow:0 12px 42px rgba(0,0,0,.17),inset 0 1px rgba(255,255,255,.025);
 }
 .chat-composer:focus-within{border-color:rgba(181,168,235,.42);box-shadow:0 0 0 3px rgba(181,168,235,.055),0 12px 42px rgba(0,0,0,.16)}
-.chat-composer-tool{width:40px;height:40px;flex:none;color:#9895a4}
+.chat-composer-tool{width:36px;height:36px;flex:none;color:#9895a4}
 .chat-composer-input{
-  display:block;min-width:0;max-height:200px;min-height:40px;flex:1;resize:none;
-  padding:10px 9px;border:0;background:transparent;color:#ebe8f1;
+  display:block;width:100%;min-width:0;max-height:200px;min-height:40px;flex:1;resize:none;
+  padding:6px 4px;border:0;background:transparent;color:#ebe8f1;
   font-size:14px;line-height:1.5;overflow-y:auto;outline:none;
 }
 .chat-composer-input::placeholder{color:#797684}
@@ -430,31 +430,32 @@ html[data-appearance="light"] .chat-thinking b{color:#494653}
 html[data-appearance="light"] .chat-thinking small,html[data-appearance="light"] .chat-composer-hint{color:#72707d}
 @media(max-width:640px){
   .chat-page{min-height:calc(100dvh - 58px)}
-  .chat-conversation-bar{min-height:40px;padding-inline:12px!important}
-  .chat-conversation-bar .inline-flex{min-height:34px;padding-inline:7px}
-  .chat-content{padding:23px 14px 25px}
-  .chat-welcome{margin:clamp(18px,6vh,44px) auto 38px}
-  .chat-welcome-mark{width:38px;height:38px;margin-bottom:20px}
-  .chat-welcome h2{font-size:clamp(2.15rem,11vw,3.2rem)}
-  .chat-welcome-copy{font-size:13px;line-height:1.75}
-  .chat-starter-grid{gap:8px;margin-top:25px}
-  .chat-starter{min-height:52px;gap:8px;padding:8px;font-size:11px}
-  .chat-starter-icon{width:27px;height:27px}
+  .chat-conversation-bar{min-height:40px;padding-inline:8px!important;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .chat-conversation-bar::-webkit-scrollbar{display:none}
+  .chat-conversation-bar .inline-flex{min-height:30px;padding-inline:6px}
+  .chat-content{padding:16px 12px 20px}
+  .chat-welcome{margin:clamp(14px,5vh,36px) auto 28px}
+  .chat-welcome-mark{width:34px;height:34px;margin-bottom:16px}
+  .chat-welcome h2{font-size:clamp(1.9rem,10vw,2.8rem)}
+  .chat-welcome-copy{font-size:13px;line-height:1.7}
+  .chat-starter-grid{gap:8px;margin-top:20px}
+  .chat-starter{min-height:48px;gap:8px;padding:8px;font-size:11px}
+  .chat-starter-icon{width:26px;height:26px}
   .chat-starter-arrow{display:none}
-  .chat-message-list{gap:24px;padding-top:18px}
+  .chat-message-list{gap:20px;padding-top:14px}
   .chat-message-inner{grid-template-columns:25px minmax(0,1fr);gap:9px}
   .chat-avatar{width:25px;height:25px;border-radius:8px}
-  .chat-prose{font-size:13px;line-height:1.75}
+  .chat-prose{font-size:13px;line-height:1.7}
   .chat-user-content{font-size:13px;padding:10px 12px}
   .chat-message-actions{margin-top:4px}
   .chat-action{opacity:1}
-  .chat-composer-dock{padding-top:8px}
-  .chat-composer{min-height:54px;gap:2px;padding:5px;border-radius:16px}
-  .chat-composer-tool{width:38px;height:40px}
-  .chat-composer-input{min-height:40px;padding:10px 6px;font-size:16px}
-  .chat-send-button{min-width:42px;width:42px;height:40px;border-radius:12px}
+  .chat-composer-dock{padding-top:6px;padding-bottom:max(env(safe-area-inset-bottom),8px)}
+  .chat-composer{min-height:50px;gap:2px;padding:8px 10px;border-radius:16px}
+  .chat-composer-tool{width:34px;height:34px}
+  .chat-composer-input{min-height:38px;padding:4px;font-size:15px;width:100%!important}
+  .chat-send-button{min-width:38px;width:38px;height:34px;border-radius:10px}
   .chat-send-button span{display:none}
-  .chat-composer-hint{font-size:9px;padding-inline:5px}
+  .chat-composer-hint{font-size:9px;padding-inline:4px}
   .chat-local-promise{font-size:9px}
   .chat-scroll-latest{right:14px;bottom:122px}
 }

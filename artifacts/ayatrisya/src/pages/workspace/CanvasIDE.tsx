@@ -34,6 +34,7 @@ import {
 import { useCanvas, CanvasProvider, useOptionalCanvas } from '@/components/canvas/CanvasContext';
 import { usePrefs } from '@/hooks/use-prefs';
 import { useDesktopRuntime } from '@/desktop/use-runtime';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { generateProjectFromPrompt, type ProjectGenerationProgress } from '@/ai/project-generator';
 import { modelClient } from '@/ai/client';
 
@@ -41,9 +42,12 @@ function CanvasIDEInternal() {
   const canvas = useCanvas();
   const { prefs } = usePrefs();
   const desktop = useDesktopRuntime();
+  const isMobile = useIsMobile();
 
   // Mode: 'editor-only' | 'split' | 'preview-only' | 'terminal-only'
   const [viewMode, setViewMode] = useState<'editor-only' | 'split' | 'preview-only' | 'terminal-only'>('split');
+  // Mobile single-pane tab: 'files' | 'code' | 'preview' | 'terminal'
+  const [mobileTab, setMobileTab] = useState<'files' | 'code' | 'preview' | 'terminal'>('code');
   // Device viewport: 'desktop' | 'tablet' | 'mobile'
   const [deviceViewport, setDeviceViewport] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   // Bottom dock tab: 'terminal' | 'output' | 'problems' | 'packages'
@@ -473,89 +477,123 @@ Return ONLY the complete updated file content without markdown code fences or co
   return (
     <div className="flex h-full w-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#0d0f17] text-slate-200 select-none font-sans">
       {/* 1. TOP TOOLBAR */}
-      <header className="flex h-12 shrink-0 items-center justify-between border-b border-white/[.08] bg-[#12141e]/90 px-3 backdrop-blur-md">
+      <header className="flex h-11 sm:h-12 shrink-0 items-center justify-between border-b border-white/[.08] bg-[#12141e]/90 px-2 sm:px-3 backdrop-blur-md gap-1 sm:gap-2">
         {/* Left: Branding & Project Meta */}
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 pr-3 border-r border-white/10">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-teal-500/20 text-teal-300 font-bold">
-              <Code2 size={16} />
+        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 pr-1.5 sm:pr-3 border-r border-white/10">
+            <div className="flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-lg bg-teal-500/20 text-teal-300 font-bold shrink-0">
+              <Code2 size={14} />
             </div>
-            <span className="text-xs font-semibold tracking-wide text-white">Ayatrisya Canvas IDE</span>
+            <span className="text-xs font-semibold tracking-wide text-white hidden sm:inline">Canvas IDE</span>
           </div>
 
-          <div className="flex items-center gap-1.5 text-xs text-slate-400">
-            <span className="font-mono text-slate-300 font-medium">project-workspace</span>
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400" title="Saved locally in browser" />
+          <div className="flex items-center gap-1 text-[11px] text-slate-400">
+            <span className="font-mono text-slate-300 font-medium truncate max-w-[80px] sm:max-w-none">{active ? active.name : 'project'}</span>
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400 shrink-0" title="Saved locally in browser" />
           </div>
         </div>
 
-        {/* Center: Controls & Mode Selector */}
-        <div className="flex items-center gap-1 bg-black/40 p-0.5 rounded-lg border border-white/10">
-          <button
-            type="button"
-            onClick={() => setViewMode('editor-only')}
-            className={`px-2.5 py-1 text-xs rounded font-medium transition ${viewMode === 'editor-only' ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30' : 'text-slate-400 hover:text-white'}`}
-            title="Editor Only"
-          >
-            Editor
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode('split')}
-            className={`px-2.5 py-1 text-xs rounded font-medium transition ${viewMode === 'split' ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30' : 'text-slate-400 hover:text-white'}`}
-            title="Editor + Preview Split"
-          >
-            Split
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode('preview-only')}
-            className={`px-2.5 py-1 text-xs rounded font-medium transition ${viewMode === 'preview-only' ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30' : 'text-slate-400 hover:text-white'}`}
-            title="Full-screen Preview"
-          >
-            Preview
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode('terminal-only')}
-            className={`px-2.5 py-1 text-xs rounded font-medium transition ${viewMode === 'terminal-only' ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30' : 'text-slate-400 hover:text-white'}`}
-            title="Terminal Focused"
-          >
-            Terminal
-          </button>
-        </div>
+        {/* Center: Mobile Navigation Switcher vs Desktop Mode Selector */}
+        {isMobile ? (
+          <div className="flex items-center gap-0.5 bg-black/50 p-0.5 rounded-lg border border-white/10">
+            <button
+              type="button"
+              onClick={() => setMobileTab('files')}
+              className={`px-2 py-1 text-[11px] rounded font-medium transition ${mobileTab === 'files' ? 'bg-teal-500/25 text-teal-300 font-semibold shadow-sm' : 'text-slate-400 hover:text-white'}`}
+            >
+              Files
+            </button>
+            <button
+              type="button"
+              onClick={() => setMobileTab('code')}
+              className={`px-2 py-1 text-[11px] rounded font-medium transition ${mobileTab === 'code' ? 'bg-teal-500/25 text-teal-300 font-semibold shadow-sm' : 'text-slate-400 hover:text-white'}`}
+            >
+              Code
+            </button>
+            <button
+              type="button"
+              onClick={() => setMobileTab('preview')}
+              className={`px-2 py-1 text-[11px] rounded font-medium transition ${mobileTab === 'preview' ? 'bg-teal-500/25 text-teal-300 font-semibold shadow-sm' : 'text-slate-400 hover:text-white'}`}
+            >
+              Preview
+            </button>
+            <button
+              type="button"
+              onClick={() => setMobileTab('terminal')}
+              className={`px-2 py-1 text-[11px] rounded font-medium transition ${mobileTab === 'terminal' ? 'bg-teal-500/25 text-teal-300 font-semibold shadow-sm' : 'text-slate-400 hover:text-white'}`}
+            >
+              Terminal
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1 bg-black/40 p-0.5 rounded-lg border border-white/10">
+            <button
+              type="button"
+              onClick={() => setViewMode('editor-only')}
+              className={`px-2.5 py-1 text-xs rounded font-medium transition ${viewMode === 'editor-only' ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30' : 'text-slate-400 hover:text-white'}`}
+              title="Editor Only"
+            >
+              Editor
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('split')}
+              className={`px-2.5 py-1 text-xs rounded font-medium transition ${viewMode === 'split' ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30' : 'text-slate-400 hover:text-white'}`}
+              title="Editor + Preview Split"
+            >
+              Split
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('preview-only')}
+              className={`px-2.5 py-1 text-xs rounded font-medium transition ${viewMode === 'preview-only' ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30' : 'text-slate-400 hover:text-white'}`}
+              title="Full-screen Preview"
+            >
+              Preview
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('terminal-only')}
+              className={`px-2.5 py-1 text-xs rounded font-medium transition ${viewMode === 'terminal-only' ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30' : 'text-slate-400 hover:text-white'}`}
+              title="Terminal Focused"
+            >
+              Terminal
+            </button>
+          </div>
+        )}
 
         {/* Right: Actions */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           {/* Run Button */}
           <button
             type="button"
             onClick={() => {
+              if (isMobile) setMobileTab('preview');
               setPreviewKey((k) => k + 1);
               setTerminalLogs((prev) => [...prev, { text: 'Running preview server update…', type: 'info' }]);
             }}
-            className="flex items-center gap-1.5 rounded-md bg-emerald-500 px-3 py-1 text-xs font-semibold text-slate-950 hover:bg-emerald-400 shadow-md transition"
+            className="flex items-center gap-1 sm:gap-1.5 rounded-md bg-emerald-500 px-2 sm:px-3 py-1 text-xs font-semibold text-slate-950 hover:bg-emerald-400 shadow-md transition"
             title="Compile & Run Project (Ctrl+Enter)"
           >
-            <Play size={13} fill="currentColor" />
-            <span>Run</span>
+            <Play size={12} fill="currentColor" />
+            <span className="hidden sm:inline">Run</span>
           </button>
 
           {/* AI Project Generator */}
           <button
             type="button"
             onClick={() => setShowAiModal(true)}
-            className="flex items-center gap-1.5 rounded-md border border-teal-500/40 bg-teal-500/10 px-2.5 py-1 text-xs font-medium text-teal-300 hover:bg-teal-500/20 transition"
+            className="flex items-center gap-1 sm:gap-1.5 rounded-md border border-teal-500/40 bg-teal-500/10 px-2 sm:px-2.5 py-1 text-xs font-medium text-teal-300 hover:bg-teal-500/20 transition"
           >
-            <Sparkles size={13} />
-            <span>AI Generate Project</span>
+            <Sparkles size={12} />
+            <span className="hidden sm:inline">AI Generate</span>
           </button>
 
           {/* Export Project */}
           <button
             type="button"
             onClick={handleDownloadAll}
-            className="flex items-center gap-1.5 rounded-md border border-white/10 px-2 py-1 text-xs text-slate-300 hover:bg-white/[.06] transition"
+            className="hidden sm:flex items-center gap-1.5 rounded-md border border-white/10 px-2 py-1 text-xs text-slate-300 hover:bg-white/[.06] transition"
             title="Export files to local drive"
           >
             <Download size={13} />
@@ -567,7 +605,7 @@ Return ONLY the complete updated file content without markdown code fences or co
       {/* 2. MAIN WORKSPACE GRID */}
       <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* LEFT: FILE EXPLORER */}
-        <aside className="w-56 shrink-0 border-r border-white/[.08] bg-[#0f111a] flex flex-col">
+        <aside className={`shrink-0 border-r border-white/[.08] bg-[#0f111a] flex flex-col ${isMobile ? (mobileTab === 'files' ? 'w-full flex-1' : 'hidden') : 'w-56'}`}>
           <div className="flex items-center justify-between px-3 py-2 border-b border-white/[.06]">
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Files</span>
             <div className="flex items-center gap-1">
@@ -632,7 +670,10 @@ Return ONLY the complete updated file content without markdown code fences or co
               return (
                 <div
                   key={file.id}
-                  onClick={() => canvas.setActiveFile(file.id)}
+                  onClick={() => {
+                    canvas.setActiveFile(file.id);
+                    if (isMobile) setMobileTab('code');
+                  }}
                   className={`group flex items-center justify-between rounded px-2 py-1 text-xs font-mono cursor-pointer transition ${
                     isActive
                       ? 'bg-teal-500/15 text-teal-300 font-semibold border border-teal-500/30'
@@ -663,7 +704,7 @@ Return ONLY the complete updated file content without markdown code fences or co
         </aside>
 
         {/* CENTER / RIGHT WORKSPACE */}
-        <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
+        <div className={`flex flex-1 flex-col min-w-0 overflow-hidden ${isMobile && mobileTab === 'files' ? 'hidden' : 'flex'}`}>
           {/* TABS & ACTIONS */}
           <div className="flex h-9 shrink-0 items-center justify-between border-b border-white/[.08] bg-[#11131c] px-2 overflow-x-auto">
             <div className="flex items-center gap-1 overflow-x-auto">
@@ -672,7 +713,10 @@ Return ONLY the complete updated file content without markdown code fences or co
                 return (
                   <div
                     key={file.id}
-                    onClick={() => canvas.setActiveFile(file.id)}
+                    onClick={() => {
+                      canvas.setActiveFile(file.id);
+                      if (isMobile) setMobileTab('code');
+                    }}
                     className={`flex items-center gap-1.5 rounded-t-md px-3 py-1.5 text-xs font-mono cursor-pointer border-t-2 transition ${
                       isActive
                         ? 'border-teal-400 bg-[#0d0f17] text-teal-200 font-medium'
@@ -687,7 +731,7 @@ Return ONLY the complete updated file content without markdown code fences or co
             </div>
 
             {/* Editor Quick Tools */}
-            <div className="flex items-center gap-1 text-slate-400">
+            <div className="flex items-center gap-1 text-slate-400 shrink-0">
               <button
                 type="button"
                 disabled={!canvas.canUndo}
@@ -726,7 +770,7 @@ Return ONLY the complete updated file content without markdown code fences or co
           {/* SPLIT VIEW (EDITOR + PREVIEW) */}
           <div className="flex flex-1 min-h-0 overflow-hidden">
             {/* CODE EDITOR PANE */}
-            {(viewMode === 'editor-only' || viewMode === 'split') && (
+            {(!isMobile ? (viewMode === 'editor-only' || viewMode === 'split') : (mobileTab === 'code')) && (
               <div className="flex flex-1 flex-col min-w-0 border-r border-white/[.08] bg-[#0d0f17]">
                 {/* Diff Banner if pending */}
                 {canvas.pendingDiff && (
@@ -802,7 +846,7 @@ Return ONLY the complete updated file content without markdown code fences or co
             )}
 
             {/* PREVIEW PANE */}
-            {(viewMode === 'preview-only' || viewMode === 'split') && (
+            {(!isMobile ? (viewMode === 'preview-only' || viewMode === 'split') : (mobileTab === 'preview')) && (
               <div className="flex flex-1 flex-col min-w-0 bg-[#090a0f]">
                 {/* Preview Toolbar */}
                 <div className="flex h-9 shrink-0 items-center justify-between border-b border-white/[.08] bg-[#11131c] px-3">
@@ -872,8 +916,8 @@ Return ONLY the complete updated file content without markdown code fences or co
           </div>
 
           {/* 3. BOTTOM DOCK (TERMINAL, OUTPUT, PROBLEMS) */}
-          {(isBottomDockOpen || viewMode === 'terminal-only') && (
-            <div className={`border-t border-white/[.08] bg-[#0d0f17] flex flex-col ${viewMode === 'terminal-only' ? 'flex-1' : 'h-44'}`}>
+          {(!isMobile ? (isBottomDockOpen || viewMode === 'terminal-only') : (mobileTab === 'terminal')) && (
+            <div className={`border-t border-white/[.08] bg-[#0d0f17] flex flex-col ${isMobile || viewMode === 'terminal-only' ? 'flex-1' : 'h-44'}`}>
               {/* Dock Header */}
               <div className="flex h-8 shrink-0 items-center justify-between border-b border-white/[.06] bg-[#11131c] px-3">
                 <div className="flex items-center gap-4 text-xs">
