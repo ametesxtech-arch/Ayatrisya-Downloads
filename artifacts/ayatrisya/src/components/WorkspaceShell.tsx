@@ -25,6 +25,7 @@ import type { ChatMode, ModelId, WorkspaceMode } from '@/storage/types';
 import { WorkspaceHome } from '@/pages/workspace/WorkspaceHome';
 import { GuestWorkspace } from '@/components/GuestWorkspace';
 import { MotionText } from '@/components/MotionText';
+import { CanvasProvider } from '@/components/canvas/CanvasContext';
 
 const modelNames: Record<ModelId, string> = { 'v1-fast': 'V1 Fast', 'v2-best': 'V2 Best Result' };
 const workspaceModeNames: Record<WorkspaceMode, string> = {
@@ -32,6 +33,14 @@ const workspaceModeNames: Record<WorkspaceMode, string> = {
 };
 
 export function Workspace() {
+  return (
+    <CanvasProvider>
+      <WorkspaceContent />
+    </CanvasProvider>
+  );
+}
+
+function WorkspaceContent() {
   const [path, setPath] = useLocation();
   const { prefs, save } = usePrefs();
   const { caps } = useCaps();
