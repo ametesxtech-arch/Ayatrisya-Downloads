@@ -114,3 +114,4 @@ export class HfImageProvider {
     throw new Error(`Hugging Face image generation failed: ${lastError || "All candidate endpoints failed."}`);
   }
 }
+

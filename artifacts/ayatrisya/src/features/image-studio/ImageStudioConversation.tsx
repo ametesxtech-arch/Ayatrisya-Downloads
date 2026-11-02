@@ -320,7 +320,7 @@ export function ImageStudioConversation({
   }
 
   return (
-    <div className="mx-auto max-w-[1100px] p-4 sm:p-8 space-y-6">
+    <div className="mx-auto max-w-[1100px] p-4 sm:p-8 pb-32 space-y-6">
       <PageHeading
         eyebrow="Image Studio"
         title="Conversational Image Generation"
@@ -330,16 +330,19 @@ export function ImageStudioConversation({
       {/* Requirement 4 & 5 Status Banner */}
       <div
         role="status"
-        className="rounded-xl border border-amber-300/15 bg-amber-300/[.04] p-4 text-sm text-amber-100/90"
+        className="rounded-xl border border-teal-500/20 bg-teal-500/[.05] p-4 text-sm text-teal-100/90"
         data-testid="status-image"
       >
         {capsLoading ? (
           'Checking model status…'
         ) : capable ? (
-          <span className="font-medium text-amber-200">Cloud image generation is active.</span>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="font-semibold text-teal-200">Ayatrisya 4-Stage Image Generation Engine Active</span>
+            <span className="text-xs text-slate-400">Sequence: 1. Proprietary Model → 2. Hugging Face → 3. Gemini → 4. Cloudflare</span>
+          </div>
         ) : (
           <span className="text-rose-200">
-            No image generation model is connected. Ensure Cloudflare Workers AI credentials are configured on your API server.
+            No image generation model is connected. Configure Ayatrisya Image Model, Hugging Face, Gemini, or Cloudflare credentials on your API server.
           </span>
         )}
         {isLimitedGuest && (
@@ -448,9 +451,10 @@ export function ImageStudioConversation({
           </label>
 
           <div className="flex items-end">
-            <p className="text-[11px] text-slate-500 leading-tight">
-              Cloudflare FLUX.1-schnell 4-step generation.
-            </p>
+            <div className="text-[11px] leading-tight">
+              <span className="font-semibold text-teal-300">4-Stage Pipeline</span>
+              <span className="text-slate-500 block text-[10px]">Proprietary → HF → Gemini → Cloudflare</span>
+            </div>
           </div>
         </div>
       </div>

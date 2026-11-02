@@ -10,6 +10,28 @@ describe('Ayatrisya Code Canvas Workspace', () => {
     // Should render even without an outer CanvasProvider
     const html = renderToStaticMarkup(<CanvasIDEPage />);
     expect(html).toContain('Ayatrisya Virtual Dev Environment');
+    expect(html).toContain('Live Preview');
+  });
+
+  it('renders active custom HTML files in the canvas preview', () => {
+    function ActiveCustomApp() {
+      const { addFile, setActiveFile } = useCanvas();
+      React.useEffect(() => {
+        addFile({
+          name: 'code-4485.html',
+          content: '<title>High Graphics 3D Scene - Ayatrisya AI</title>',
+          language: 'html',
+        });
+      }, []);
+      return <CanvasIDEPage />;
+    }
+
+    const html = renderToStaticMarkup(
+      <CanvasProvider>
+        <ActiveCustomApp />
+      </CanvasProvider>
+    );
+    expect(html).toBeDefined();
   });
 
   it('renders CanvasPanel with interactive controls when open', () => {

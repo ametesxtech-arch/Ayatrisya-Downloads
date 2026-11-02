@@ -86,15 +86,28 @@ function CanvasIDEInternal() {
 
   // Construct Virtual Sandboxed HTML from Canvas Files
   const bundledPreviewHtml = useMemo(() => {
-    const htmlFile = canvas.files.find((f) => f.name.endsWith('.html')) || canvas.files.find((f) => f.language === 'html');
+    // Prefer the currently active file if it is an HTML document or snippet
+    const activeIsHtml =
+      canvas.activeFile &&
+      (canvas.activeFile.name.endsWith('.html') ||
+        canvas.activeFile.language === 'html' ||
+        canvas.activeFile.content.includes('<!DOCTYPE html>') ||
+        canvas.activeFile.content.includes('<html'));
+
+    const htmlFile = activeIsHtml
+      ? canvas.activeFile
+      : canvas.files.find((f) => f.name === 'index.html') ||
+        canvas.files.find((f) => f.name.endsWith('.html')) ||
+        canvas.files.find((f) => f.language === 'html');
+
     const cssFiles = canvas.files.filter((f) => f.name.endsWith('.css') || f.language === 'css');
     const jsFiles = canvas.files.filter((f) => f.name.endsWith('.js') || f.name.endsWith('.ts') || f.language === 'javascript');
 
     let baseHtml = htmlFile ? htmlFile.content : `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Preview</title></head><body><div id="app"></div></body></html>`;
 
-    // Inject combined CSS
+    // Inject combined CSS only if the active document doesn't already contain inline style sheets
     const combinedCss = cssFiles.map((c) => `<style data-file="${c.name}">\n${c.content}\n</style>`).join('\n');
-    if (combinedCss) {
+    if (combinedCss && (!activeIsHtml || !baseHtml.includes('<style'))) {
       if (baseHtml.includes('</head>')) {
         baseHtml = baseHtml.replace('</head>', `${combinedCss}\n</head>`);
       } else {
@@ -137,7 +150,7 @@ function CanvasIDEInternal() {
     }
 
     return baseHtml;
-  }, [canvas.files]);
+  }, [canvas.files, canvas.activeFile, canvas.activeFileId]);
 
   // Listen for logs from preview iframe
   useEffect(() => {
@@ -458,7 +471,7 @@ Return ONLY the complete updated file content without markdown code fences or co
   const active = canvas.activeFile;
 
   return (
-    <div className="flex h-screen w-screen flex-col overflow-hidden bg-[#0d0f17] text-slate-200 select-none font-sans">
+    <div className="flex h-full w-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#0d0f17] text-slate-200 select-none font-sans">
       {/* 1. TOP TOOLBAR */}
       <header className="flex h-12 shrink-0 items-center justify-between border-b border-white/[.08] bg-[#12141e]/90 px-3 backdrop-blur-md">
         {/* Left: Branding & Project Meta */}
@@ -974,6 +987,20 @@ Return ONLY the complete updated file content without markdown code fences or co
                   </div>
                 )}
               </div>
+            </div>
+          )}
+
+          {!isBottomDockOpen && viewMode !== 'terminal-only' && (
+            <div className="flex h-6 shrink-0 items-center justify-between border-t border-white/[.08] bg-[#0d0f17] px-3 text-[11px] text-slate-400">
+              <button
+                type="button"
+                onClick={() => setIsBottomDockOpen(true)}
+                className="flex items-center gap-1.5 hover:text-teal-300 font-medium transition"
+              >
+                <TerminalIcon size={11} />
+                <span>Show Terminal & Console</span>
+              </button>
+              <span className="text-[10px] text-slate-600">Ayatrisya Dev Environment</span>
             </div>
           )}
         </div>
