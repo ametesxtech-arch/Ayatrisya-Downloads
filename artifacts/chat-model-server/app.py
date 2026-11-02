@@ -157,11 +157,12 @@ async def post_chat(
     is_sse = "text/event-stream" in accept_header
 
     # Streaming generation
+    model_provenance = "ayatrisya-v2-reasoning" if body.model == "v2-best" else "ayatrisya-v1-fast"
     if body.stream:
         if is_sse:
             def sse_generator():
                 try:
-                    for token in engine.generate_stream(body.messages, body.mode):
+                    for token in engine.generate_stream(body.messages, body.mode, model_type=body.model):
                         payload = json.dumps({"token": token}, separators=(",", ":"))
                         yield f"data: {payload}\n\n"
                     yield "data: [DONE]\n\n"
@@ -176,13 +177,15 @@ async def post_chat(
                 headers={
                     "Cache-Control": "no-store",
                     "X-Accel-Buffering": "no",
+                    "x-model-source": model_provenance,
+                    "x-provider": "ayatrisya-native",
                 },
             )
         else:
             # Default streaming format: application/x-ndjson
             def ndjson_generator():
                 try:
-                    for token in engine.generate_stream(body.messages, body.mode):
+                    for token in engine.generate_stream(body.messages, body.mode, model_type=body.model):
                         payload = json.dumps({"token": token}, separators=(",", ":"))
                         yield f"{payload}\n"
                     yield json.dumps({"token": "", "done": True}, separators=(",", ":")) + "\n"
@@ -197,16 +200,27 @@ async def post_chat(
                 headers={
                     "Cache-Control": "no-store",
                     "X-Accel-Buffering": "no",
+                    "x-model-source": model_provenance,
+                    "x-provider": "ayatrisya-native",
                 },
             )
 
     # Non-streaming standard JSON generation
     try:
-        output_text = engine.generate(body.messages, body.mode)
+        output_text = engine.generate(body.messages, body.mode, model_type=body.model)
         return JSONResponse(
             status_code=200,
-            content={"text": output_text},
-            headers={"Cache-Control": "no-store"},
+            content={
+                "text": output_text,
+                "provider": "ayatrisya-native",
+                "model": model_provenance,
+                "engine": engine.model_id,
+            },
+            headers={
+                "Cache-Control": "no-store",
+                "x-model-source": model_provenance,
+                "x-provider": "ayatrisya-native",
+            },
         )
     except TimeoutError as exc:
         raise HTTPException(status_code=504, detail=str(exc))

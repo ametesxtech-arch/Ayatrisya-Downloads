@@ -1,5 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { Table, Search, ArrowUpDown } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
 import type { TableBlock } from './types';
 
 export function TableBlockRenderer({ block }: { block: TableBlock }) {
@@ -97,7 +101,19 @@ export function TableBlockRenderer({ block }: { block: TableBlock }) {
                 <tr key={rIdx} className="hover:bg-white/[.02] transition-colors">
                   {row.map((cell, cIdx) => (
                     <td key={cIdx} className="p-3 text-slate-300">
-                      {String(cell)}
+                      {typeof cell === 'string' && (cell.includes('$') || cell.includes('\\')) ? (
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm, remarkMath]}
+                          rehypePlugins={[[rehypeKatex, { throwOnError: false, strict: false }]]}
+                          components={{
+                            p: ({ children }) => <span>{children}</span>,
+                          }}
+                        >
+                          {cell}
+                        </ReactMarkdown>
+                      ) : (
+                        String(cell)
+                      )}
                     </td>
                   ))}
                 </tr>

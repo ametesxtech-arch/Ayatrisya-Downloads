@@ -215,7 +215,7 @@ class SeedRequestHandler(BaseHTTPRequestHandler):
                             "streaming": False,
                             "modalities": ["chat"],
                             "attachments": True,
-                            "reason": None if available else (self.server.load_error or "Model checkpoint not loaded"),
+                            "reason": "Ready" if available else (self.server.load_error or "Model checkpoint not loaded"),
                         }
                     ]
                 },

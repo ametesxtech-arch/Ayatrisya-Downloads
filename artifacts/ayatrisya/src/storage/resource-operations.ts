@@ -5,7 +5,10 @@ import type { Attachment, Conversation, Message, Project, ProjectItem } from "./
 import { validateFileContent } from "./files";
 
 type Transaction=IDBPTransaction<unknown,StoreName[],"readwrite">;
-const allContent:StoreName[]=["conversations","messages","projects","projectItems","attachments","blobs"];
+const allContent:StoreName[]=[
+  "conversations","messages","projects","projectItems","attachments","blobs",
+  "aiMemories","knowledgeBases","knowledgeDocuments","knowledgeChunks",
+];
 const now=()=>new Date().toISOString();
 const copyTitle=(title:string)=>`Copy of ${title}`.slice(0,200);
 export async function atomic<T>(repo:LocalRepository,names:StoreName[],run:(tx:Transaction,owner:string)=>Promise<T>):Promise<T>{
@@ -15,11 +18,11 @@ export async function atomic<T>(repo:LocalRepository,names:StoreName[],run:(tx:T
   try{const result=await run(tx,owner);await tx.done;repo.notify();return result;}
   catch(error){try{tx.abort();}catch{/* Already aborted. */}await tx.done.catch(()=>{});throw storageError(error);}
 }
-export async function updateConversation(repo:LocalRepository,id:string,patch:Partial<Pick<Conversation,"title"|"pinned"|"archived">>){
+export async function updateConversation(repo:LocalRepository,id:string,patch:Partial<Pick<Conversation,"title"|"pinned"|"archived"|"mode">>){
   await atomic(repo,["conversations"],async(tx,owner)=>{
     const old=await tx.objectStore("conversations").get([owner,id]);if(!old)throw new Error("Conversation not found.");
     const value={...old,...patch,updatedAt:now()};
-    if(!value.title.trim()||value.title.length>200||typeof value.pinned!=="boolean"||typeof value.archived!=="boolean")throw new Error("Invalid conversation metadata.");
+    if(!value.title.trim()||value.title.length>200||typeof value.pinned!=="boolean"||typeof value.archived!=="boolean"||(value.mode!==undefined&&!["Normal","Savage","Joke"].includes(value.mode)))throw new Error("Invalid conversation metadata.");
     value.title=value.title.trim();await tx.objectStore("conversations").put(value);
   });
 }

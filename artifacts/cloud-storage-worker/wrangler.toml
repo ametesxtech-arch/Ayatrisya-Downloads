@@ -1,0 +1,24 @@
+name = "ayatrisya-cloud-storage"
+main = "src/index.ts"
+compatibility_date = "2024-11-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+ENVIRONMENT = "production"
+FIREBASE_PROJECT_ID = "ayatrisya"
+DEFAULT_QUOTA_BYTES = 524288000            # 500 MB Free Tier Quota per user
+MAX_FILE_BYTES = 26214400                  # 25 MB max per file upload
+GLOBAL_STORAGE_QUOTA_BYTES = 10737418240   # 10 GB Free Tier Global R2 Quota (all users combined)
+RESERVED_CAPACITY_RATIO = "0.90"           # 90% threshold for reserved emergency capacity (safe behavior)
+
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ayatrisya-storage-d1"
+database_id = "placeholder-d1-id"
+migrations_dir = "migrations"
+
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "ayatrisya-storage-r2"
+preview_bucket_name = "ayatrisya-storage-r2-preview"

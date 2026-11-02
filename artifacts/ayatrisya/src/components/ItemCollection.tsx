@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Plus, Search } from 'lucide-react';
-import { Button, EmptyPreview, LoadError, Modal, Skeleton, inputCls } from '@/components/Primitives';
+import { Plus, Search, Sparkles } from 'lucide-react';
+import { Button, EmptyPreview, LoadError, Modal, Skeleton, inputCls, areaCls } from '@/components/Primitives';
 import { PageHeading } from '@/components/PageHeading';
 import { ItemEditor } from '@/components/ItemEditors';
 import { ItemList } from '@/components/ItemList';
@@ -8,6 +8,9 @@ import { repository } from '@/storage/repository';
 import { useLocalQuery } from '@/storage/hooks';
 import type { ItemKind } from '@/storage/types';
 import { errMsg } from '@/lib/format';
+import { generateDocumentFromPrompt, type DocumentGenerationProgress } from '@/ai/document-generator';
+import { generatePresentationFromPrompt, type PresentationGenerationProgress } from '@/ai/presentation-generator';
+import { usePrefs } from '@/hooks/use-prefs';
 
 export type Template = { name: string; description: string; content: string };
 
@@ -16,6 +19,8 @@ export function ItemCollection({ kind, tag, eyebrow, heading, description, noun,
   openId?: string | null; onOpen?: (id: string | null) => void; notify: (m: string) => void;
 }) {
   const [q, setQ] = useState(''), [creating, setCreating] = useState(false), [title, setTitle] = useState(''), [tpl, setTpl] = useState(0), [busy, setBusy] = useState(false), [err, setErr] = useState('');
+  const [aiGenerating, setAiGenerating] = useState(false), [aiPrompt, setAiPrompt] = useState(''), [aiStatus, setAiStatus] = useState('');
+  const { prefs } = usePrefs();
   const [localOpen, setLocalOpen] = useState<string | null>(null);
   const current = openId !== undefined ? openId : localOpen;
   const setOpen = (id: string | null) => (onOpen ? onOpen(id) : setLocalOpen(id));
@@ -31,6 +36,50 @@ export function ItemCollection({ kind, tag, eyebrow, heading, description, noun,
       setCreating(false); setTitle(''); setOpen(it.id);
     } catch (e) { setErr(errMsg(e)); } finally { setBusy(false); }
   }
+
+  async function handleAiGenerate() {
+    if (!aiPrompt.trim()) return;
+    setBusy(true); setErr(''); setAiStatus('Planning content structure…');
+    try {
+      if (kind === 'document') {
+        const result = await generateDocumentFromPrompt(aiPrompt, {
+          model: prefs.model,
+          mode: prefs.mode,
+          tags: tag ? [tag, 'ai-generated'] : ['ai-generated'],
+          onProgress: (p: DocumentGenerationProgress) => {
+            if (p.step === 'planning') setAiStatus('Planning document structure & sections…');
+            else if (p.step === 'generating_sections') setAiStatus(`Writing section ${p.completedSections + 1}/${p.totalSections}: ${p.currentSectionTitle || ''}…`);
+            else if (p.step === 'assembling') setAiStatus('Assembling full document…');
+            else if (p.step === 'saving') setAiStatus('Saving to local workspace…');
+          },
+        });
+        setAiGenerating(false); setAiPrompt(''); setAiStatus('');
+        if (result.item) {
+          notify(`Document "${result.title}" created successfully.`);
+          setOpen(result.item.id);
+        }
+      } else if (kind === 'presentation') {
+        const result = await generatePresentationFromPrompt(aiPrompt, {
+          model: prefs.model,
+          mode: prefs.mode,
+          tags: tag ? [tag, 'ai-generated'] : ['ai-generated'],
+          onProgress: (p: PresentationGenerationProgress) => {
+            if (p.step === 'planning') setAiStatus('Planning slide narrative and outlines…');
+            else if (p.step === 'saving') setAiStatus('Saving deck to local workspace…');
+          },
+        });
+        setAiGenerating(false); setAiPrompt(''); setAiStatus('');
+        if (result.item) {
+          notify(`Presentation "${result.title}" generated with ${result.slides.length} slides.`);
+          setOpen(result.item.id);
+        }
+      }
+    } catch (e) {
+      setErr(errMsg(e, `Failed to generate ${noun}.`));
+    } finally {
+      setBusy(false);
+    }
+  }
   if (current) {
     if (item.loading && !item.data) return <div className="mx-auto max-w-[1000px] p-4 sm:p-8"><Skeleton className="h-64" /></div>;
     if (!item.data) return <div className="mx-auto max-w-[1000px] p-4 sm:p-8"><EmptyPreview title={`This ${noun} was not found`} detail="It may have been deleted or belongs to a different account in this browser." /><Button className="mt-4" onClick={() => setOpen(null)}>Back to list</Button></div>;
@@ -38,7 +87,23 @@ export function ItemCollection({ kind, tag, eyebrow, heading, description, noun,
   }
   const items = list.data ?? [];
   return <div className="mx-auto max-w-[1000px] p-4 sm:p-8">
-    <PageHeading eyebrow={eyebrow} title={heading} description={description} actions={<Button onClick={() => setCreating(true)} data-testid="button-new"><Plus size={15} />New {noun}</Button>} />
+    <PageHeading
+      eyebrow={eyebrow}
+      title={heading}
+      description={description}
+      actions={
+        <div className="flex items-center gap-2">
+          {(kind === 'document' || kind === 'presentation') && (
+            <Button variant="outline" onClick={() => { setAiGenerating(true); setErr(''); }} data-testid="button-ai-generate">
+              <Sparkles size={15} />Generate with AI
+            </Button>
+          )}
+          <Button onClick={() => { setCreating(true); setErr(''); }} data-testid="button-new">
+            <Plus size={15} />New {noun}
+          </Button>
+        </div>
+      }
+    />
     <label className="relative mb-4 block"><span className="sr-only">Search {noun}s</span><Search size={15} className="absolute left-3 top-3.5 text-slate-500" /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder={`Search ${noun}s`} className={`${inputCls} pl-9`} /></label>
     {list.loading && !list.data && <div className="space-y-2"><Skeleton className="h-16" /><Skeleton className="h-16" /></div>}
     {list.error && <LoadError message={list.error} retry={list.refresh} />}
@@ -52,6 +117,29 @@ export function ItemCollection({ kind, tag, eyebrow, heading, description, noun,
         </div></fieldset>
         {err && <p role="alert" className="mt-3 text-xs text-rose-300">{err}</p>}
         <div className="mt-5 flex justify-end gap-2"><Button variant="outline" onClick={() => setCreating(false)}>Cancel</Button><Button type="submit" disabled={busy}>{busy ? 'Creating…' : `Create ${noun}`}</Button></div>
+      </form>
+    </Modal>}
+    {aiGenerating && <Modal title={`Generate ${noun} with AI`} onClose={() => !busy && setAiGenerating(false)}>
+      <form onSubmit={(e) => { e.preventDefault(); void handleAiGenerate(); }}>
+        <label className="block text-xs font-medium text-slate-400">Prompt / Topic
+          <textarea
+            data-autofocus
+            value={aiPrompt}
+            onChange={(e) => setAiPrompt(e.target.value)}
+            disabled={busy}
+            placeholder={kind === 'document' ? 'e.g. Create a detailed 10-page market research report about renewable energy trends...' : 'e.g. Create a 15-slide presentation about the future of artificial intelligence...'}
+            className={`${areaCls} mt-1.5 min-h-32`}
+            data-testid="input-ai-prompt"
+          />
+        </label>
+        {aiStatus && <p className="mt-2 flex items-center gap-2 text-xs text-teal-300"><Sparkles size={13} className="animate-spin" />{aiStatus}</p>}
+        {err && <p role="alert" className="mt-3 text-xs text-rose-300">{err}</p>}
+        <div className="mt-5 flex justify-end gap-2">
+          <Button variant="outline" onClick={() => setAiGenerating(false)} disabled={busy}>Cancel</Button>
+          <Button type="submit" disabled={busy || !aiPrompt.trim()} data-testid="button-ai-submit">
+            <Sparkles size={14} />{busy ? 'Generating…' : `Generate ${noun}`}
+          </Button>
+        </div>
       </form>
     </Modal>}
   </div>;

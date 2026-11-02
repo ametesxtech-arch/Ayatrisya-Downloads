@@ -28,15 +28,45 @@ export function FormWizardBlockRenderer({
     values: initialVals,
     submitted: false,
   });
+  const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
 
   const totalSteps = block.steps.length;
   const currentStep = block.steps[state.currentStep];
 
   const setVal = (id: string, val: string | number | boolean) => {
     setState((p) => ({ ...p, values: { ...p.values, [id]: val } }));
+    if (fieldErrors[id]) {
+      setFieldErrors((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+    }
   };
 
   const handleNext = () => {
+    // Validate current step fields
+    const errors: Record<string, string> = {};
+    for (const f of currentStep.fields) {
+      const val = state.values[f.id];
+      if (f.required && (val === undefined || val === '' || val === null)) {
+        errors[f.id] = 'This field is required';
+      } else if (f.type === 'email' && val) {
+        const emailStr = String(val).trim();
+        // Standard email regex check
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(emailStr)) {
+          errors[f.id] = 'Please enter a valid email address';
+        }
+      }
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      return;
+    }
+    setFieldErrors({});
+
     if (state.currentStep < totalSteps - 1) {
       setState((p) => ({ ...p, currentStep: p.currentStep + 1 }));
     } else {
@@ -111,6 +141,18 @@ export function FormWizardBlockRenderer({
                     placeholder={f.placeholder}
                     className="h-8 w-full rounded-md border border-white/10 bg-black/40 px-3 text-xs text-slate-200 focus:border-blue-400 focus:outline-none"
                   />
+                )}
+                {f.type === 'email' && (
+                  <input
+                    type="email"
+                    value={String(state.values[f.id] || '')}
+                    onChange={(e) => setVal(f.id, e.target.value)}
+                    placeholder={f.placeholder || 'name@example.com'}
+                    className="h-8 w-full rounded-md border border-white/10 bg-black/40 px-3 text-xs text-slate-200 focus:border-blue-400 focus:outline-none"
+                  />
+                )}
+                {fieldErrors[f.id] && (
+                  <p className="text-[11px] text-rose-400">{fieldErrors[f.id]}</p>
                 )}
                 {f.type === 'number' && (
                   <input

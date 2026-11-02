@@ -16,6 +16,8 @@ import { useDesktopRuntime } from '@/desktop/use-runtime';
 import type { SeedModelHostStatus } from '@/desktop/contracts';
 import { WarModePanel } from '@/components/WarModePanel';
 import { proprietarySoftwareShortNotice } from '@/data/copyright-policy';
+import { getCloudImageConsentScope, revokeCloudImageConsent, subscribeCloudImageConsent } from '@/features/image-studio/consent';
+import type { CloudImageConsentScope } from '@/features/image-studio/types';
 
 type Section = 'appearance' | 'personalization' | 'models' | 'war-mode' | 'privacy' | 'storage';
 const sections: Array<[Section, string]> = [['appearance', 'Appearance'], ['personalization', 'Personalization'], ['models', 'Models'], ['war-mode', 'War Mode'], ['privacy', 'Privacy'], ['storage', 'Storage and backup']];
@@ -33,7 +35,7 @@ export function SettingsPage({ notify, goto, initial = 'appearance' }: { notify:
     {section === 'personalization' && <PersonalizationPage />}
     {section === 'models' && <Models goto={goto} />}
     {section === 'war-mode' && <WarModePanel />}
-    {section === 'privacy' && <Privacy goStorage={() => setSection('storage')} goto={goto} />}
+    {section === 'privacy' && <Privacy goStorage={() => setSection('storage')} goto={goto} notify={notify} />}
     {section === 'storage' && <Storage notify={notify} />}
     <p className="mt-8 text-xs text-slate-500">Profile and sign-in details are on the <Link href="/workspace/account" className="underline">Account</Link> page. <button className="underline" onClick={() => goto('/onboarding')}>Run setup again</button></p>
   </div>;
@@ -410,8 +412,60 @@ function DesktopLocalModel() {
   </Card>;
 }
 
-function Privacy({ goStorage, goto }: { goStorage: () => void; goto: (h: string) => void }) {
+function Privacy({ goStorage, goto, notify }: { goStorage: () => void; goto: (h: string) => void; notify?: (m: string) => void }) {
+  const [consentScope, setConsentScope] = useState<CloudImageConsentScope>(() => getCloudImageConsentScope());
+
+  useEffect(() => {
+    return subscribeCloudImageConsent((scope) => setConsentScope(scope));
+  }, []);
+
+  function handleRevoke() {
+    revokeCloudImageConsent();
+    setConsentScope('none');
+    notify?.('Cloud image generation consent has been revoked.');
+  }
+
   return <>
+    <Card title="Cloud image generation consent">
+      <div className="py-3 space-y-3">
+        <p className="text-sm leading-6 text-slate-400">
+          Ayatrisya connects to the configured cloud image provider (Cloudflare Workers AI) only after user consent. Your choice is remembered according to the scope you selected.
+        </p>
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-white/[.07] bg-black/10 p-3 text-xs">
+          <div>
+            <span className="font-medium text-slate-300">Permission status: </span>
+            <span
+              className={
+                consentScope === 'device'
+                  ? 'text-teal-300 font-semibold'
+                  : consentScope === 'session'
+                  ? 'text-violet-300 font-semibold'
+                  : 'text-slate-400 font-medium'
+              }
+              data-testid="status-cloud-image-consent"
+            >
+              {consentScope === 'device'
+                ? 'Always allowed on this device'
+                : consentScope === 'session'
+                ? 'Allowed for this session'
+                : 'Not granted (prompts before request)'}
+            </span>
+          </div>
+          {consentScope !== 'none' && (
+            <Button
+              variant="outline"
+              onClick={handleRevoke}
+              data-testid="button-revoke-cloud-image-consent"
+            >
+              Revoke permission
+            </Button>
+          )}
+        </div>
+        <p className="text-[11px] text-slate-500">
+          When revoked, Ayatrisya will prompt for permission before the next cloud image generation request.
+        </p>
+      </div>
+    </Card>
     <Card title="Delete selected data">
       <p className="py-3 text-sm leading-6 text-slate-400">Choose exactly what to remove. Each manager shows counts and asks before deleting.</p>
       <div className="flex flex-wrap gap-2 pb-3"><Button variant="outline" onClick={() => goto('/workspace/history')}>Select conversations</Button><Button variant="outline" onClick={() => goto('/workspace/projects')}>Manage projects</Button><Button variant="outline" onClick={() => goto('/workspace/library')}>Manage files and notes</Button></div>

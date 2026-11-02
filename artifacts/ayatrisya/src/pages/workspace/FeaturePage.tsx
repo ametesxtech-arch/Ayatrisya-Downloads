@@ -17,11 +17,13 @@ const Library = lazy(() => import('@/pages/workspace/Library').then((m) => ({ de
 const Settings = lazy(() => import('@/pages/workspace/Settings').then((m) => ({ default: m.SettingsPage })));
 const Account = lazy(() => import('@/pages/workspace/Account').then((m) => ({ default: m.AccountPage })));
 const ModelsAndEngines = lazy(() => import('@/pages/workspace/ModelsAndEngines').then((m) => ({ default: m.ModelsAndEnginesPage })));
+const CanvasIDE = lazy(() => import('@/pages/workspace/CanvasIDE').then((m) => ({ default: m.CanvasIDEPage })));
 
 export function FeaturePage({ path, goto, notify }: { path: string; goto: (href: string) => void; notify: (m: string) => void }) {
   const { guest } = useAuth();
   const seg = path.split('/');
   let body;
+  if (path === '/workspace/canvas' || path.startsWith('/workspace/canvas/')) return <CanvasIDE />;
   if (path === '/workspace/chat' || path === '/workspace/chat/' || (path.startsWith('/workspace/chat/') && seg.length === 4)) return <ChatPage path={path} goto={goto} notify={notify} />;
   if (guest && path === '/workspace/images') body = <GuestImageAccess notify={notify} />;
   else if (path === '/workspace/research') body = <Research notify={notify} />;

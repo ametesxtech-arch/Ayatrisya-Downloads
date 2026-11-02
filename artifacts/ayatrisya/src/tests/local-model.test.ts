@@ -222,5 +222,56 @@ describe("desktop-local model transport", () => {
       else Reflect.deleteProperty(globalThis, "window");
     }
   });
+
+  it("correctly parses capabilities when model reason is null or omitted", async () => {
+    const requestLocalModel = vi.fn(async (path: string) => {
+      if (path === "/capabilities") {
+        return {
+          status: 200,
+          contentType: "application/json",
+          body: {
+            models: [
+              { id: "v1-fast", available: true, reason: null, modalities: ["chat"] },
+              { id: "v2-best", available: false, reason: null, modalities: ["chat"] },
+            ],
+          },
+        };
+      }
+      return { status: 404, contentType: "application/json", body: {} };
+    });
+    const bridge = {
+      isDesktop: true as const,
+      getRuntimeInfo: vi.fn().mockResolvedValue({
+        bridgeName: "ayatrisya-desktop",
+        apiVersion: 1,
+        appVersion: "1.0.0",
+        platform: "win32",
+        capabilities: ["local-model-ipc"],
+        localModel: { endpointConfigured: true, models: [] },
+      }),
+      getLocalModelEndpoint: vi.fn().mockResolvedValue("http://127.0.0.1:49382"),
+      requestLocalModel,
+      cancelLocalModelRequest: vi.fn().mockResolvedValue(undefined),
+    };
+    const previousWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
+    Object.defineProperty(globalThis, "window", { configurable: true, value: { ayatrisyaDesktop: bridge } });
+    resetDesktopRuntimeCache();
+
+    try {
+      const client = new AyatrisyaModelClient();
+      const caps = await client.getModelCapabilities();
+      expect(caps).toHaveLength(2);
+      expect(caps[0].id).toBe("v1-fast");
+      expect(caps[0].available).toBe(true);
+      expect(caps[0].reason).toBe("Ready");
+      expect(caps[1].id).toBe("v2-best");
+      expect(caps[1].available).toBe(false);
+      expect(caps[1].reason).toBe("Model not ready");
+    } finally {
+      resetDesktopRuntimeCache();
+      if (previousWindow) Object.defineProperty(globalThis, "window", previousWindow);
+      else Reflect.deleteProperty(globalThis, "window");
+    }
+  });
 });
 

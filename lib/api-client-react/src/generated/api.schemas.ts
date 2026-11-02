@@ -37,7 +37,7 @@ export interface ModelCapability {
   id: ModelCapabilityId;
   available: boolean;
   /** @maxLength 300 */
-  reason?: string;
+  reason?: string | null;
   streaming?: boolean;
   attachments?: boolean;
   /**

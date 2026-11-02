@@ -31,6 +31,9 @@ class SendModelChatBody(BaseModel):
 
 class SendModelChatResponse(BaseModel):
     text: str = Field(..., max_length=2_000_000)
+    provider: Optional[str] = "ayatrisya-native"
+    model: Optional[str] = None
+    engine: Optional[str] = None
 
 # ---------------------------------------------------------------------------
 # Health Response (GetModelHealthResponse)

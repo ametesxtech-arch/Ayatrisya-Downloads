@@ -18,7 +18,7 @@ import { buildApiUrl } from "@/lib/api-config";
 import { resolveExecutionRouting, type ExecutionTarget, type ExecutionCapability } from "./execution-policy";
 
 const capabilitySchema = z.object({
-  models:z.array(z.object({id:z.enum(["v1-fast","v2-best"]),available:z.boolean(),reason:z.string().optional(),streaming:z.boolean().default(false),attachments:z.boolean().default(true),modalities:z.array(z.string()).default(["chat"])})),
+  models:z.array(z.object({id:z.enum(["v1-fast","v2-best"]),available:z.boolean(),reason:z.string().nullable().optional(),streaming:z.boolean().default(false),attachments:z.boolean().default(true),modalities:z.array(z.string()).default(["chat"])})),
 });
 const generatedAssetSchema = z.object({
   fileName: z.string().min(1).max(160),
@@ -581,7 +581,7 @@ export class AyatrisyaModelClient implements ModelTransport {
         return Object.entries(labels).map(([id,label])=>{
           const model=parsed.models.find(m=>m.id===id);
           const supportedLocalModalities = ["chat", "image", "3d", "music"];
-          return {id:id as ModelCapability["id"],label,available:model?.available??false,reason:model?.reason??(model?.available?"Ready":"Model not ready"),streaming:localEndpoint?false:model?.streaming??false,attachments:localEndpoint?false:(model?.attachments??true),modalities:localEndpoint?(model?.modalities??["chat"]).filter((modality)=>supportedLocalModalities.includes(modality)):model?.modalities??[]};
+          return {id:id as ModelCapability["id"],label,available:model?.available??false,reason:model?.reason || (model?.available?"Ready":"Model not ready"),streaming:localEndpoint?false:model?.streaming??false,attachments:localEndpoint?false:(model?.attachments??true),modalities:localEndpoint?(model?.modalities??["chat"]).filter((modality)=>supportedLocalModalities.includes(modality)):model?.modalities??[]};
         });
       } finally {dispose();}
     } catch (error) {
@@ -638,23 +638,44 @@ export class AyatrisyaModelClient implements ModelTransport {
     try {
       const {response,dispose}=await this.request("/chat",{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json, application/x-ndjson, text/event-stream"},body:JSON.stringify({messages,model:options.model,mode:options.mode,stream:capability.streaming,attachments:options.attachments})},this.generation.signal,"chat");
       try {
-        const type=response.headers.get("content-type")??"";
+        const type = response.headers.get("content-type") ?? "";
+        let finalText = "";
         if(type.includes("application/json")) {
-          const body=z.object({text:z.string().max(2000000)}).parse(await response.json());options.onToken?.(body.text);return body.text;
+          const body=z.object({text:z.string().max(2000000)}).parse(await response.json());
+          finalText = body.text;
+        } else {
+          if(!response.body || (!type.includes("ndjson")&&!type.includes("event-stream")))throw new Error("Unsupported model response format.");
+          const reader=response.body.getReader(),decoder=new TextDecoder();let pending="",output="";
+          const parseLine=(line:string)=>{
+            if(type.includes("event-stream")) {if(!line.startsWith("data:"))return;line=line.slice(5).trim();}
+            if(!line.trim()||line==="[DONE]")return;
+            const chunk=z.object({token:z.string().optional(),error:z.string().optional(),done:z.boolean().optional()}).parse(JSON.parse(line));
+            if(chunk.error)throw new Error("Model generation failed. Retry the request.");
+            if(chunk.token){output+=chunk.token;if(output.length>2000000)throw new Error("Model output exceeded the supported limit.");options.onToken?.(chunk.token);}
+          };
+          while(true){const {value,done}=await reader.read();if(done)break;pending+=decoder.decode(value,{stream:true});const lines=pending.split(/\r?\n/);pending=lines.pop()??"";for(const line of lines)parseLine(line);}
+          pending+=decoder.decode();if(pending.trim())parseLine(pending);
+          finalText = output;
         }
-        if(!response.body || (!type.includes("ndjson")&&!type.includes("event-stream")))throw new Error("Unsupported model response format.");
-        const reader=response.body.getReader(),decoder=new TextDecoder();let pending="",output="";
-        const parseLine=(line:string)=>{
-          if(type.includes("event-stream")) {if(!line.startsWith("data:"))return;line=line.slice(5).trim();}
-          if(!line.trim()||line==="[DONE]")return;
-          const chunk=z.object({token:z.string().optional(),error:z.string().optional(),done:z.boolean().optional()}).parse(JSON.parse(line));
-          if(chunk.error)throw new Error("Model generation failed. Retry the request.");
-          if(chunk.token){output+=chunk.token;if(output.length>2000000)throw new Error("Model output exceeded the supported limit.");options.onToken?.(chunk.token);}
-        };
-        while(true){const {value,done}=await reader.read();if(done)break;pending+=decoder.decode(value,{stream:true});const lines=pending.split(/\r?\n/);pending=lines.pop()??"";for(const line of lines)parseLine(line);}
-        pending+=decoder.decode();if(pending.trim())parseLine(pending);
-        if(!output)throw new Error("Model returned no text.");
-        return output;
+
+        const trimmed = finalText.trim();
+        if(!trimmed) throw new Error("The model returned an empty response. Check model connection and retry.");
+
+        // Guard against degenerate corrupted token output (e.g. undertrained checkpoint gibberish)
+        const words = trimmed.split(/\s+/).filter(Boolean);
+        if (words.length > 5) {
+          // If 75%+ of words are 1-2 char fragments or repetitive nonsensical n-grams
+          const shortRatio = words.filter(w => w.length <= 2).length / words.length;
+          const isMostlyPunctuationOrNoise = /^[^a-zA-Z0-9\s]{4,}$/.test(trimmed);
+          if (shortRatio > 0.85 || isMostlyPunctuationOrNoise) {
+            throw new Error("The model produced corrupted or unreadable output. Please check that a compatible model weight is installed and selected.");
+          }
+        }
+
+        if(type.includes("application/json")) {
+          options.onToken?.(finalText);
+        }
+        return finalText;
       } finally {dispose();}
     } finally {options.signal?.removeEventListener("abort",abort);this.generation=undefined;}
   }

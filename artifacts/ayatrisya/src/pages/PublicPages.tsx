@@ -4,6 +4,13 @@ import { Link, useLocation } from 'wouter';
 import { PublicPageFrame } from '@/components/PublicSite';
 import { MotionText } from '@/components/MotionText';
 import { documentationArticles, publicLegalPages, type DocArticle, type PublicLegalPage } from '@/data/public-docs';
+import {
+  fullProductPage,
+  fullPrivacyPolicyPage,
+  fullContactPage,
+  fullLicensesPage,
+  fullCookiesAndStoragePage,
+} from '@/data/legal-pages-full';
 
 const categoryOrder = ['Getting started', 'Products', 'Privacy and storage', 'Security', 'Developer documentation'];
 
@@ -173,26 +180,23 @@ export function PublicDocumentation() {
 export function PublicLegalRoute() {
   const [location] = useLocation();
   const routePath = location;
+
+  if (routePath === '/product') {
+    return <LegalPage page={fullProductPage} />;
+  }
   if (routePath === '/privacy') {
-    return (
-      <UnpublishedPage
-        title="Privacy Policy"
-        description="Information about how Ayatrisya handles data."
-        statusTitle="The official Privacy Policy is not available yet"
-        detail="An official Privacy Policy has not been published for Ayatrisya. This page does not set an effective date or make privacy guarantees."
-      />
-    );
+    return <LegalPage page={fullPrivacyPolicyPage} />;
   }
   if (routePath === '/contact') {
-    return (
-      <UnpublishedPage
-        title="Contact"
-        description="Official contact information for Ayatrisya."
-        statusTitle="Official contact details are not available yet"
-        detail="No verified, monitored contact channel is available to publish here."
-      />
-    );
+    return <LegalPage page={fullContactPage} />;
   }
+  if (routePath === '/licenses') {
+    return <LegalPage page={fullLicensesPage} />;
+  }
+  if (routePath === '/cookies') {
+    return <LegalPage page={fullCookiesAndStoragePage} />;
+  }
+
   const page = publicLegalPages.find((item) => item.path === routePath);
   return page ? <LegalPage page={page} /> : <DocumentationPage />;
 }

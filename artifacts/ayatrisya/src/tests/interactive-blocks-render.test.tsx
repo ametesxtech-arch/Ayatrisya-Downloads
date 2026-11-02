@@ -220,4 +220,23 @@ Let me know what you think!`;
     expect(getInteractiveBlockState('block-1', { value: '' })).toEqual({ value: 'first' });
     expect(getInteractiveBlockState('block-2', { value: '' })).toEqual({ value: 'second' });
   });
+
+  // 9. Markdown Table upgrade to interactive table with search & sort
+  it('automatically upgrades standard markdown tables into interactive tables with sorting and searching', () => {
+    const tableMd = `### Cloud Model Comparison
+
+| Feature | Ayatrisya Cloud | Standard Chatbot |
+| --- | --- | --- |
+| Fast Streaming | Yes | No |
+| Canvas IDE | Included | Not available |
+| SmartArt Decks | Yes | Basic text only |
+
+All features are fully verified.`;
+
+    const html = renderToStaticMarkup(React.createElement(MarkdownRenderer, { content: tableMd }));
+    expect(html).toContain('interactive-table');
+    expect(html).toContain('Cloud Model Comparison');
+    expect(html).toContain('Fast Streaming');
+    expect(html).toContain('Search rows...');
+  });
 });

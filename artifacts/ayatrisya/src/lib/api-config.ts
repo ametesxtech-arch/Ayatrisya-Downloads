@@ -85,7 +85,11 @@ export function buildApiUrl(path: string): string {
     return `${DEFAULT_API_BASE_URL}${normalizedPath}`;
   }
   if (typeof window !== "undefined" && window.location?.origin) {
-    return `${window.location.origin}${normalizedPath}`;
+    const origin = window.location.origin;
+    if (origin.includes("ayatrisya.web.app") || origin.includes("ayatrisya.firebaseapp.com")) {
+      return `${DEFAULT_API_BASE_URL}${normalizedPath}`;
+    }
+    return `${origin}${normalizedPath}`;
   }
   return `${DEFAULT_API_BASE_URL}${normalizedPath}`;
 }
@@ -154,6 +158,9 @@ export async function apiFetch<T = unknown>(path: string, options: ApiFetchOptio
     }
     if (!headers.has("Accept")) {
       headers.set("Accept", "application/json");
+    }
+    if (fetchOptions.body && !headers.has("Content-Type")) {
+      headers.set("Content-Type", "application/json");
     }
 
     const response = await fetch(url, {

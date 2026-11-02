@@ -28,7 +28,22 @@ export function firebaseAuth(): Auth {
 }
 export function authError(error: unknown): string {
   if (!error) return "";
-  const code = typeof error === "object" && error && "code" in error ? String((error as { code?: unknown }).code) : "";
+  const rawCode = typeof error === "object" && error && "code" in error ? String((error as { code?: unknown }).code) : "";
+  const messageStr = error instanceof Error ? error.message : typeof error === "string" ? error : "";
+  const code = rawCode || messageStr.match(/auth\/[a-z0-9-]+/i)?.[0]?.toLowerCase() || "";
+
+  // Safe diagnostic logging (excludes passwords, tokens, API keys, or raw secrets)
+  if (typeof console !== "undefined" && typeof console.warn === "function") {
+    const sanitizedMsg = messageStr
+      ? messageStr.replace(/([?&](?:key|token|auth|secret|password)=)[^&\s]+/gi, "$1[REDACTED]")
+      : undefined;
+    console.warn("[Ayatrisya Auth Diagnostic]", {
+      name: error instanceof Error ? error.name : typeof error,
+      code: code || undefined,
+      message: sanitizedMsg,
+    });
+  }
+
   const messages: Record<string, string> = {
     "auth/invalid-credential": "Email or password is incorrect.",
     "auth/user-not-found": "Email or password is incorrect.",
@@ -51,6 +66,10 @@ export function authError(error: unknown): string {
     "auth/user-token-expired": "Your session has expired. Please sign in again.",
     "auth/requires-recent-login": "Please sign in again to perform this sensitive action.",
     "auth/quota-exceeded": "Authentication quota exceeded. Please try again later.",
+    "auth/admin-restricted-operation": "This operation is restricted by Firebase administrative settings.",
+    "auth/internal-error": "Firebase Authentication encountered an internal error. Check your connection or try again.",
+    "auth/credential-already-in-use": "This credential is already associated with a different user account.",
+    "auth/timeout": "Authentication request timed out. Check your connection and retry.",
   };
   if (code && messages[code]) {
     return messages[code];
@@ -59,6 +78,15 @@ export function authError(error: unknown): string {
     const formatted = code.replace(/^auth\//, "").replace(/-/g, " ");
     return `Authentication error: ${formatted}.`;
   }
+
+  // Network / fetch failures without a Firebase code
+  if (
+    error instanceof TypeError &&
+    (messageStr.includes("fetch") || messageStr.includes("Network") || messageStr.includes("Failed"))
+  ) {
+    return "Could not reach Firebase Authentication. Check your network connection and retry.";
+  }
+
   return firebaseConfigured
     ? "Authentication could not be completed. Check your configuration or try again."
     : "Firebase Authentication is not configured. Ask the deployment administrator to complete setup.";

@@ -57,8 +57,9 @@ app.use((_req, res, next) => {
   });
   next();
 });
-app.use(express.json({ limit: "25mb" }));
+app.use(express.json({ limit: "25mb", type: ["application/json", "application/*+json", "text/plain"] }));
 app.use(express.urlencoded({ extended: true, limit: "25mb" }));
+app.use(express.text({ limit: "25mb" }));
 
 app.get(["/health", "/healthz"], (_req, res) => {
   res.status(200).json({ status: "ok" });

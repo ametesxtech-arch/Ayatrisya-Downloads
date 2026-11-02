@@ -46,12 +46,10 @@ function DefaultFallback({ error, resetError }: ErrorFallbackProps) {
           This part of the app hit an error. The rest of the app is still
           running.
         </p>
-        {/* Dev only: messages can carry API responses and other internals. */}
-        {import.meta.env.DEV ? (
-          <pre className="mt-4 overflow-x-auto rounded bg-gray-100 p-3 text-left text-xs text-gray-800">
-            {error.message || String(error)}
-          </pre>
-        ) : null}
+        {/* Show error message cleanly so users and diagnostics can see the issue */}
+        <pre className="mt-4 overflow-x-auto rounded bg-gray-100 p-3 text-left text-xs text-gray-800 dark:bg-black/50 dark:text-gray-200">
+          {error.message || String(error)}
+        </pre>
         <button
           type="button"
           onClick={resetError}

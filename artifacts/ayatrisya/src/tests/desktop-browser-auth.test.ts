@@ -77,24 +77,42 @@ describe("Desktop Browser Authentication Handshake", () => {
 
   it("enforces PKCE challenge and state parameter validation", () => {
     function isValidState(state: string) {
-      return typeof state === "string" && /^[a-f0-9]{16,128}$/i.test(state);
+      const trimmed = typeof state === "string" ? state.trim() : "";
+      return /^[a-zA-Z0-9_-]{16,128}$/.test(trimmed);
     }
 
     function isValidChallenge(challenge: string) {
-      return typeof challenge === "string" && /^[a-zA-Z0-9_-]{40,128}$/.test(challenge);
+      const trimmed = typeof challenge === "string" ? challenge.trim() : "";
+      return /^[a-zA-Z0-9_-]{40,128}$/.test(trimmed);
     }
 
-    // Valid hex state
+    // Realistic Electron hex state (32 chars)
     expect(isValidState("abcdef0123456789abcdef0123456789")).toBe(true);
+    expect(isValidState("1d3f792732a1b31412cf3c221ca6c5e7")).toBe(true);
+    // State with surrounding whitespace (trimmed)
+    expect(isValidState("  1d3f792732a1b31412cf3c221ca6c5e7  ")).toBe(true);
+    // Base64url and UUID state
+    expect(isValidState("300ef84dbca7d784ebd33a517c555c5a")).toBe(true);
+    expect(isValidState("f47ac10b-58cc-4372-a567-0e02b2c3d479")).toBe(true);
     // Invalid characters in state
     expect(isValidState("not-hex-characters!!")).toBe(false);
-    // Too short
-    expect(isValidState("abc")).toBe(false);
+    expect(isValidState("has spaces inside")).toBe(false);
+    expect(isValidState("state@invalid.com")).toBe(false);
+    // Too short (< 16 chars)
+    expect(isValidState("abc12345")).toBe(false);
 
-    // Valid base64url challenge (43 chars SHA-256)
+    // Realistic SHA-256 base64url challenges (43 chars)
     expect(isValidChallenge("dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk")).toBe(true);
-    // Invalid characters in challenge
+    expect(isValidChallenge("LVxKC4SvQrTXNg2dvmjo8ii23C2uWnmotVARa8zPRA0")).toBe(true);
+    expect(isValidChallenge("8p11D2csjG9xFpBMi7YXzWEhFmNzVRdLLm98ALiiyzo")).toBe(true);
+    // Challenge with surrounding whitespace (trimmed)
+    expect(isValidChallenge("  LVxKC4SvQrTXNg2dvmjo8ii23C2uWnmotVARa8zPRA0  ")).toBe(true);
+    // Illegal characters (standard base64 padding or symbols not permitted in base64url)
+    expect(isValidChallenge("LVxKC4SvQrTXNg2dvmjo8ii23C2uWnmotVARa8zPRA0=")).toBe(false);
     expect(isValidChallenge("challenge+with+illegal+chars/==")).toBe(false);
+    expect(isValidChallenge("challenge with spaces inside 123456789012345")).toBe(false);
+    // Too short (< 40 chars)
+    expect(isValidChallenge("too_short_challenge")).toBe(false);
   });
 
   it("verifies desktop bridge contract integrates startBrowserAuth and onAuthCallback", async () => {

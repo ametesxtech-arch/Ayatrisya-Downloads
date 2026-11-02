@@ -36,6 +36,7 @@ const env = {
   PORT: process.env.PORT || '4187',
   BASE_PATH: '/',
   NODE_ENV: 'production',
+  VITE_API_URL: process.env.VITE_API_URL || 'https://ayatrisya-model-api.onrender.com',
   VITE_FIREBASE_API_KEY: process.env.VITE_FIREBASE_API_KEY || 'AIzaSyAsTIhiNu7UhTwOh-gfY5exLLIX9qGRtyk',
   VITE_FIREBASE_AUTH_DOMAIN: process.env.VITE_FIREBASE_AUTH_DOMAIN || 'ayatrisya.firebaseapp.com',
   VITE_FIREBASE_PROJECT_ID: process.env.VITE_FIREBASE_PROJECT_ID || 'ayatrisya',

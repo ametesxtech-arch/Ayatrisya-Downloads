@@ -6,7 +6,7 @@ import { copyrightNotice, proprietarySoftwareShortNotice } from '@/data/copyrigh
 import { MotionText } from '@/components/MotionText';
 
 const footerLinks = [
-  { href: '/#capabilities', label: 'Product' },
+  { href: '/product', label: 'Product' },
   { href: '/privacy', label: 'Privacy' },
   { href: '/documentation', label: 'Documentation' },
   { href: '/contact', label: 'Contact' },
@@ -59,7 +59,7 @@ export function PublicSiteFooter() {
             <Link href="/" className="w-fit" aria-label="Ayatrisya home">
               <Brand compact />
             </Link>
-            <span className="pl-[42px] text-[10px] tracking-wide text-slate-600">An Ametesx product</span>
+            <span className="pl-[42px] text-[10px] tracking-wide text-slate-400 font-medium">AYATRISYA is a product of AMETESX</span>
           </div>
           <nav aria-label="Footer navigation" className="flex flex-wrap gap-x-5 gap-y-2 text-[11px] text-slate-400">
             {footerLinks.map((item) => <Link key={item.href} href={item.href} className="rounded-sm transition hover:text-white focus-visible:outline-2 focus-visible:outline-violet-300">{item.label}</Link>)}

@@ -1,9 +1,10 @@
 import { openDB, type IDBPDatabase } from "idb";
 
-export const DATABASE_VERSION = 4;
+export const DATABASE_VERSION = 5;
 export const stores = [
   "profiles", "conversations", "messages", "projects", "projectItems",
   "attachments", "blobs", "preferences", "syncQueue", "syncMetadata",
+  "aiMemories", "knowledgeBases", "knowledgeDocuments", "knowledgeChunks",
 ] as const;
 export type StoreName = typeof stores[number];
 
@@ -16,6 +17,15 @@ export function openLocalDatabase(name = "ayatrisya-local"): Promise<IDBPDatabas
           const store = db.createObjectStore(name, { keyPath: ["ownerId", "id"] });
           store.createIndex("ownerId", "ownerId");
           if (name === "messages") store.createIndex("conversation", ["ownerId", "conversationId"]);
+          if (name === "aiMemories") {
+            store.createIndex("category", ["ownerId", "category"]);
+            store.createIndex("projectId", ["ownerId", "projectId"]);
+          } else if (name === "knowledgeDocuments") {
+            store.createIndex("knowledgeBaseId", ["ownerId", "knowledgeBaseId"]);
+          } else if (name === "knowledgeChunks") {
+            store.createIndex("knowledgeBaseId", ["ownerId", "knowledgeBaseId"]);
+            store.createIndex("documentId", ["ownerId", "documentId"]);
+          }
         }
       }
       if (oldVersion < 2) {
@@ -33,6 +43,25 @@ export function openLocalDatabase(name = "ayatrisya-local"): Promise<IDBPDatabas
             await cursor.update({pinned:false,archived:false,...(name==="projects"?{color:"violet",icon:"folder"}:{}),...cursor.value});
             await migrate(await cursor.continue());
           });
+        }
+      }
+      if (oldVersion < 5) {
+        // Phase 4: AI Memory, Knowledge Base, Document, and Chunk stores
+        const newStores = ["aiMemories", "knowledgeBases", "knowledgeDocuments", "knowledgeChunks"] as const;
+        for (const sName of newStores) {
+          if (!db.objectStoreNames.contains(sName)) {
+            const store = db.createObjectStore(sName, { keyPath: ["ownerId", "id"] });
+            store.createIndex("ownerId", "ownerId");
+            if (sName === "aiMemories") {
+              store.createIndex("category", ["ownerId", "category"]);
+              store.createIndex("projectId", ["ownerId", "projectId"]);
+            } else if (sName === "knowledgeDocuments") {
+              store.createIndex("knowledgeBaseId", ["ownerId", "knowledgeBaseId"]);
+            } else if (sName === "knowledgeChunks") {
+              store.createIndex("knowledgeBaseId", ["ownerId", "knowledgeBaseId"]);
+              store.createIndex("documentId", ["ownerId", "documentId"]);
+            }
+          }
         }
       }
     },

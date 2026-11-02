@@ -378,6 +378,7 @@ components:
           type: boolean
         reason:
           type: string
+          nullable: true
           maxLength: 300
         streaming:
           type: boolean

@@ -229,7 +229,7 @@ const kanbanBlockSchema = z.object({
 const formFieldSchema = z.object({
   id: z.string().min(1).max(50),
   label: z.string().min(1).max(200),
-  type: z.enum(['text', 'number', 'select', 'checkbox']),
+  type: z.enum(['text', 'email', 'number', 'select', 'checkbox']),
   placeholder: z.string().max(200).optional(),
   options: z.array(z.string().max(100)).optional(),
   defaultValue: z.union([z.string(), z.number(), z.boolean()]).optional(),
@@ -285,6 +285,26 @@ const diagramBlockSchema = z.object({
   caption: z.string().max(300).optional(),
   diagramType: z.enum(['mermaid', 'flowchart', 'mindmap']),
   code: z.string().min(1).max(10000),
+});
+
+export const mindMapNodeSchema: z.ZodType<any> = z.lazy(() =>
+  z.object({
+    id: z.string().min(1).max(100),
+    label: z.string().min(1).max(300),
+    children: z.array(mindMapNodeSchema).optional(),
+    collapsed: z.boolean().optional(),
+    color: z.string().max(50).optional(),
+  })
+);
+
+export const mindMapBlockSchema = z.object({
+  version: z.literal('1.0'),
+  type: z.literal('mindmap'),
+  id: z.string().max(100).optional(),
+  title: z.string().max(200).optional(),
+  caption: z.string().max(300).optional(),
+  root: mindMapNodeSchema,
+  theme: z.enum(['violet', 'teal', 'amber', 'rose', 'default']).optional(),
 });
 
 const jsonViewerBlockSchema = z.object({
@@ -590,6 +610,7 @@ export const interactiveBlockSchema = z.discriminatedUnion('type', [
   formWizardBlockSchema,
   calculatorBlockSchema,
   diagramBlockSchema,
+  mindMapBlockSchema,
   jsonViewerBlockSchema,
   regexTesterBlockSchema,
   apiBuilderBlockSchema,
@@ -611,6 +632,113 @@ export type ParseInteractiveResult =
   | { status: 'valid'; block: InteractiveBlock }
   | { status: 'streaming_incomplete' }
   | { status: 'invalid'; error: string };
+
+/**
+ * Deterministically normalizes model output variants (such as series-based charts,
+ * string-array quiz options, or natural index references) to conform strictly to the Zod schema.
+ */
+export function normalizeInteractivePayload(raw: unknown): unknown {
+  if (!raw || typeof raw !== 'object') return raw;
+  const obj = { ...(raw as Record<string, unknown>) };
+
+  // 1. Chart Normalization: Convert series-based charts to data array
+  if (obj.type === 'chart') {
+    if (!Array.isArray(obj.data) && Array.isArray(obj.series) && obj.series.length > 0) {
+      const firstSeries = obj.series[0];
+      if (firstSeries && Array.isArray(firstSeries.data)) {
+        const normalizedData: Array<{ label: string; value: number; color?: string }> = [];
+        for (const pt of firstSeries.data) {
+          if (pt && typeof pt === 'object') {
+            const label = String(pt.label ?? pt.name ?? pt.x ?? '').trim();
+            const rawVal = pt.value ?? pt.y;
+            const numVal = typeof rawVal === 'number' ? rawVal : parseFloat(String(rawVal));
+            if (label && !isNaN(numVal)) {
+              normalizedData.push({
+                label,
+                value: numVal,
+                ...(typeof pt.color === 'string' ? { color: pt.color } : {}),
+              });
+            }
+          }
+        }
+        if (normalizedData.length > 0) {
+          obj.data = normalizedData;
+        }
+      }
+    }
+  }
+
+  // 2. Quiz Normalization: Convert string options to mcqOptionSchema { id, label } and validate answers
+  if (obj.type === 'quiz' && Array.isArray(obj.questions)) {
+    const letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+    obj.questions = obj.questions.map((q: unknown, qIdx: number) => {
+      if (!q || typeof q !== 'object') return q;
+      const questionObj = { ...(q as Record<string, unknown>) };
+
+      // Ensure question id exists
+      if (!questionObj.id || typeof questionObj.id !== 'string') {
+        questionObj.id = `q${qIdx + 1}`;
+      }
+
+      // Normalize options if they are an array of strings or missing id/label
+      if (Array.isArray(questionObj.options)) {
+        questionObj.options = questionObj.options.map((opt: unknown, oIdx: number) => {
+          if (typeof opt === 'string') {
+            const letterId = letters[oIdx] || `opt${oIdx + 1}`;
+            return { id: letterId, label: opt.trim() };
+          }
+          if (opt && typeof opt === 'object') {
+            const optRecord = { ...(opt as Record<string, unknown>) };
+            const id = String(optRecord.id ?? letters[oIdx] ?? `opt${oIdx + 1}`);
+            const label = String(optRecord.label ?? optRecord.text ?? optRecord.title ?? id);
+            return { ...optRecord, id, label };
+          }
+          return opt;
+        });
+      }
+
+      // Normalize correctAnswer / correctOptionIndex
+      const validOptionIds = Array.isArray(questionObj.options)
+        ? questionObj.options.map((o: any) => o?.id).filter(Boolean)
+        : [];
+
+      // If model gave correctOptionIndex (e.g. 0) or correctAnswer: 0
+      if (
+        questionObj.correctAnswer === undefined &&
+        typeof questionObj.correctOptionIndex === 'number'
+      ) {
+        const targetId = validOptionIds[questionObj.correctOptionIndex];
+        if (targetId) questionObj.correctAnswer = targetId;
+      } else if (typeof questionObj.correctAnswer === 'number') {
+        const targetId = validOptionIds[questionObj.correctAnswer];
+        if (targetId) questionObj.correctAnswer = targetId;
+      } else if (typeof questionObj.correctAnswer === 'string') {
+        const trimmed = questionObj.correctAnswer.trim();
+        // If it matches an option id (e.g. "a", "b")
+        const directMatch = validOptionIds.find(
+          (id) => String(id).toLowerCase() === trimmed.toLowerCase()
+        );
+        if (directMatch) {
+          questionObj.correctAnswer = directMatch;
+        } else {
+          // If the model gave the full text of the option as the answer, map it to the matching option id
+          const textMatch = Array.isArray(questionObj.options)
+            ? questionObj.options.find(
+                (o: any) => o?.label?.toLowerCase() === trimmed.toLowerCase()
+              )
+            : null;
+          if (textMatch) {
+            questionObj.correctAnswer = textMatch.id;
+          }
+        }
+      }
+
+      return questionObj;
+    });
+  }
+
+  return obj;
+}
 
 /**
  * Safely parses raw text (from an interactive code block or JSON) into a typed InteractiveBlock.
@@ -645,7 +773,8 @@ export function parseInteractiveBlock(
     return { status: 'invalid', error: `Malformed JSON: ${message}` };
   }
 
-  const result = interactiveBlockSchema.safeParse(parsed);
+  const normalized = normalizeInteractivePayload(parsed);
+  const result = interactiveBlockSchema.safeParse(normalized);
   if (!result.success) {
     const errorDetails = result.error.errors.map((e) => `${e.path.join('.') || 'root'}: ${e.message}`).join(', ');
     return { status: 'invalid', error: `Schema validation failed: ${errorDetails}` };

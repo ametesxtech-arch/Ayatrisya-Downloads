@@ -225,7 +225,7 @@ export interface KanbanBlock extends BaseInteractiveBlock {
 export interface FormField {
   id: string;
   label: string;
-  type: 'text' | 'number' | 'select' | 'checkbox';
+  type: 'text' | 'email' | 'number' | 'select' | 'checkbox';
   placeholder?: string;
   options?: string[];
   defaultValue?: string | number | boolean;
@@ -273,6 +273,22 @@ export interface DiagramBlock extends BaseInteractiveBlock {
   type: 'diagram';
   diagramType: 'mermaid' | 'flowchart' | 'mindmap';
   code: string;
+  caption?: string;
+}
+
+// 14b. Dedicated Structured Visual Mind Map
+export interface MindMapNode {
+  id: string;
+  label: string;
+  children?: MindMapNode[];
+  collapsed?: boolean;
+  color?: string;
+}
+
+export interface MindMapBlock extends BaseInteractiveBlock {
+  type: 'mindmap';
+  root: MindMapNode;
+  theme?: 'violet' | 'teal' | 'amber' | 'rose' | 'default';
   caption?: string;
 }
 
@@ -493,6 +509,7 @@ export type InteractiveBlock =
   | FormWizardBlock
   | CalculatorBlock
   | DiagramBlock
+  | MindMapBlock
   | JsonViewerBlock
   | RegexTesterBlock
   | ApiBuilderBlock

@@ -27,6 +27,8 @@ function guestCanOpen(path: string) {
   return path === '/workspace/images' ||
     path === '/workspace/chat' ||
     path === '/workspace/tasks' ||
+    path === '/workspace/canvas' ||
+    /^\/workspace\/canvas(?:\/.*)?$/.test(path) ||
     /^\/workspace\/chat\/[^/]+\/?$/.test(path);
 }
 
@@ -175,6 +177,7 @@ function Router() {
       <Suspense fallback={<div className="grid min-h-[100dvh] place-items-center text-xs text-slate-500" role="status"><span className="grid place-items-center gap-3"><Emblem size={44} mode="loading" /><span>Loading Ayatrisya</span></span></div>}>
         <Switch>
           <Route path="/" component={Landing} />
+          <Route path="/product" component={PublicLegalRoute} />
           <Route path="/desktop" component={DesktopDownloadsPage} />
           <Route path="/downloads" component={DesktopDownloadsPage} />
           <Route path="/download" component={DesktopDownloadsPage} />
@@ -204,6 +207,8 @@ function Router() {
           <Route path="/auth/email-check/" component={AuthPage} />
           <Route path="/auth/desktop" component={DesktopHandoff} />
           <Route path="/auth/desktop/" component={DesktopHandoff} />
+          <Route path="/auth/desktop-handoff" component={DesktopHandoff} />
+          <Route path="/auth/desktop-handoff/" component={DesktopHandoff} />
           <Route path="/onboarding" component={ProtectedOnboarding} />
           <Route path={/^\/workspace(?:\/.*)?$/} component={ProtectedWorkspace} />
           <Route component={NotFound} />

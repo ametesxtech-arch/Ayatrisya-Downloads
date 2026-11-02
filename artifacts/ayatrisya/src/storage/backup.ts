@@ -30,16 +30,71 @@ const prefsSchema = z.object({
     clarifying:z.enum(["when-needed","assume","ask-first"]).default("when-needed"),
     technicality:z.enum(["accessible","balanced","technical"]).default("balanced"),
   }).default({enabled:true,useMemory:true,memorySummary:"",instructions:"",avoid:"",tone:"balanced",length:"balanced",format:"automatic",examples:"when-useful",clarifying:"when-needed",technicality:"balanced"}),
+  answerStyle:z.enum(["concise","detailed","step-by-step","teaching","exam-ready","examples-first","creative"]).default("detailed"),
+  modelDataConsent:z.enum(["allowed","ask","disabled"]).default("allowed"),
 }).strict();
+const memoryEntrySchema = z.object({
+  ...base,
+  category: z.enum(["user_preference", "project_context", "conversation_fact", "work_preference", "technical_decision"]),
+  content: text,
+  sourceConversationId: ref.nullable().optional(),
+  projectId: ref.nullable().optional(),
+  pinned: z.boolean().default(false),
+  temporary: z.boolean().default(false),
+  expiresAt: z.string().datetime().nullable().optional(),
+  tags,
+}).strict();
+
+const knowledgeBaseSchema = z.object({
+  ...base,
+  name: z.string().trim().min(1).max(200),
+  description: z.string().max(2000),
+  tags,
+  documentCount: z.number().int().nonnegative(),
+  totalBytes: z.number().int().nonnegative(),
+  isArchived: z.boolean().default(false),
+}).strict();
+
+const knowledgeDocumentSchema = z.object({
+  ...base,
+  knowledgeBaseId: ref,
+  title: z.string().trim().min(1).max(200),
+  fileName: z.string().max(255),
+  fileExtension: z.string().max(20),
+  mimeType: z.string().max(200),
+  fileSize: z.number().int().nonnegative(),
+  extractedText: text,
+  chunkCount: z.number().int().nonnegative(),
+}).strict();
+
+const knowledgeChunkSchema = z.object({
+  ...base,
+  knowledgeBaseId: ref,
+  documentId: ref,
+  chunkIndex: z.number().int().nonnegative(),
+  text,
+  tokenCountEstimate: z.number().int().nonnegative(),
+  startCharIndex: z.number().int().nonnegative(),
+  endCharIndex: z.number().int().nonnegative(),
+  metadata: z.object({
+    documentTitle: z.string().max(200),
+    fileName: z.string().max(255),
+  }),
+}).strict();
+
 const backupSchema = z.object({
-  format: z.literal("ayatrisya-backup"), version: z.union([z.literal(1),z.literal(2)]), exportedAt: z.string().datetime(),
+  format: z.literal("ayatrisya-backup"), version: z.union([z.literal(1),z.literal(2),z.literal(3)]), exportedAt: z.string().datetime(),
   preferences: prefsSchema,
-  conversations: z.array(z.object({...base,title,pinned:z.boolean().default(false),archived:z.boolean().default(false)}).strict()).max(100000),
+  conversations: z.array(z.object({...base,title,pinned:z.boolean().default(false),archived:z.boolean().default(false),mode:z.enum(["Normal","Savage","Joke"]).optional()}).strict()).max(100000),
   messages: z.array(z.object({...base,conversationId:ref,role:z.enum(["user","assistant"]),content:text,attachmentIds:z.array(ref).max(50),modelId:z.enum(["v1-fast","v2-best"]).optional()}).strict()).max(500000),
   projects: z.array(z.object({...base,title,description:z.string().max(10000),tags,archived:z.boolean(),pinned:z.boolean().default(false),color:z.enum(["violet","cyan","rose","amber","emerald"]).default("violet"),icon:z.enum(["folder","code","book","music","orbit"]).default("folder")}).strict()).max(100000),
   items: z.array(z.object({...base,title,projectId:ref.nullable(),kind:z.enum(["note","document","presentation","file","task","code"]),content:text,tags,attachmentId:ref.optional(),completed:z.boolean().optional()}).strict()).max(100000),
   attachments: z.array(z.object({...base,name:z.string().max(255),mimeType:z.string().max(200),size:z.number().int().positive().max(10485760),projectId:ref.nullable(),conversationId:ref.nullable()}).strict()).max(10000),
   assets: z.array(z.object({id:ref,base64:z.string().max(14000000)}).strict()).max(10000),
+  aiMemories: z.array(memoryEntrySchema).max(50000).optional().default([]),
+  knowledgeBases: z.array(knowledgeBaseSchema).max(10000).optional().default([]),
+  knowledgeDocuments: z.array(knowledgeDocumentSchema).max(50000).optional().default([]),
+  knowledgeChunks: z.array(knowledgeChunkSchema).max(200000).optional().default([]),
 }).strict();
 type Backup = z.infer<typeof backupSchema>;
 export const MAX_BACKUP_BYTES = 100 * 1024 * 1024;
@@ -85,12 +140,20 @@ function decode(value:string) {
 export async function exportBackup(repo: LocalRepository = repository): Promise<Blob> {
   const owner = repo.ownerId; const tx = (await repo.db()).transaction([...stores],"readonly");
   const read = (store:StoreName) => tx.objectStore(store).index("ownerId").getAll(owner);
-  const [conversations,messages,projects,items,attachments,blobs,preferences] = await Promise.all([
+  const [conversations,messages,projects,items,attachments,blobs,preferences,aiMemories,knowledgeBases,knowledgeDocuments,knowledgeChunks] = await Promise.all([
     read("conversations"),read("messages"),read("projects"),read("projectItems"),read("attachments"),read("blobs"),tx.objectStore("preferences").get([owner,"ui"]),
+    read("aiMemories"),read("knowledgeBases"),read("knowledgeDocuments"),read("knowledgeChunks"),
   ]);
   await tx.done;
   const assets = await Promise.all(blobs.map(async (row:{id:string;data:Blob}) => ({id:row.id,base64:encode(new Uint8Array(await row.data.arrayBuffer()))})));
-  const backup = {format:"ayatrisya-backup",version:2,exportedAt:new Date().toISOString(),preferences:{...defaultPreferences,...preferences?.value},conversations,messages,projects,items,attachments,assets};
+  const backup = {
+    format:"ayatrisya-backup",
+    version:2,
+    exportedAt:new Date().toISOString(),
+    preferences:{...defaultPreferences,...preferences?.value},
+    conversations,messages,projects,items,attachments,assets,
+    aiMemories,knowledgeBases,knowledgeDocuments,knowledgeChunks,
+  };
   const json = JSON.stringify(backup,null,2);
   parseBackup(json); // Do not emit a backup that cannot be restored by this app.
   return new Blob([json],{type:"application/json"});
@@ -132,7 +195,17 @@ export async function restoreBackup(input:string, mode:"merge"|"replace", repo:L
     transaction = tx;
     if (mode === "replace") for (const name of stores) for (const key of await tx.objectStore(name).index("ownerId").getAllKeys(owner)) await tx.objectStore(name).delete(key);
     let imported = 0, skipped = 0;
-    const groups = { conversations:data.conversations,messages:data.messages,projects:data.projects,projectItems:data.items,attachments:data.attachments };
+    const groups: Record<string, any[]> = {
+      conversations: data.conversations,
+      messages: data.messages,
+      projects: data.projects,
+      projectItems: data.items,
+      attachments: data.attachments,
+      aiMemories: data.aiMemories || [],
+      knowledgeBases: data.knowledgeBases || [],
+      knowledgeDocuments: data.knowledgeDocuments || [],
+      knowledgeChunks: data.knowledgeChunks || [],
+    };
     const keptAttachments = new Set<string>();
     for (const [name,rows] of Object.entries(groups)) for (const record of rows) {
       const store = tx.objectStore(name as StoreName);

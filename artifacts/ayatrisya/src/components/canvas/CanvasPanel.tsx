@@ -14,10 +14,12 @@ import {
   FileCode,
   Terminal,
   ShieldAlert,
+  FolderPlus,
 } from 'lucide-react';
 import { useCanvas } from './CanvasContext';
 import { modelClient } from '@/ai/client';
 import { usePrefs } from '@/hooks/use-prefs';
+import { generateProjectFromPrompt, type ProjectGenerationProgress } from '@/ai/project-generator';
 
 const SUPPORTED_LANGUAGES = [
   'typescript',
@@ -43,6 +45,7 @@ export function CanvasPanel() {
     canRedo,
     closeCanvas,
     addFile,
+    loadProjectFiles,
     removeFile,
     setActiveFile,
     updateContent,
@@ -63,6 +66,72 @@ export function CanvasPanel() {
   const [consoleOutput, setConsoleOutput] = useState<string[]>([]);
   const [newFileName, setNewFileName] = useState('');
   const [isAddingFile, setIsAddingFile] = useState(false);
+  const [showProjectModal, setShowProjectModal] = useState(false);
+  const [projectPrompt, setProjectPrompt] = useState('');
+  const [projectStatus, setProjectStatus] = useState('');
+  const [projectBusy, setProjectBusy] = useState(false);
+
+  // Safe Execution in Sandboxed iframe (HTML/JS/CSS)
+  const isWebExecutable = Boolean(
+    activeFile && ['html', 'javascript', 'typescript'].includes(activeFile.language)
+  );
+
+  const sandboxedHtml = useMemo(() => {
+    if (!activeFile) return '';
+    if (activeFile.language === 'html') {
+      return activeFile.content;
+    }
+    if (activeFile.language === 'javascript' || activeFile.language === 'typescript') {
+      return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: sans-serif; background: #0e1017; color: #e2e8f0; padding: 16px; margin: 0; }
+  </style>
+</head>
+<body>
+  <div id="output"></div>
+  <script>
+    const log = console.log;
+    console.log = (...args) => {
+      log(...args);
+      const div = document.createElement('div');
+      div.textContent = args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ');
+      document.body.appendChild(div);
+    };
+    try {
+      ${activeFile.content}
+    } catch (e) {
+      console.log('Error: ' + e.message);
+    }
+  </script>
+</body>
+</html>`;
+    }
+    return '';
+  }, [activeFile?.content, activeFile?.language]);
+
+  // Unified Diff Lines Calculation
+  const diffLines = useMemo(() => {
+    if (!pendingDiff) return [];
+    const origLines = pendingDiff.original.split('\n');
+    const propLines = pendingDiff.proposed.split('\n');
+    const result: Array<{ type: 'same' | 'added' | 'removed'; text: string }> = [];
+
+    const maxLen = Math.max(origLines.length, propLines.length);
+    for (let i = 0; i < maxLen; i++) {
+      const orig = origLines[i];
+      const prop = propLines[i];
+      if (orig === prop) {
+        if (orig !== undefined) result.push({ type: 'same', text: orig });
+      } else {
+        if (orig !== undefined) result.push({ type: 'removed', text: orig });
+        if (prop !== undefined) result.push({ type: 'added', text: prop });
+      }
+    }
+    return result;
+  }, [pendingDiff]);
 
   if (!isOpen || !activeFile) return null;
 
@@ -107,6 +176,39 @@ export function CanvasPanel() {
     });
     setNewFileName('');
     setIsAddingFile(false);
+  };
+
+  const handleGenerateProject = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!projectPrompt.trim() || projectBusy) return;
+    setProjectBusy(true);
+    setProjectStatus('Architecting project structure…');
+
+    try {
+      const res = await generateProjectFromPrompt(projectPrompt, {
+        model: prefs.model,
+        mode: prefs.mode,
+        onProgress: (p: ProjectGenerationProgress) => {
+          if (p.step === 'planning') setProjectStatus('Planning file tree and architecture…');
+          else if (p.step === 'generating_files') setProjectStatus(`Generating ${p.completedFiles + 1}/${p.totalFiles}: ${p.currentFilePath || ''}…`);
+        },
+      });
+
+      if (res.files.length > 0) {
+        loadProjectFiles(res.files.map((f) => ({
+          name: f.path,
+          content: f.content,
+          language: f.language,
+        })));
+        setShowProjectModal(false);
+        setProjectPrompt('');
+        setProjectStatus('');
+      }
+    } catch (err: any) {
+      setProjectStatus(`Error: ${err?.message || 'Failed to generate project'}`);
+    } finally {
+      setProjectBusy(false);
+    }
   };
 
   // AI Prompt to Edit / Refactor Active File
@@ -155,65 +257,6 @@ Return ONLY the complete updated file content. Do not include markdown code fenc
       setIsAiBusy(false);
     }
   };
-
-  // Safe Execution in Sandboxed iframe (HTML/JS/CSS)
-  const isWebExecutable = ['html', 'javascript', 'typescript'].includes(activeFile.language);
-
-  const sandboxedHtml = useMemo(() => {
-    if (activeFile.language === 'html') {
-      return activeFile.content;
-    }
-    if (activeFile.language === 'javascript' || activeFile.language === 'typescript') {
-      return `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <style>
-    body { font-family: sans-serif; background: #0e1017; color: #e2e8f0; padding: 16px; margin: 0; }
-  </style>
-</head>
-<body>
-  <div id="output"></div>
-  <script>
-    const log = console.log;
-    console.log = (...args) => {
-      log(...args);
-      const div = document.createElement('div');
-      div.textContent = args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ');
-      document.body.appendChild(div);
-    };
-    try {
-      ${activeFile.content}
-    } catch (e) {
-      console.log('Error: ' + e.message);
-    }
-  </script>
-</body>
-</html>`;
-    }
-    return '';
-  }, [activeFile.content, activeFile.language]);
-
-  // Unified Diff Lines Calculation
-  const diffLines = useMemo(() => {
-    if (!pendingDiff) return [];
-    const origLines = pendingDiff.original.split('\n');
-    const propLines = pendingDiff.proposed.split('\n');
-    const result: Array<{ type: 'same' | 'added' | 'removed'; text: string }> = [];
-
-    const maxLen = Math.max(origLines.length, propLines.length);
-    for (let i = 0; i < maxLen; i++) {
-      const orig = origLines[i];
-      const prop = propLines[i];
-      if (orig === prop) {
-        if (orig !== undefined) result.push({ type: 'same', text: orig });
-      } else {
-        if (orig !== undefined) result.push({ type: 'removed', text: orig });
-        if (prop !== undefined) result.push({ type: 'added', text: prop });
-      }
-    }
-    return result;
-  }, [pendingDiff]);
 
   return (
     <div
@@ -278,6 +321,16 @@ Return ONLY the complete updated file content. Do not include markdown code fenc
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowProjectModal(true)}
+            className="flex items-center gap-1 rounded bg-teal-500/10 border border-teal-500/30 px-2 py-1 text-xs text-teal-300 hover:bg-teal-500/20"
+            title="Generate Multi-file Project with AI"
+            data-testid="canvas-generate-project-button"
+          >
+            <FolderPlus size={12} />
+            <span>Generate Project</span>
+          </button>
           <button
             type="button"
             onClick={closeCanvas}
@@ -505,6 +558,65 @@ Return ONLY the complete updated file content. Do not include markdown code fenc
           {isAiBusy ? 'Thinking…' : 'Refactor'}
         </button>
       </form>
+
+      {/* Multi-file Project Generation Modal */}
+      {showProjectModal && (
+        <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-xl border border-white/10 bg-[#12141c] p-5 shadow-2xl">
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-white">
+                <FolderPlus size={16} className="text-teal-400" />
+                Generate Multi-File Project
+              </h3>
+              <button
+                type="button"
+                onClick={() => !projectBusy && setShowProjectModal(false)}
+                className="text-slate-400 hover:text-white"
+              >
+                <X size={15} />
+              </button>
+            </div>
+            <form onSubmit={handleGenerateProject} className="mt-4">
+              <label className="block text-xs font-medium text-slate-400">
+                Project Prompt & Requirements
+                <textarea
+                  autoFocus
+                  disabled={projectBusy}
+                  value={projectPrompt}
+                  onChange={(e) => setProjectPrompt(e.target.value)}
+                  placeholder="e.g. Build a complete REST API client with retry logic, Zod validation schemas, and rate-limiting..."
+                  className="mt-1.5 min-h-28 w-full rounded-lg border border-white/10 bg-black/50 p-2.5 font-mono text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-teal-400"
+                />
+              </label>
+              {projectStatus && (
+                <p className="mt-2 text-xs text-teal-300 flex items-center gap-1.5">
+                  <Sparkles size={12} className="animate-spin" />
+                  {projectStatus}
+                </p>
+              )}
+              <div className="mt-4 flex justify-end gap-2">
+                <button
+                  type="button"
+                  disabled={projectBusy}
+                  onClick={() => setShowProjectModal(false)}
+                  className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-slate-300 hover:bg-white/[.06]"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={projectBusy || !projectPrompt.trim()}
+                  className="flex items-center gap-1.5 rounded-lg bg-teal-500 px-4 py-1.5 text-xs font-semibold text-slate-950 hover:bg-teal-400 disabled:opacity-40"
+                  data-testid="canvas-project-submit"
+                >
+                  <Sparkles size={13} />
+                  {projectBusy ? 'Generating…' : 'Generate Project'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

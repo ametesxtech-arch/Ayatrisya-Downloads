@@ -40,11 +40,20 @@ router.post("/auth/desktop/handoff", async (req: Request, res: Response) => {
   const uid = await verifiedFirebaseUid(req, res);
   if (!uid) return;
 
-  const { state, challenge } = req.body ?? {};
+  let body = req.body;
+  if (typeof body === "string") {
+    try {
+      body = JSON.parse(body);
+    } catch {}
+  }
+
+  const rawState = (body?.state ?? req.query?.state) as unknown;
+  const rawChallenge = (body?.challenge ?? req.query?.challenge) as unknown;
+  const state = typeof rawState === "string" ? rawState.trim() : "";
+  const challenge = typeof rawChallenge === "string" ? rawChallenge.trim() : "";
+
   if (
-    typeof state !== "string" ||
-    !/^[a-f0-9]{16,128}$/i.test(state) ||
-    typeof challenge !== "string" ||
+    !/^[a-zA-Z0-9_-]{16,128}$/.test(state) ||
     !/^[a-zA-Z0-9_-]{40,128}$/.test(challenge)
   ) {
     res.status(400).json({ error: "Invalid state or challenge parameter." });
@@ -52,7 +61,7 @@ router.post("/auth/desktop/handoff", async (req: Request, res: Response) => {
   }
 
   const code = randomBytes(32).toString("hex");
-  const email = typeof req.body?.email === "string" ? req.body.email : undefined;
+  const email = typeof body?.email === "string" ? body.email : (typeof req.query?.email === "string" ? req.query.email : undefined);
 
   handoffs.set(code, {
     uid,
@@ -71,13 +80,22 @@ router.post("/auth/desktop/handoff", async (req: Request, res: Response) => {
  * Exchanges the single-use code + PKCE verifier for a verified session token.
  */
 router.post("/auth/desktop/exchange", async (req: Request, res: Response) => {
-  const { code, verifier, state } = req.body ?? {};
+  let body = req.body;
+  if (typeof body === "string") {
+    try {
+      body = JSON.parse(body);
+    } catch {}
+  }
 
-  if (
-    typeof code !== "string" ||
-    typeof verifier !== "string" ||
-    typeof state !== "string"
-  ) {
+  const rawCode = (body?.code ?? req.query?.code) as unknown;
+  const rawVerifier = (body?.verifier ?? req.query?.verifier) as unknown;
+  const rawState = (body?.state ?? req.query?.state) as unknown;
+
+  const code = typeof rawCode === "string" ? rawCode.trim() : "";
+  const verifier = typeof rawVerifier === "string" ? rawVerifier.trim() : "";
+  const state = typeof rawState === "string" ? rawState.trim() : "";
+
+  if (!code || !verifier || !state) {
     res.status(400).json({ error: "Missing required parameters (code, verifier, state)." });
     return;
   }

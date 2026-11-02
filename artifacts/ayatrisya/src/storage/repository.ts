@@ -1,6 +1,6 @@
 import type { IDBPDatabase } from "idb";
 import { openLocalDatabase, stores, type StoreName } from "./database";
-import { defaultPreferences, type Attachment, type BaseRecord, type Conversation, type ConversationOptions, type ItemOptions, type ListOptions, type Message, type Preferences, type Project, type ProjectItem, type StorageStats } from "./types";
+import { defaultPreferences, type Attachment, type BaseRecord, type ChatMode, type Conversation, type ConversationOptions, type ItemOptions, type ListOptions, type Message, type Preferences, type Project, type ProjectItem, type StorageStats } from "./types";
 import { validateFileContent } from "./files";
 import * as operations from "./resource-operations";
 import { searchAll } from "./search";
@@ -70,6 +70,10 @@ export class LocalRepository {
     };
     if (!["Dark", "Light", "Follow system"].includes(value.theme) || !["Normal", "Savage", "Joke"].includes(value.mode) || !["v1-fast", "v2-best"].includes(value.model) || value.language !== "English" || value.displayName.length > 100)
       throw new Error("Invalid interface preferences.");
+    if (value.answerStyle && !["concise", "detailed", "step-by-step", "teaching", "exam-ready", "examples-first", "creative"].includes(value.answerStyle))
+      throw new Error("Invalid answer style preference.");
+    if (value.modelDataConsent && !["allowed", "ask", "disabled"].includes(value.modelDataConsent))
+      throw new Error("Invalid model consent preference.");
     if(!["newest","oldest","title"].includes(value.historySort)||!["full","subtle","none"].includes(value.animationIntensity)||!["grid","list"].includes(value.projectView)||["enterToSend","historyPinnedFirst","logoIdle","reducedMotion","sidebarCollapsed","skipIntro","onboardingComplete","syncAcrossDevices"].some(key=>typeof value[key as keyof Preferences]!=="boolean"))throw new Error("Invalid behavior preferences.");
     if(!["standard","focus","studio","developer","compact"].includes(value.workspaceMode)||!["comfortable","compact"].includes(value.homeDensity)||!value.homeSections||typeof value.homeSections!=="object"||["projects","conversations","items"].some(key=>typeof value.homeSections[key as keyof Preferences["homeSections"]]!=="boolean")||!Array.isArray(value.recentCommands)||value.recentCommands.length>20||value.recentCommands.some(command=>typeof command!=="string"||command.length>200))throw new Error("Invalid workspace preferences.");
     const personalization=value.personalization;
@@ -98,14 +102,14 @@ export class LocalRepository {
     await tx.done;return result;
   }
   getConversation(id: string) { return this.get<Conversation>("conversations", id); }
-  async createConversation(title = "New conversation"): Promise<Conversation> {
-    const conversation = { ...this.base(), title: checkedTitle(title),pinned:false,archived:false };
+  async createConversation(title = "New conversation", mode: ChatMode = "Normal"): Promise<Conversation> {
+    const conversation: Conversation = { ...this.base(), title: checkedTitle(title),pinned:false,archived:false, mode };
     await this.put("conversations", conversation); return conversation;
   }
   async renameConversation(id: string, title: string) {
     return this.updateConversation(id,{title:checkedTitle(title)});
   }
-  updateConversation(id:string,patch:Partial<Pick<Conversation,"title"|"pinned"|"archived">>){return operations.updateConversation(this,id,patch);}
+  updateConversation(id:string,patch:Partial<Pick<Conversation,"title"|"pinned"|"archived"|"mode">>){return operations.updateConversation(this,id,patch);}
   deleteConversations(ids:string[]){return operations.removeConversations(this,ids);}
   clearConversation(id:string){return operations.removeConversations(this,[id],true);}
   deleteMessage(id:string){return operations.deleteMessage(this,id);}
@@ -221,13 +225,26 @@ export class LocalRepository {
     const owner = this.ownerId; const tx = (await this.db()).transaction(["attachments","blobs","projectItems","messages"],"readwrite");
     await this.removeAttachmentInTransaction(tx,id,owner); await tx.done; this.emit();
   }
-  async stats(): Promise<StorageStats> {
-    const [conversations,projects,items,attachments] = await Promise.all([this.all("conversations"),this.all("projects"),this.all("projectItems"),this.all("attachments")]);
+  async stats(): Promise<StorageStats & { memories: number; knowledgeBases: number }> {
+    const [conversations,projects,items,attachments,memories,kbs] = await Promise.all([
+      this.all("conversations"),this.all("projects"),this.all("projectItems"),this.all("attachments"),
+      this.all("aiMemories"),this.all("knowledgeBases"),
+    ]);
     let estimate: StorageEstimate = {}; let persistent: boolean|null = null;
     if (typeof navigator !== "undefined" && navigator.storage) {
       try { estimate = await navigator.storage.estimate(); persistent = navigator.storage.persisted ? await navigator.storage.persisted() : null; } catch { /* Unsupported estimates are reported as unavailable, not zero. */ }
     }
-    return { conversations: conversations.length, projects: projects.length, items: items.length, attachments: attachments.length, usage: estimate.usage, quota: estimate.quota, persistent };
+    return {
+      conversations: conversations.length,
+      projects: projects.length,
+      items: items.length,
+      attachments: attachments.length,
+      memories: memories.length,
+      knowledgeBases: kbs.length,
+      usage: estimate.usage,
+      quota: estimate.quota,
+      persistent,
+    };
   }
   async requestPersistence() { return typeof navigator !== "undefined" && !!navigator.storage?.persist ? navigator.storage.persist() : false; }
   async clearLocalData() {
@@ -242,7 +259,7 @@ export class LocalRepository {
     const pref = await tx.objectStore("profiles").get([owner,"guest-import"]);
     if (pref) { await tx.done; return 0; }
     const mappings = new Map<string,string>(); const source = new Map<StoreName,any[]>();
-    for (const name of ["conversations","messages","projects","projectItems","attachments","blobs"] as const) {
+    for (const name of ["conversations","messages","projects","projectItems","attachments","blobs","aiMemories","knowledgeBases","knowledgeDocuments","knowledgeChunks"] as const) {
       const rows = await tx.objectStore(name).index("ownerId").getAll("guest"); source.set(name,rows);
       for (const row of rows) if (!mappings.has(row.id)) mappings.set(row.id,crypto.randomUUID());
     }

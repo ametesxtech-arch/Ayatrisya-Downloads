@@ -1,12 +1,12 @@
 // Proprietary notice: applies only to original material Ametesx owns or is authorized to license; third-party and prior licenses remain in force.
-const { app, BrowserWindow, dialog, ipcMain, shell } = require("electron");
+const { app, BrowserWindow, dialog, ipcMain, shell, safeStorage } = require("electron");
 const { spawn } = require("node:child_process");
 const fsSync = require("node:fs");
 const fs = require("node:fs/promises");
 const http = require("node:http");
 const os = require("node:os");
 const path = require("node:path");
-const { randomUUID } = require("node:crypto");
+const { createHash, randomBytes, randomUUID } = require("node:crypto");
 const {
   cleanRelativePath,
   isWithin,
@@ -31,6 +31,10 @@ const { createWarModeYaraService } = require("./war-mode-yara.cjs");
 const { DEFAULT_PORT: COMPANION_PORT, createCompanionServer } = require("./companion-server.cjs");
 const { createSeedModelHost } = require("./seed-model-host.cjs");
 const { detectHardware } = require("./hardware-detector.cjs");
+const { DesktopStorageManager } = require("./desktop/storage/manager.cjs");
+const { ModelDownloader } = require("./desktop/downloads/downloader.cjs");
+const { ActiveModelManager } = require("./desktop/runtime/active-manager.cjs");
+const { ConnectionManager } = require("./desktop/remote/connection-manager.cjs");
 
 const MAX_TEXT_FILE_BYTES = 1024 * 1024;
 const MAX_TERMINAL_OUTPUT_BYTES = 128 * 1024;
@@ -199,6 +203,49 @@ function getSeedModelHost() {
     });
   }
   return seedModelHost;
+}
+
+let desktopStorageManager = null;
+let modelDownloader = null;
+let activeModelManager = null;
+let connectionManager = null;
+
+function getDesktopStorageManager() {
+  if (!desktopStorageManager) {
+    const baseDir = process.env.LOCALAPPDATA
+      ? path.join(process.env.LOCALAPPDATA, "Ayatrisya", "models")
+      : path.join(app.getPath("userData"), "models");
+    desktopStorageManager = new DesktopStorageManager({ baseDir });
+  }
+  return desktopStorageManager;
+}
+
+function getModelDownloader() {
+  if (!modelDownloader) {
+    modelDownloader = new ModelDownloader({
+      storageManager: getDesktopStorageManager(),
+    });
+  }
+  return modelDownloader;
+}
+
+function getActiveModelManager() {
+  if (!activeModelManager) {
+    activeModelManager = new ActiveModelManager({
+      storageManager: getDesktopStorageManager(),
+    });
+  }
+  return activeModelManager;
+}
+
+function getConnectionManager() {
+  if (!connectionManager) {
+    connectionManager = new ConnectionManager({
+      userDataDir: app.getPath("userData"),
+      safeStorage,
+    });
+  }
+  return connectionManager;
 }
 
 app.setName("Ayatrisya");
@@ -385,10 +432,11 @@ async function getLocalModelEndpoint() {
     return validateLocalModelEndpoint(value.endpoint);
   } catch (error) {
     if (error.code === "ENOENT") {
-      const host = getSeedModelHost();
-      const status = host.getStatus();
-      if (status.configured || status.state === "READY") {
-        return "http://127.0.0.1:49382";
+      // Check active production local model manager first
+      const activeManager = getActiveModelManager();
+      const activeStatus = activeManager.getStatus();
+      if (activeStatus && activeStatus.status === "READY" && activeStatus.endpoint) {
+        return activeStatus.endpoint;
       }
       return "";
     }
@@ -994,6 +1042,7 @@ registerIpc("desktop:war-mode:open-windows-security", async () => {
   await shell.openExternal("ms-settings:windowsdefender");
 });
 
+registerIpc("desktop:bridge:handshake", getDesktopRuntimeInfo);
 registerIpc("desktop:model-endpoint:get", getLocalModelEndpoint);
 registerIpc("desktop:model-endpoint:set", setLocalModelEndpoint);
 registerIpc("desktop:model-endpoint:request", requestLocalModel);
@@ -1084,6 +1133,95 @@ registerIpc("desktop:ametesx:export-project", async (request) => {
     validationStatus: "VALID",
     details: "Project exported successfully.",
   };
+});
+
+// --- Modular Desktop Models & Engines Subsystem ---
+registerIpc("desktop:models:installed", async () => {
+  const sm = getDesktopStorageManager();
+  const installedModels = await sm.listInstalled();
+  const storageSummary = await sm.getStorageSummary();
+  return { installedModels, storageSummary };
+});
+
+registerIpc("desktop:models:verify", async (modelId) => {
+  const sm = getDesktopStorageManager();
+  return sm.verifyModel(modelId);
+});
+
+registerIpc("desktop:models:delete", async (modelId) => {
+  const sm = getDesktopStorageManager();
+  return sm.deleteModel(modelId);
+});
+
+registerIpc("desktop:models:download:start", async (modelEntry) => {
+  const downloader = getModelDownloader();
+  return downloader.startDownload(modelEntry, {
+    onProgress: (progress) => {
+      mainWindow?.webContents.send("desktop:models:download:progress", progress);
+    },
+  });
+});
+
+registerIpc("desktop:models:download:cancel", async (modelId) => {
+  const downloader = getModelDownloader();
+  return downloader.cancelDownload(modelId);
+});
+
+registerIpc("desktop:models:active:status", async () => {
+  return getActiveModelManager().getStatus();
+});
+
+registerIpc("desktop:models:active:load", async (modelId, catalogEntry) => {
+  return getActiveModelManager().loadModel(modelId, catalogEntry);
+});
+
+registerIpc("desktop:models:active:unload", async () => {
+  return getActiveModelManager().unloadModel();
+});
+
+registerIpc("desktop:models:active:chat", async (request) => {
+  return getActiveModelManager().chat(request);
+});
+
+// --- Remote Connection & Explicit Routing Subsystem ---
+registerIpc("desktop:remote:policy:get", async () => {
+  const cm = getConnectionManager();
+  await cm.init();
+  return cm.getRoutingPolicy();
+});
+
+registerIpc("desktop:remote:policy:set", async (policy) => {
+  const cm = getConnectionManager();
+  await cm.init();
+  return cm.setRoutingPolicy(policy);
+});
+
+registerIpc("desktop:remote:endpoints:list", async () => {
+  const cm = getConnectionManager();
+  await cm.init();
+  return cm.listEndpoints();
+});
+
+registerIpc("desktop:remote:endpoints:save", async (endpointData) => {
+  const cm = getConnectionManager();
+  await cm.init();
+  return cm.saveEndpoint(endpointData);
+});
+
+registerIpc("desktop:remote:endpoints:remove", async (id) => {
+  const cm = getConnectionManager();
+  await cm.init();
+  return cm.removeEndpoint(id);
+});
+
+registerIpc("desktop:remote:endpoints:test", async (options) => {
+  const cm = getConnectionManager();
+  return cm.testEndpoint(options);
+});
+
+registerIpc("desktop:remote:gateway:test", async (options) => {
+  const cm = getConnectionManager();
+  return cm.testAyatrisyaGateway(options);
 });
 
 registerIpc("desktop:projects:list", listProjects);

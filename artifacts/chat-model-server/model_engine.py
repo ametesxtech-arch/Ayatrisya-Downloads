@@ -101,7 +101,7 @@ class ChatEngine:
             self.self_test_error = f"Self-test inference failed: {str(exc)}"
             logger.error(self.self_test_error, exc_info=True)
 
-    def format_prompt(self, messages: List[ChatMessage], mode: str) -> str:
+    def format_prompt(self, messages: List[ChatMessage], mode: str, model_type: str = "v1-fast") -> str:
         """Constructs prompt with Ayatrisya persona, conversation history, and attachments."""
         # Persona tone selection
         if mode == "Savage":
@@ -122,6 +122,17 @@ class ChatEngine:
                 "2. Conversational Tone: Natural, clear, engaging, and precise.\n"
                 "3. Mathematical Notation: Always use standard LaTeX delimiters ($...$ for inline, $$...$$ for display equations).\n"
                 "4. Code Quality: Tag code blocks with exact language identifiers (```python, ```typescript, ```rust, etc.)."
+            )
+
+        if model_type == "v2-best":
+            tone_prompt += (
+                "\n[Profile: Ayatrisya V2 Deep Reasoning Engine]\n"
+                "Provide deep multi-step reasoning, thorough code analysis, and explore edge cases carefully."
+            )
+        else:
+            tone_prompt += (
+                "\n[Profile: Ayatrisya V1 Fast Engine]\n"
+                "Provide concise, high-speed, direct responses optimized for quick assistance."
             )
 
         # Check if tokenizer has apply_chat_template (e.g. Qwen2.5)
@@ -188,12 +199,12 @@ class ChatEngine:
         generated_tokens = outputs[0][input_length:]
         return self.tokenizer.decode(generated_tokens, skip_special_tokens=True)
 
-    def generate(self, messages: List[ChatMessage], mode: str) -> str:
+    def generate(self, messages: List[ChatMessage], mode: str, model_type: str = "v1-fast") -> str:
         """Public synchronous generation with timeout and concurrency guard."""
         if not self.self_test_passed:
             raise RuntimeError(self.self_test_error or "Model is not ready. Warmup self-test is pending.")
 
-        prompt = self.format_prompt(messages, mode)
+        prompt = self.format_prompt(messages, mode, model_type=model_type)
 
         acquired = self.inference_lock.acquire(timeout=self.request_timeout)
         if not acquired:
@@ -204,12 +215,12 @@ class ChatEngine:
         finally:
             self.inference_lock.release()
 
-    def generate_stream(self, messages: List[ChatMessage], mode: str) -> Generator[str, None, None]:
+    def generate_stream(self, messages: List[ChatMessage], mode: str, model_type: str = "v1-fast") -> Generator[str, None, None]:
         """Public streaming generation yielding tokens."""
         if not self.self_test_passed:
             raise RuntimeError(self.self_test_error or "Model is not ready. Warmup self-test is pending.")
 
-        prompt = self.format_prompt(messages, mode)
+        prompt = self.format_prompt(messages, mode, model_type=model_type)
 
         acquired = self.inference_lock.acquire(timeout=self.request_timeout)
         if not acquired:
@@ -217,8 +228,9 @@ class ChatEngine:
 
         try:
             if self.mock_inference or not self.model or not self.tokenizer:
+                profile_label = "V2 Deep Reasoning Engine" if model_type == "v2-best" else "V1 Fast Engine"
                 chunks = [
-                    "Hello! ", "I am Ayatrisya AI, ", "streaming directly ",
+                    f"[{profile_label}] ", "Hello! ", "I am Ayatrisya AI, ", "streaming directly ",
                     "from your dedicated CPU-optimized ", "chat model server."
                 ]
                 for chunk in chunks:

@@ -183,8 +183,32 @@ export function AuthProvider({children}:{children:ReactNode}) {
         await sendEmailVerification(result.user);
       } catch {}
     }),
-    googleSignIn:()=>perform(async()=>{ const provider=new GoogleAuthProvider();provider.setCustomParameters({prompt:"select_account"}); const result=await signInWithPopup(firebaseAuth(),provider);writeGuestMode(false);setGuest(false);switchOwner(`firebase:${result.user.uid}`);setUser(result.user); }),
-    githubSignIn:()=>perform(async()=>{ const result=await signInWithPopup(firebaseAuth(),new GithubAuthProvider());writeGuestMode(false);setGuest(false);switchOwner(`firebase:${result.user.uid}`);setUser(result.user); }),
+    googleSignIn: () =>
+      perform(async () => {
+        if (typeof window !== "undefined" && window.ayatrisyaDesktop?.isDesktop) {
+          await window.ayatrisyaDesktop.startBrowserAuth("sign-in");
+          return;
+        }
+        const provider = new GoogleAuthProvider();
+        provider.setCustomParameters({ prompt: "select_account" });
+        const result = await signInWithPopup(firebaseAuth(), provider);
+        writeGuestMode(false);
+        setGuest(false);
+        switchOwner(`firebase:${result.user.uid}`);
+        setUser(result.user);
+      }),
+    githubSignIn: () =>
+      perform(async () => {
+        if (typeof window !== "undefined" && window.ayatrisyaDesktop?.isDesktop) {
+          await window.ayatrisyaDesktop.startBrowserAuth("sign-in");
+          return;
+        }
+        const result = await signInWithPopup(firebaseAuth(), new GithubAuthProvider());
+        writeGuestMode(false);
+        setGuest(false);
+        switchOwner(`firebase:${result.user.uid}`);
+        setUser(result.user);
+      }),
     resetPassword:(email)=>perform(()=>sendPasswordResetEmail(firebaseAuth(),email)),
     sendVerification:()=>perform(async()=>{const current=firebaseAuth().currentUser;if(!current)throw new Error("Sign in first.");await sendEmailVerification(current);}),
     refreshUser:()=>perform(async()=>{const current=firebaseAuth().currentUser;if(current){await reload(current);setUser(Object.assign(Object.create(Object.getPrototypeOf(current)),current));}}),

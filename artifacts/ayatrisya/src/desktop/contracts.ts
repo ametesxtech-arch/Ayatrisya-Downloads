@@ -270,6 +270,25 @@ export interface AyatrisyaDesktopApi {
       error?: string;
     }) => void
   ): () => void;
+  // Models & Engines Subsystem
+  getInstalledModels?(): Promise<{ installedModels: any[]; storageSummary: any }>;
+  verifyModelChecksum?(modelId: string): Promise<boolean>;
+  deleteModel?(modelId: string): Promise<boolean>;
+  startModelDownload?(modelEntry: any): Promise<any>;
+  cancelModelDownload?(modelId: string): Promise<boolean>;
+  onModelDownloadProgress?(callback: (progress: any) => void): () => void;
+  getActiveModelStatus?(): Promise<any>;
+  loadActiveModel?(modelId: string, catalogEntry?: any): Promise<any>;
+  unloadActiveModel?(): Promise<any>;
+  chatActiveModel?(request: { messages: any[]; temperature?: number; maxTokens?: number }): Promise<any>;
+  // Remote & Routing Subsystem
+  getRoutingPolicy?(): Promise<string>;
+  setRoutingPolicy?(policy: string): Promise<string>;
+  listRemoteEndpoints?(): Promise<any[]>;
+  saveRemoteEndpoint?(data: any): Promise<string>;
+  removeRemoteEndpoint?(id: string): Promise<boolean>;
+  testRemoteEndpoint?(options: any): Promise<any>;
+  testAyatrisyaGateway?(options: any): Promise<any>;
 }
 
 declare global {

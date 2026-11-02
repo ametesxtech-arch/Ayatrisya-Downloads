@@ -11,8 +11,10 @@ import { PublicSiteFooter } from "@/components/PublicSite";
 export function DesktopHandoff() {
   const auth = useAuth();
   const searchParams = new URLSearchParams(window.location.search);
-  const state = searchParams.get("state") || "";
-  const challenge = searchParams.get("challenge") || "";
+  const rawState = searchParams.get("state") || "";
+  const rawChallenge = searchParams.get("challenge") || "";
+  const state = rawState.trim();
+  const challenge = rawChallenge.trim();
   const initialMode = searchParams.get("mode") || "sign-in";
 
   const [isCreate, setIsCreate] = useState(initialMode === "create-account");
@@ -28,7 +30,7 @@ export function DesktopHandoff() {
 
   const hasValidDesktopParams = Boolean(
     state &&
-    /^[a-f0-9]{16,128}$/i.test(state) &&
+    /^[a-zA-Z0-9_-]{16,128}$/.test(state) &&
     challenge &&
     /^[a-zA-Z0-9_-]{40,128}$/.test(challenge)
   );
@@ -49,6 +51,7 @@ export function DesktopHandoff() {
       const response = await apiFetch<{ code: string }>("/api/auth/desktop/handoff", {
         method: "POST",
         token,
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           state,
           challenge,
@@ -70,6 +73,7 @@ export function DesktopHandoff() {
   async function submit(e: FormEvent) {
     e.preventDefault();
     setError(null);
+    setHandoffError(null);
     if (!/^\S+@\S+\.\S+$/.test(email)) return setError("Enter a valid email address.");
     if (password.length < 8) return setError("Password must be at least 8 characters.");
     if (isCreate && password !== confirm) return setError("The passwords do not match.");
@@ -81,6 +85,7 @@ export function DesktopHandoff() {
       } else {
         await auth.signIn(email, password);
       }
+      setHandoffStatus("idle");
     } catch (err) {
       setError(errMsg(err, "Authentication failed."));
     } finally {
@@ -90,9 +95,11 @@ export function DesktopHandoff() {
 
   async function handleGoogle() {
     setError(null);
+    setHandoffError(null);
     setBusy(true);
     try {
       await auth.googleSignIn();
+      setHandoffStatus("idle");
     } catch (err) {
       setError(errMsg(err));
     } finally {
@@ -102,9 +109,11 @@ export function DesktopHandoff() {
 
   async function handleGithub() {
     setError(null);
+    setHandoffError(null);
     setBusy(true);
     try {
       await auth.githubSignIn();
+      setHandoffStatus("idle");
     } catch (err) {
       setError(errMsg(err));
     } finally {

@@ -1,5 +1,6 @@
 import { createRemoteJWKSet, jwtVerify } from "jose";
 import type { Request, Response } from "express";
+import { defaultTrustKernel } from "./trust-kernel";
 
 const FIREBASE_KEYS = createRemoteJWKSet(
   new URL("https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com"),
@@ -43,8 +44,36 @@ export async function verifiedFirebaseUid(
     if (typeof payload.sub !== "string" || !/^[\w-]{1,128}$/.test(payload.sub)) {
       throw new Error("Invalid Firebase subject.");
     }
+
+    const issuedAtSec = typeof payload.auth_time === "number"
+      ? payload.auth_time
+      : typeof payload.iat === "number"
+      ? payload.iat
+      : Math.floor(Date.now() / 1000);
+    const issuedAtMs = issuedAtSec * 1000;
+
+    if (defaultTrustKernel.isUserSessionRevoked(payload.sub, issuedAtMs)) {
+      defaultTrustKernel.logEvent({
+        userId: payload.sub,
+        role: "user",
+        action: "session_validation",
+        resource: "auth:session",
+        decision: "deny",
+        reason: "Session has been revoked on server.",
+      });
+      res.status(401).json({ error: messages.invalid });
+      return undefined;
+    }
+
     return payload.sub;
   } catch (firebaseErr) {
+    // Check for guest authorization (e.g. Bearer guest or guest:...)
+    if (match[1] === "guest" || match[1].startsWith("guest:")) {
+      const clientIp = req.ip || req.socket.remoteAddress || "guest";
+      const guestUid = `guest-${clientIp.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
+      return guestUid;
+    }
+
     const sessionSecret = process.env.SESSION_SECRET;
     if (sessionSecret) {
       try {
@@ -54,6 +83,11 @@ export async function verifiedFirebaseUid(
           audience: "ayatrisya-desktop",
         });
         if (typeof payload.sub === "string" && /^[\w-]{1,128}$/.test(payload.sub)) {
+          const issuedAtMs = typeof payload.iat === "number" ? payload.iat * 1000 : Date.now();
+          if (defaultTrustKernel.isUserSessionRevoked(payload.sub, issuedAtMs)) {
+            res.status(401).json({ error: messages.invalid });
+            return undefined;
+          }
           return payload.sub;
         }
       } catch {}

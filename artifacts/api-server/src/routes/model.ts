@@ -20,14 +20,17 @@ import { searchInternet, shouldSearchInternet } from "../lib/web-search";
 import { validateGlbBuffer } from "../lib/glb-validator";
 import { validateAudioBuffer } from "../lib/audio-validator";
 import { generateCloudflareImage, isCloudflareConfigured } from "../lib/cloudflare-image";
+import { handleCloudflareChatFallback } from "../lib/cloudflare-chat-handler";
+import { generateHfImage, isHfImageConfigured } from "../lib/hf-image";
 import { generateProceduralWav } from "../lib/music-generator";
+import { callHfGradioApi, isHuggingFaceSpaceUrl, normalizeHfSpaceBaseUrl } from "../lib/hf-space-client";
 
 const router: IRouter = Router();
 const MAX_JSON_RESPONSE_BYTES = 25 * 1024 * 1024;
 const MAX_CHAT_RESPONSE_BYTES = 25 * 1024 * 1024;
 const MODEL_TIMEOUT_MS = 120_000;
 const JSON_RESPONSE_TYPES = new Set(["application/json", "application/x-ndjson", "text/event-stream"]);
-const DENIED_HOSTS = /(^|\.)(openai\.com|anthropic\.com|googleapis\.com|groq\.com|openrouter\.ai|huggingface\.co|huggingface\.com)$/i;
+const DENIED_HOSTS = /(^|\.)(openai\.com|anthropic\.com|googleapis\.com|groq\.com|openrouter\.ai)$/i;
 
 type ModelRoute = {
   upstreamPath: string;
@@ -232,12 +235,17 @@ Core Principles for Response Excellence:
 8. Interactive Chat Blocks:
    - When the user asks for a quiz, multiple-choice question (MCQ), poll, comparison, checklist, step-by-step tutorial, expandable answers, sliders/controls, or metrics, you can render an Interactive Chat Block by outputting a fenced code block tagged with \`\`\`interactive containing valid JSON (version "1.0"):
      * MCQ: \`\`\`interactive { "version": "1.0", "type": "mcq", "question": "...", "options": [{"id": "a", "label": "..."}], "correctAnswer": "a", "explanation": "..." } \`\`\`
-     * Quiz: \`\`\`interactive { "version": "1.0", "type": "quiz", "title": "...", "questions": [{"id": "q1", "question": "...", "options": [{"id":"a","label":"..."}], "correctAnswer": "a", "explanation": "..."}] } \`\`\`
+     * Quiz: \`\`\`interactive { "version": "1.0", "type": "quiz", "title": "...", "questions": [{"id": "q1", "question": "...", "options": [{"id": "a", "label": "..."}, {"id": "b", "label": "..."}], "correctAnswer": "a", "explanation": "..."}], "passingScore": 70 } \`\`\`
      * Poll: \`\`\`interactive { "version": "1.0", "type": "poll", "question": "...", "options": [{"id": "a", "label": "..."}] } \`\`\`
      * Checklist: \`\`\`interactive { "version": "1.0", "type": "checklist", "title": "...", "items": [{"id": "1", "label": "..."}] } \`\`\`
      * Steps: \`\`\`interactive { "version": "1.0", "type": "steps", "title": "...", "steps": [{"title": "...", "description": "..."}] } \`\`\`
      * Accordion: \`\`\`interactive { "version": "1.0", "type": "accordion", "title": "...", "items": [{"id": "1", "title": "...", "content": "..."}] } \`\`\`
      * Comparison: \`\`\`interactive { "version": "1.0", "type": "comparison", "entities": ["A", "B"], "criteria": [{"criterion": "...", "values": {"A": "...", "B": "..."}}] } \`\`\`
+     * Table: \`\`\`interactive { "version": "1.0", "type": "table", "title": "...", "headers": ["Col 1", "Col 2"], "rows": [["Val 1", "Val 2"]] } \`\`\`
+     * Chart: \`\`\`interactive { "version": "1.0", "type": "chart", "title": "...", "chartType": "bar", "data": [{"label": "Jan", "value": 10}, {"label": "Feb", "value": 20}] } \`\`\`
+     * Diagram / Flowchart: \`\`\`interactive { "version": "1.0", "type": "diagram", "title": "...", "diagramType": "mermaid", "code": "graph TD; A[Start]-->B[Process]-->C[End];" } \`\`\`
+     * Form Wizard: \`\`\`interactive { "version": "1.0", "type": "form_wizard", "title": "...", "steps": [{"title": "Step 1", "fields": [{"id": "name", "label": "Name", "type": "text", "required": true}, {"id": "email", "label": "Email", "type": "email", "required": true}]}] } \`\`\`
+     * Decision Tree: \`\`\`interactive { "version": "1.0", "type": "decision_tree", "title": "...", "rootNodeId": "1", "nodes": [{"id": "1", "text": "Start Question?", "options": [{"label": "A", "nextNodeId": "2"}, {"label": "B", "nextNodeId": "3"}]}] } \`\`\`
      * Controls: \`\`\`interactive { "version": "1.0", "type": "input_controls", "title": "...", "controls": [{"type": "slider", "id": "val", "label": "...", "min": 0, "max": 100, "defaultValue": 50}] } \`\`\`
      * Progress / Chart: \`\`\`interactive { "version": "1.0", "type": "progress", "items": [{"label": "...", "value": 75}] } \`\`\` or type "chart"
      * Scheduled Task / Automation: When the user asks to schedule a reminder or recurring automation (e.g., "Remind me to study Maths tomorrow at 6 PM", "Every morning at 7 AM, summarize my tasks", "Every Sunday, generate a practice quiz", "Check my project status every weekday", "Remind me to review this code in three days"), ALWAYS output a confirmation card with \`\`\`interactive { "version": "1.0", "type": "scheduled_task", "task": { "id": "task-uuid", "title": "...", "description": "...", "status": "draft", "recurrence": "daily"|"weekly"|"weekdays"|"monthly"|"one-time", "time": "18:00", "timezone": "UTC", "actionType": "study_reminder"|"task_summary"|"practice_quiz"|"project_status"|"code_review"|"notification"|"custom", "executionTarget": "cloud"|"desktop", "requiresConfirmation": true } } \`\`\`
@@ -337,14 +345,23 @@ Style & Tone: ${toneInstruction}${webSearchContext}`;
     },
   };
 
-  const candidateModels = [
-    "gemini-3.5-flash-lite",
-    "gemini-3.1-flash-lite",
-    "gemini-3.5-flash",
-    "gemini-3.8-flash",
-    "gemini-flash-latest",
-  ];
+  // Verified available Gemini model identifiers from live API inspection:
+  // - "gemini-flash-lite-latest" (Gemini 2.5 Flash-Lite, fast, lightweight, high stability)
+  // - "gemini-flash-latest" (Gemini 2.5 Flash, 1M input limit, supports thinking & multimodal)
+  // - "gemini-2.5-flash-lite"
+  const candidateModels = chatData.model === "v2-best"
+    ? [
+        "gemini-flash-lite-latest",
+        "gemini-flash-latest",
+        "gemini-2.5-flash-lite",
+      ]
+    : [
+        "gemini-flash-lite-latest",
+        "gemini-flash-latest",
+        "gemini-2.5-flash-lite",
+      ];
   let geminiRes: globalThis.Response | null = null;
+  let activeFallbackModelId = "";
 
   for (const modelId of candidateModels) {
     try {
@@ -361,6 +378,7 @@ Style & Tone: ${toneInstruction}${webSearchContext}`;
 
       if (attempt.ok) {
         geminiRes = attempt;
+        activeFallbackModelId = modelId;
         break;
       }
     } catch {}
@@ -379,6 +397,8 @@ Style & Tone: ${toneInstruction}${webSearchContext}`;
         "Content-Type": contentType,
         "Cache-Control": "no-store",
         "X-Content-Type-Options": "nosniff",
+        "x-model-source": "ayatrisya-gemini-fallback",
+        "x-fallback-model": activeFallbackModelId || "gemini-flash-latest",
       });
 
       const reader = geminiRes.body.getReader();
@@ -425,7 +445,15 @@ Style & Tone: ${toneInstruction}${webSearchContext}`;
       const text = Array.isArray(parts)
         ? parts.map((p: any) => p.text ?? "").join("")
         : "Ayatrisya AI generated response.";
-      res.status(200).set({ "Cache-Control": "no-store" }).json({ text: text || "Ayatrisya AI generated response." });
+      res.status(200).set({
+        "Cache-Control": "no-store",
+        "x-model-source": "ayatrisya-gemini-fallback",
+        "x-fallback-model": activeFallbackModelId || "gemini-flash-latest",
+      }).json({
+        text: text || "Ayatrisya AI generated response.",
+        provider: "gemini-fallback",
+        fallbackModel: activeFallbackModelId || "gemini-flash-latest",
+      });
       return true;
     }
   } catch (error) {
@@ -451,6 +479,10 @@ async function proxyModelRequest(
       const handled = await generateCloudflareImage(res, parsed.data as any);
       if (handled) return;
     }
+    if (isHfImageConfigured()) {
+      const handled = await generateHfImage(res, parsed.data as any);
+      if (handled) return;
+    }
     const config = getModelConfig();
     if (!config.ok) {
       sendError(
@@ -464,15 +496,21 @@ async function proxyModelRequest(
 
   const config = getModelConfig();
   if (!config.ok) {
-    // If chat request and Gemini fallback is configured, allow fallback even when primary is unconfigured
-    if (route.upstreamPath === "/chat" && method === "POST" && process.env.GEMINI_API_KEY?.trim()) {
+    // If chat request, try Cloudflare Workers AI high-speed LLM first, then Gemini
+    if (route.upstreamPath === "/chat" && method === "POST") {
       const parsed = route.schema?.safeParse(req.body);
       if (!parsed?.success) {
         sendError(res, 400, "The model request is invalid.");
         return;
       }
-      const handled = await fallbackWithGeminiChat(req, res, parsed.data as any);
-      if (handled) return;
+      if (isCloudflareConfigured()) {
+        const handledCf = await handleCloudflareChatFallback(req, res, parsed.data as any);
+        if (handledCf) return;
+      }
+      if (process.env.GEMINI_API_KEY?.trim()) {
+        const handled = await fallbackWithGeminiChat(req, res, parsed.data as any);
+        if (handled) return;
+      }
     }
 
     // If 3D generation and primary is unconfigured, return honest 503
@@ -495,10 +533,10 @@ async function proxyModelRequest(
       return;
     }
 
-    // If capabilities request and Gemini fallback is configured, report fallback model capabilities
-    if (route.upstreamPath === "/capabilities" && method === "GET" && process.env.GEMINI_API_KEY?.trim()) {
+    // If capabilities request and Cloudflare or Gemini is configured, report ready model capabilities
+    if (route.upstreamPath === "/capabilities" && method === "GET" && (isCloudflareConfigured() || process.env.GEMINI_API_KEY?.trim())) {
       const modalities = ["chat"];
-      if (isCloudflareConfigured()) {
+      if (isCloudflareConfigured() || isHfImageConfigured()) {
         modalities.push("image");
       }
       res.status(200).set({ "Cache-Control": "no-store", "Content-Type": "application/json" }).json({
@@ -506,7 +544,7 @@ async function proxyModelRequest(
           {
             id: "v1-fast",
             available: true,
-            reason: "Ayatrisya Fast Engine (Active)",
+            reason: "Ayatrisya Fast Engine (Cloudflare / Llama 3.1 8B Ready)",
             streaming: true,
             attachments: true,
             modalities,
@@ -514,7 +552,7 @@ async function proxyModelRequest(
           {
             id: "v2-best",
             available: true,
-            reason: "Ayatrisya Best Result (Active)",
+            reason: "Ayatrisya Reasoning Engine (Active)",
             streaming: true,
             attachments: true,
             modalities,
@@ -581,6 +619,80 @@ async function proxyModelRequest(
       }
       body = JSON.stringify(parsed.data);
       contentType = "application/json";
+    }
+  }
+
+  // Handle Hugging Face Gradio ZeroGPU Space integration
+  if (isHuggingFaceSpaceUrl(config.baseUrl.toString())) {
+    try {
+      // Use HF_READ_TOKEN or AYATRISYA_MODEL_API_KEY
+      const readToken = process.env.HF_READ_TOKEN?.trim() || config.apiKey;
+      const hfConfig = {
+        spaceUrl: config.baseUrl.toString(),
+        readToken,
+        timeoutMs: MODEL_TIMEOUT_MS,
+      };
+
+      if (route.upstreamPath === "/chat" && method === "POST") {
+        const payload = typeof body === "string" ? body : JSON.stringify(req.body);
+        const result = (await callHfGradioApi(hfConfig, "predict", [payload])) as { text?: string; error?: string };
+        if (result && typeof result.text === "string") {
+          res
+            .status(200)
+            .set({
+              "Cache-Control": "no-store",
+              "Content-Type": "application/json",
+              "x-model-source": "ayatrisya-hosted-zerogpu",
+            })
+            .json({ text: result.text });
+          return;
+        }
+        throw new Error(result?.error || "Invalid response format from HF Space.");
+      }
+
+      if (route.upstreamPath === "/health" && method === "GET") {
+        const health = (await callHfGradioApi(hfConfig, "health", [])) as {
+          status?: string;
+          model?: string;
+          readiness?: string;
+          parameter_count?: string;
+          device?: string;
+          error?: string;
+        };
+        const status = health?.status === "ok" ? 200 : 503;
+        res.status(status).set({ "Cache-Control": "no-store", "Content-Type": "application/json" }).json(health);
+        return;
+      }
+
+      if (route.upstreamPath === "/capabilities" && method === "GET") {
+        const caps = (await callHfGradioApi(hfConfig, "capabilities", [])) as {
+          models?: Array<{ id: string; available: boolean; modalities?: string[] }>;
+        };
+        if (caps?.models && Array.isArray(caps.models)) {
+          if (isCloudflareConfigured()) {
+            for (const m of caps.models) {
+              if (m.modalities && !m.modalities.includes("image")) {
+                m.modalities.push("image");
+              }
+            }
+          }
+          res.status(200).set({ "Cache-Control": "no-store", "Content-Type": "application/json" }).json(caps);
+          return;
+        }
+        throw new Error("Invalid capabilities payload from HF Space.");
+      }
+    } catch (hfErr) {
+      req.log.warn({ error: hfErr instanceof Error ? hfErr.message : String(hfErr) }, "HF Space inference failed");
+      // Fallback to Gemini if configured
+      if (route.upstreamPath === "/chat" && method === "POST" && process.env.GEMINI_API_KEY?.trim()) {
+        const parsed = route.schema?.safeParse(req.body);
+        if (parsed?.success) {
+          const fallbackOk = await fallbackWithGeminiChat(req, res, parsed.data as any);
+          if (fallbackOk) return;
+        }
+      }
+      sendError(res, 503, "The Ayatrisya chat model service is unavailable or returned an error.");
+      return;
     }
   }
 
@@ -831,11 +943,16 @@ async function proxyModelRequest(
           }
         }
 
-        // If capabilities endpoint, ensure cloud image capability is declared when Cloudflare Workers AI is configured
-        if (route.upstreamPath === "/capabilities" && isCloudflareConfigured() && Array.isArray((rawJson as any)?.models)) {
+        // If capabilities endpoint, normalize reason and ensure cloud image capability is declared when Cloudflare Workers AI is configured
+        if (route.upstreamPath === "/capabilities" && Array.isArray((rawJson as any)?.models)) {
           for (const m of (rawJson as any).models) {
-            if (m && Array.isArray(m.modalities) && !m.modalities.includes("image")) {
-              m.modalities.push("image");
+            if (m) {
+              if (m.reason === null || m.reason === undefined) {
+                m.reason = m.available ? "Ready" : "Model not ready";
+              }
+              if (isCloudflareConfigured() && Array.isArray(m.modalities) && !m.modalities.includes("image")) {
+                m.modalities.push("image");
+              }
             }
           }
         }

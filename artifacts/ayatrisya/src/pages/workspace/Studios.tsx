@@ -12,6 +12,7 @@ import { downloadBlob } from '@/storage/backup';
 import { modelClient } from '@/ai/client';
 import { errMsg, formatBytes, MAX_UPLOAD } from '@/lib/format';
 import { getGuestImageGenerationCount, GUEST_IMAGE_LIMIT, reserveGuestImageGeneration } from '@/ai/guest-image-quota';
+import { ImageStudioConversation } from '@/features/image-studio/ImageStudioConversation';
 
 type Kind = 'image' | '3d' | 'music' | 'voice';
 const meta = {
@@ -21,6 +22,9 @@ const meta = {
 } as const;
 
 export default function Studios({ kind, notify, guestLimited = false }: { kind: Kind; notify?: (m: string) => void; guestLimited?: boolean }) {
+  if (kind === 'image') {
+    return <ImageStudioConversation notify={notify} guestLimited={guestLimited} />;
+  }
   return kind === 'voice' ? <VoiceStudio notify={notify ?? (() => undefined)} /> : <GenerativeStudio key={kind} kind={kind} notify={notify} guestLimited={guestLimited} />;
 }
 
@@ -62,7 +66,7 @@ function ModelView({ attachmentId }: { attachmentId: string }) {
   </div>;
 }
 
-function AssetHistory({ kind, notify }: { kind: 'image' | 'music' | '3d'; notify: (m: string) => void }) {
+export function AssetHistory({ kind, notify }: { kind: 'image' | 'music' | '3d'; notify: (m: string) => void }) {
   const items = useLocalQuery(() => repository.listItems({ kind: 'file', limit: 500 }), []);
   const atts = useLocalQuery(() => repository.listAttachments(), []);
   const map = new Map((atts.data ?? []).map((a) => [a.id, a]));
@@ -340,7 +344,7 @@ function GenerativeStudio({ kind, notify, guestLimited }: { kind: Exclude<Kind, 
             <p className="mt-1 text-xs text-amber-200/80">Cloud 3D generation is disabled to avoid nonfunctional requests. You can still import, inspect, and view local 3D models in the browser below, or switch to the Desktop application for local 3D generation.</p>
             <Link href="/workspace/storage" className="mt-2 inline-block text-xs font-semibold underline text-amber-200 hover:text-white">Review Desktop status & backup</Link>
           </div>
-        ) : capable ? (kind === 'image' ? 'Cloud image generation is active (powered by Cloudflare Workers AI). Prompts are sent only after you approve each request.' : `Your Ayatrisya endpoint reports ${m.modality} generation. Prompts are sent only after you approve each request.`) : (kind === 'image' ? 'No image generation model is connected. Ensure Cloudflare Workers AI credentials are configured on your API server.' : `No Ayatrisya ${m.noun.endsWith('model') ? m.noun : `${m.noun} model`} is connected. Generation is unavailable until your own endpoint reports this capability.`)}
+        ) : capable ? (kind === 'image' ? 'Cloud image generation is active.' : `Your Ayatrisya endpoint reports ${m.modality} generation. Prompts are sent only after you approve each request.`) : (kind === 'image' ? 'No image generation model is connected. Ensure Cloudflare Workers AI credentials are configured on your API server.' : `No Ayatrisya ${m.noun.endsWith('model') ? m.noun : `${m.noun} model`} is connected. Generation is unavailable until your own endpoint reports this capability.`)}
         {isLimitedGuest && <span className="mt-2 block" data-testid="status-guest-image-quota">{guestImagesRemaining} of {GUEST_IMAGE_LIMIT} guest image generations remaining in this browser.</span>}
     </div>
     <div className="grid gap-5 md:grid-cols-[1fr_1fr]">

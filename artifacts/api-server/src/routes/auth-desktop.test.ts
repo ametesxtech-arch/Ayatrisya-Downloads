@@ -61,6 +61,18 @@ describe("Desktop Browser Authentication Handshake", () => {
     };
   }
 
+  it("distinguishes missing routes (404) from registered desktop auth endpoints", async () => {
+    const call = await startApi();
+    const missingRes = await call("/api/auth/desktop/non-existent-endpoint", { method: "POST" });
+    expect(missingRes.status).toBe(404);
+
+    // Handshake routes exist: they reject unauthenticated or bad requests with 401/400, not 404
+    const handoffRes = await call("/api/auth/desktop/handoff", { method: "POST" });
+    expect(handoffRes.status).toBe(401);
+    const exchangeRes = await call("/api/auth/desktop/exchange", { method: "POST" });
+    expect(exchangeRes.status).toBe(400);
+  });
+
   it("rejects desktop handoff request without valid Firebase identity", async () => {
     const call = await startApi();
     const res = await call("/api/auth/desktop/handoff", {
@@ -163,5 +175,60 @@ describe("Desktop Browser Authentication Handshake", () => {
     expect(mismatchedStateExchange.status).toBe(400);
     const errBody = (await mismatchedStateExchange.json()) as { error: string };
     expect(errBody.error).toContain("state mismatch");
+  });
+
+  it("strictly rejects malformed state or PKCE challenge while accepting realistic Electron values", async () => {
+    const call = await startApi();
+    const validState = "1d3f792732a1b31412cf3c221ca6c5e7";
+    const validChallenge = "LVxKC4SvQrTXNg2dvmjo8ii23C2uWnmotVARa8zPRA0";
+
+    // 1. Accepts realistic Electron values with whitespace trimming
+    const validRes = await call("/api/auth/desktop/handoff", {
+      method: "POST",
+      headers: { Authorization: "Bearer valid-firebase-id-token" },
+      body: JSON.stringify({ state: `  ${validState}  `, challenge: `  ${validChallenge}  ` }),
+    });
+    expect(validRes.status).toBe(200);
+
+    // 2. Rejects state that is too short
+    const shortStateRes = await call("/api/auth/desktop/handoff", {
+      method: "POST",
+      headers: { Authorization: "Bearer valid-firebase-id-token" },
+      body: JSON.stringify({ state: "short", challenge: validChallenge }),
+    });
+    expect(shortStateRes.status).toBe(400);
+
+    // 3. Rejects state with invalid characters
+    const badStateRes = await call("/api/auth/desktop/handoff", {
+      method: "POST",
+      headers: { Authorization: "Bearer valid-firebase-id-token" },
+      body: JSON.stringify({ state: "state-with-spaces inside-1234", challenge: validChallenge }),
+    });
+    expect(badStateRes.status).toBe(400);
+
+    // 4. Rejects challenge that is too short
+    const shortChallengeRes = await call("/api/auth/desktop/handoff", {
+      method: "POST",
+      headers: { Authorization: "Bearer valid-firebase-id-token" },
+      body: JSON.stringify({ state: validState, challenge: "short_challenge" }),
+    });
+    expect(shortChallengeRes.status).toBe(400);
+
+    // 5. Rejects challenge with illegal base64 padding '='
+    const paddedChallengeRes = await call("/api/auth/desktop/handoff", {
+      method: "POST",
+      headers: { Authorization: "Bearer valid-firebase-id-token" },
+      body: JSON.stringify({ state: validState, challenge: `${validChallenge}=` }),
+    });
+    expect(paddedChallengeRes.status).toBe(400);
+
+    // 6. Accepts base64url or UUID state formats
+    const uuidState = "f47ac10b-58cc-4372-a567-0e02b2c3d479";
+    const uuidRes = await call("/api/auth/desktop/handoff", {
+      method: "POST",
+      headers: { Authorization: "Bearer valid-firebase-id-token" },
+      body: JSON.stringify({ state: uuidState, challenge: validChallenge }),
+    });
+    expect(uuidRes.status).toBe(200);
   });
 });

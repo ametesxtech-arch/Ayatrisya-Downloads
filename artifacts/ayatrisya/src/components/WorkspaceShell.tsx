@@ -98,7 +98,7 @@ export function Workspace() {
   async function newChat() {
     if (creating || !confirmDiscard()) return;
     setCreating(true);
-    try { const c = await repository.createConversation(); setChatPage(0); setPath(`/workspace/chat/${c.id}`); setMobileOpen(false); setDialog(''); }
+    try { const c = await repository.createConversation("New conversation", prefs.mode); setChatPage(0); setPath(`/workspace/chat/${c.id}`); setMobileOpen(false); setDialog(''); }
     catch (e) { notify(`Could not create a conversation: ${errMsg(e)}`); } finally { setCreating(false); }
   }
   async function createDocument() {
@@ -135,6 +135,9 @@ export function Workspace() {
     <FeaturePage path={path} goto={goto} notify={notify} />
   </GuestWorkspace>;
   const isChat = path === '/workspace/chat' || path.startsWith('/workspace/chat/');
+  const isCoding = path === '/workspace/coding';
+  const isCanvas = path === '/workspace/canvas' || path.startsWith('/workspace/canvas/');
+  const isFullViewport = isChat || isCoding || isCanvas;
   const commands: Command[] = [
     { id: 'home', category: 'Navigate', keywords: ['dashboard', 'overview'], label: 'Open workspace home', run: () => goto('/workspace') },
     { id: 'chat', category: 'Create', keywords: ['conversation'], label: 'New chat', hint: 'Ctrl N', run: () => void newChat() },
@@ -170,6 +173,7 @@ export function Workspace() {
     ...(user ? [{ label: 'Sign out', danger: true, onSelect: () => { signOut().then(() => { notify('Signed out.'); goto('/auth/sign-in'); }, (e) => notify(errMsg(e))); } }] : []),
   ];
   const capFor = (id: ModelId) => caps.find((c) => c.id === id);
+  const selectedCap = capFor(prefs.model);
   const anyReady = caps.some((c) => c.available);
   const L = (href: string, active: boolean, icon: ReactNode, label: string) => <SideLink href={href} active={active} icon={icon} label={label} collapsed={collapsed} onSelect={() => setMobileOpen(false)} />;
   const initials = (user?.displayName || prefs.displayName || user?.email || 'G').slice(0, 2).toUpperCase();
@@ -198,6 +202,7 @@ export function Workspace() {
           {L('/workspace/documents', path.startsWith('/workspace/documents'), <FileText size={15} />, 'Documents')}
           {L('/workspace/presentations', path === '/workspace/presentations', <Presentation size={15} />, 'Presentations')}
           {L('/workspace/coding', path.startsWith('/workspace/coding'), <Code2 size={15} />, 'Coding')}
+          {L('/workspace/canvas', path.startsWith('/workspace/canvas'), <Code2 size={15} className="text-teal-400" />, 'Canvas IDE')}
           {h('Studios')}
           {L('/workspace/images', path === '/workspace/images', <Image size={15} />, 'Image studio')}
           {L('/workspace/3d', path === '/workspace/3d', <Box size={15} />, '3D studio')}
@@ -278,12 +283,14 @@ export function Workspace() {
             <select aria-label="Chat mode" value={prefs.mode} onChange={(e) => void save({ mode: e.target.value as ChatMode })} className="hidden max-w-[84px] rounded-md border border-white/[.08] bg-[#171920] px-2 py-2 text-[11px] text-slate-200 lg:block sm:max-w-none sm:px-3">
               <option>Normal</option><option>Savage</option><option>Joke</option>
             </select>
-            <span role="status" className={cx('hidden rounded-md border px-2 py-1.5 text-[10px] lg:block', anyReady ? 'border-teal-300/20 text-teal-200' : 'border-white/[.08] text-slate-400')}>{anyReady ? 'Model connection reported ready' : 'No model connected'}</span>
+            <span role="status" className={cx('hidden rounded-md border px-2 py-1.5 text-[10px] lg:block', selectedCap?.available ? 'border-teal-300/30 text-teal-300 bg-teal-400/[.06]' : 'border-amber-400/30 text-amber-300 bg-amber-400/[.06]')}>
+              {selectedCap?.available ? `${modelNames[prefs.model]} · Ready` : `${modelNames[prefs.model]} · Unavailable`}
+            </span>
             <IconButton label="Search and commands (Ctrl K)" onClick={() => setDialog('palette')} className="hidden sm:grid"><CommandIcon size={16} /></IconButton>
             <ActionMenu label="Profile menu" items={profileItems}><UserRound size={16} /></ActionMenu>
           </div>
         </header>
-        <main id="main" tabIndex={-1} className={cx('workspace-main-content min-h-0 flex-1 focus:outline-none', isChat ? 'flex flex-col h-full overflow-hidden' : 'overflow-y-auto')}><div ref={pageRef} className={cx(isChat ? 'flex-1 h-full min-h-0 flex flex-col' : 'min-h-full')}>
+        <main id="main" tabIndex={-1} className={cx('workspace-main-content min-h-0 flex-1 focus:outline-none', isFullViewport ? 'flex flex-col h-full overflow-hidden' : 'overflow-y-auto')}><div ref={pageRef} className={cx(isFullViewport ? 'flex-1 h-full min-h-0 flex flex-col' : 'min-h-full')}>
           {path === '/workspace' ? <WorkspaceHome
             displayName={user?.displayName || prefs.displayName || ''}
             projects={homeProjects.data ?? []}

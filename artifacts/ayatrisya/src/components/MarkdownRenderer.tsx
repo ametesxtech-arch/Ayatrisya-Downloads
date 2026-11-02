@@ -3,15 +3,16 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
-import { ArrowUpRight, Check, Copy, PanelsRightBottom } from 'lucide-react';
+import { ArrowUpRight, Check, Copy, PanelsRightBottom, Download, FileArchive } from 'lucide-react';
 import 'katex/dist/katex.min.css';
 import {
   parseInteractiveBlock,
   InteractiveBlockRenderer,
   InteractiveBlockSkeleton,
 } from './interactive-blocks';
-import { detectMarkdownQuizOrMcq } from './interactive-blocks/quiz-detector';
+import { detectUniversalInteractiveContent } from './interactive-blocks/interactive-detector';
 import { useOptionalCanvas } from './canvas/CanvasContext';
+import { downloadZip } from '@/lib/zip-export';
 
 export interface MarkdownContextValue {
   messageId?: string;
@@ -125,20 +126,52 @@ export function CodeBlock({ children }: { children?: ReactNode }) {
                   sql: 'sql',
                 };
                 const extension = extMap[ext] || (ext.length <= 4 && ext !== 'code' ? ext : 'txt');
+                const filename = `code-${Date.now().toString().slice(-4)}.${extension}`;
                 canvas.openCanvas({
-                  name: `snippet-${Date.now().toString().slice(-4)}.${extension}`,
+                  name: filename,
                   content: text,
                   language: ext !== 'code' ? ext : 'typescript',
                 });
+                // Also open dedicated full-screen tab
+                window.open('/workspace/canvas', '_blank');
               }}
               className="flex items-center gap-1.5 rounded px-2 py-0.5 text-[11px] text-teal-300/90 transition-colors hover:bg-teal-500/10 hover:text-teal-200"
               data-testid="button-open-in-canvas"
-              title="Open in interactive Canvas"
+              title="Open in interactive Canvas IDE"
             >
               <PanelsRightBottom size={12} />
-              <span>Canvas</span>
+              <span>Canvas IDE</span>
             </button>
           )}
+          <button
+            type="button"
+            onClick={() => {
+              const ext = language.toLowerCase();
+              const extMap: Record<string, string> = {
+                typescript: 'ts',
+                javascript: 'js',
+                python: 'py',
+                html: 'html',
+                css: 'css',
+                json: 'json',
+                markdown: 'md',
+                rust: 'rs',
+                go: 'go',
+                sql: 'sql',
+              };
+              const extension = extMap[ext] || (ext.length <= 4 && ext !== 'code' ? ext : 'txt');
+              const filename = `snippet-${Date.now().toString().slice(-4)}.${extension}`;
+              downloadZip(filename.replace(/\.[^.]+$/, ''), [
+                { path: filename, data: text }
+              ]);
+            }}
+            className="flex items-center gap-1.5 rounded px-2 py-0.5 text-[11px] text-slate-300 transition-colors hover:bg-white/[.08] hover:text-white"
+            data-testid="button-download-zip"
+            title="Download as .ZIP"
+          >
+            <FileArchive size={12} className="text-amber-300" />
+            <span>.ZIP</span>
+          </button>
           <button
             type="button"
             onClick={copy}
@@ -276,8 +309,8 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
     }
   }
 
-  // Detect structured Markdown quizzes/MCQs (e.g. Class 10 Science quiz with questions and A/B/C/D options)
-  const detected = !isStreaming ? detectMarkdownQuizOrMcq(trimmed) : null;
+  // Detect structured interactive content (quizzes, MCQs, or interactive comparison tables)
+  const detected = !isStreaming ? detectUniversalInteractiveContent(trimmed) : null;
   if (detected && detected.block) {
     const intro = detected.beforeText ? normalizeMathInMarkdown(detected.beforeText) : null;
     const outro = detected.afterText ? normalizeMathInMarkdown(detected.afterText) : null;

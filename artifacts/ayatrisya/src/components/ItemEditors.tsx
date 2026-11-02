@@ -7,6 +7,8 @@ import { useLocalQuery } from '@/storage/hooks';
 import type { ProjectItem } from '@/storage/types';
 import { confirmDiscard, setDirty } from '@/lib/dirty';
 import { downloadText, errMsg, safeName } from '@/lib/format';
+import { downloadPdf } from '@/lib/pdf-export';
+import { downloadPptx } from '@/lib/pptx-export';
 
 function useSaver(item: ProjectItem, get: () => { title: string; content: string; tags: string; projectId: string | null }) {
   const [saved, setSaved] = useState(() => JSON.stringify({ ...get() }));
@@ -76,7 +78,7 @@ export function TextEditor({ item, onClose, onDeleted }: { item: ProjectItem; on
   const words = content.trim() ? content.trim().split(/\s+/).length : 0;
   const base = safeName(title);
   return <Shell item={item} title={title} setTitle={setTitle} dirty={s.dirty} saving={s.saving} error={s.error} onSave={s.save} onClose={onClose} onDelete={del} projectId={projectId} setProjectId={setProjectId} tags={tags} setTags={setTags}
-    exports={[{ label: 'Markdown', run: () => downloadText(`# ${title}\n\n${content}`, `${base}.md`, 'text/markdown') }, { label: 'Plain text', run: () => downloadText(`${title}\n\n${content}`, `${base}.txt`) }]}>
+    exports={[{ label: 'PDF', run: () => downloadPdf(content, `${base}.pdf`, { title }) }, { label: 'Markdown', run: () => downloadText(`# ${title}\n\n${content}`, `${base}.md`, 'text/markdown') }, { label: 'Plain text', run: () => downloadText(`${title}\n\n${content}`, `${base}.txt`) }]}>
     <label className="sr-only" htmlFor="editor-body">Content</label>
     <textarea id="editor-body" value={content} onChange={(e) => setContent(e.target.value)} placeholder="Start writing. Markdown is kept as plain text." className={`${areaCls} min-h-[48dvh] resize-y`} data-testid="input-content" />
     <p className="mt-2 text-xs text-slate-500">{words} words · {content.length} characters · Ctrl or Cmd + S saves</p>
@@ -98,6 +100,7 @@ export const slidesToJson = (slides: Slide[]) => JSON.stringify({ version: 1, sl
 export function SlideEditor({ item, onClose, onDeleted }: { item: ProjectItem; onClose: () => void; onDeleted?: () => void }) {
   const [title, setTitle] = useState(item.title), [tags, setTags] = useState(item.tags.join(', ')), [projectId, setProjectId] = useState(item.projectId);
   const [slides, setSlides] = useState<Slide[]>(() => parseSlides(item.content)), [sel, setSel] = useState(0);
+  const [theme, setTheme] = useState<'dark-cinematic' | 'clean-light' | 'emerald-minimal' | 'cyber-neon'>('dark-cinematic');
   const content = useMemo(() => slidesToJson(slides), [slides]);
   const s = useSaver(item, () => ({ title, content, tags, projectId }));
   const del = useDelete(item, onClose, onDeleted);
@@ -108,28 +111,94 @@ export function SlideEditor({ item, onClose, onDeleted }: { item: ProjectItem; o
   const base = safeName(title);
   const outline = slides.map((x, i) => `Slide ${i + 1}: ${x.title}\n${x.body}`).join('\n\n');
   return <Shell item={item} title={title} setTitle={setTitle} dirty={s.dirty} saving={s.saving} error={s.error} onSave={s.save} onClose={onClose} onDelete={del} projectId={projectId} setProjectId={setProjectId} tags={tags} setTags={setTags}
-    exports={[{ label: 'JSON', run: () => downloadText(content, `${base}.slides.json`, 'application/json') }, { label: 'Text outline', run: () => downloadText(outline, `${base}.txt`) }]}>
-    <Notice>Slides are saved as JSON in this browser. PowerPoint export is not available; export JSON or a text outline.</Notice>
+    exports={[{ label: 'PowerPoint (.pptx)', run: () => downloadPptx(title, slides, `${base}.pptx`, { theme }) }, { label: 'JSON', run: () => downloadText(content, `${base}.slides.json`, 'application/json') }, { label: 'Text outline', run: () => downloadText(outline, `${base}.txt`) }]}>
+    <Notice>Slides are saved as JSON in this browser. Export PowerPoint (.pptx) presentation decks with custom styles and SmartArt layout.</Notice>
     <div className="mt-4 grid gap-4 md:grid-cols-[200px_1fr]">
       <div className="space-y-1.5" role="listbox" aria-label="Slides">
         {slides.map((x, i) => <button key={x.id} role="option" aria-selected={x === cur} onClick={() => setSel(i)} className={`flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-xs ${x === cur ? 'border-violet-400/40 bg-violet-400/10 text-white' : 'border-white/[.07] text-slate-400 hover:bg-white/[.04]'}`}><span className="text-slate-500">{i + 1}</span><span className="truncate">{x.title || 'Untitled'}</span></button>)}
         <Button variant="outline" className="w-full" onClick={() => { setSlides([...slides, newSlide()]); setSel(slides.length); }}><Plus size={14} />Add slide</Button>
       </div>
       <div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" onClick={() => move(-1)} disabled={idx === 0}><ArrowUp size={14} />Up</Button>
           <Button variant="outline" onClick={() => move(1)} disabled={idx === slides.length - 1}><ArrowDown size={14} />Down</Button>
           <Button variant="outline" onClick={() => { const c = { ...cur, id: crypto.randomUUID() }; const a = [...slides]; a.splice(idx + 1, 0, c); setSlides(a); setSel(idx + 1); }}><Copy size={14} />Duplicate</Button>
           <Button variant="outline" disabled={slides.length === 1} onClick={() => { setSlides(slides.filter((x) => x !== cur)); setSel(Math.max(0, idx - 1)); }}><Trash2 size={14} />Remove</Button>
+          
+          <div className="ml-auto flex items-center gap-1.5">
+            <span className="text-xs text-slate-400">Palette:</span>
+            <select
+              value={theme}
+              onChange={(e) => setTheme(e.target.value as any)}
+              className="rounded-md border border-white/10 bg-[#161820] px-2 py-1 text-xs text-slate-200"
+            >
+              <option value="dark-cinematic">Dark Cinematic</option>
+              <option value="clean-light">Clean Light</option>
+              <option value="emerald-minimal">Emerald Minimal</option>
+              <option value="cyber-neon">Cyber Neon</option>
+            </select>
+          </div>
         </div>
         <label className="mt-3 block text-xs font-medium text-slate-400">Slide title<input value={cur.title} onChange={(e) => patch({ title: e.target.value })} className={`${inputCls} mt-1.5`} /></label>
-        <label className="mt-3 block text-xs font-medium text-slate-400">Layout<select value={cur.layout} onChange={(e) => patch({ layout: e.target.value as Slide['layout'] })} className={`${inputCls} mt-1.5`}><option value="title">Title</option><option value="bullets">Bulleted (one point per line)</option><option value="quote">Quote</option></select></label>
+        <label className="mt-3 block text-xs font-medium text-slate-400">Layout<select value={cur.layout} onChange={(e) => patch({ layout: e.target.value as Slide['layout'] })} className={`${inputCls} mt-1.5`}><option value="title">Title Deck</option><option value="bullets">SmartArt Cards (one per line)</option><option value="quote">Quote / Manifesto</option></select></label>
         <label className="mt-3 block text-xs font-medium text-slate-400">Body<textarea value={cur.body} onChange={(e) => patch({ body: e.target.value })} className={`${areaCls} mt-1.5 min-h-28`} /></label>
-        <div aria-label="Slide preview" className="mt-4 aspect-video rounded-xl border border-white/10 bg-[#101116] p-6 sm:p-10">
-          <h3 className={`display font-bold ${cur.layout === 'title' ? 'text-3xl sm:text-4xl' : 'text-xl sm:text-2xl'}`}>{cur.title}</h3>
-          {cur.layout === 'bullets' && <ul className="mt-4 list-disc space-y-1.5 pl-5 text-sm text-slate-300">{cur.body.split('\n').filter(Boolean).map((l, i) => <li key={i}>{l}</li>)}</ul>}
-          {cur.layout === 'quote' && <blockquote className="mt-4 border-l-2 border-violet-400 pl-4 text-lg italic text-slate-300">{cur.body}</blockquote>}
-          {cur.layout === 'title' && <p className="mt-3 text-slate-400">{cur.body}</p>}
+        
+        {/* Visual Gamma-style live preview */}
+        <div aria-label="Slide preview" className={`mt-4 aspect-video rounded-xl border p-6 sm:p-10 transition-colors ${
+          theme === 'clean-light' ? 'bg-slate-50 border-slate-200 text-slate-900' :
+          theme === 'emerald-minimal' ? 'bg-[#061A14] border-emerald-900/40 text-emerald-100' :
+          theme === 'cyber-neon' ? 'bg-[#0F051D] border-fuchsia-900/40 text-fuchsia-100' :
+          'bg-[#0B0F19] border-white/10 text-slate-100'
+        }`}>
+          {cur.layout === 'title' ? (
+            <div className="flex h-full flex-col justify-center">
+              <span className={`inline-block w-fit rounded-full px-3 py-1 text-[11px] font-bold tracking-wider uppercase mb-3 ${
+                theme === 'clean-light' ? 'bg-blue-100 text-blue-700' :
+                theme === 'emerald-minimal' ? 'bg-emerald-500/20 text-emerald-300' :
+                theme === 'cyber-neon' ? 'bg-fuchsia-500/20 text-fuchsia-300' :
+                'bg-violet-500/20 text-violet-300'
+              }`}>Presentation Deck</span>
+              <h3 className="display font-extrabold text-3xl sm:text-5xl tracking-tight">{cur.title}</h3>
+              <p className="mt-4 text-base opacity-80 max-w-xl">{cur.body}</p>
+            </div>
+          ) : cur.layout === 'quote' ? (
+            <div className="flex h-full flex-col justify-center">
+              <h4 className="text-sm font-semibold uppercase tracking-widest opacity-60 mb-2">{cur.title}</h4>
+              <blockquote className={`border-l-4 pl-6 text-xl sm:text-2xl font-medium italic ${
+                theme === 'clean-light' ? 'border-blue-600 text-slate-800' :
+                theme === 'emerald-minimal' ? 'border-emerald-400 text-emerald-100' :
+                theme === 'cyber-neon' ? 'border-cyan-400 text-cyan-100' :
+                'border-violet-400 text-white'
+              }`}>
+                “{cur.body.replace(/^"|"$/g, '')}”
+              </blockquote>
+            </div>
+          ) : (
+            <div>
+              <div className="mb-6 flex items-center gap-2">
+                <span className={`size-2 rounded-full ${
+                  theme === 'clean-light' ? 'bg-blue-600' :
+                  theme === 'emerald-minimal' ? 'bg-emerald-400' :
+                  theme === 'cyber-neon' ? 'bg-cyan-400' :
+                  'bg-violet-400'
+                }`} />
+                <h3 className="text-xl sm:text-2xl font-bold tracking-tight">{cur.title}</h3>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                {cur.body.split('\n').filter(Boolean).slice(0, 3).map((l, i) => (
+                  <div key={i} className={`rounded-lg border p-4 text-xs ${
+                    theme === 'clean-light' ? 'bg-white border-slate-200 text-slate-700 shadow-sm' :
+                    theme === 'emerald-minimal' ? 'bg-[#0D281E] border-emerald-800/40 text-emerald-200' :
+                    theme === 'cyber-neon' ? 'bg-[#1B0B33] border-fuchsia-800/40 text-fuchsia-200' :
+                    'bg-[#161F30] border-slate-700/50 text-slate-300'
+                  }`}>
+                    <span className={`block font-mono text-[10px] font-bold mb-1.5 opacity-60 uppercase`}>Point 0{i + 1}</span>
+                    <p className="leading-relaxed font-medium">{l.replace(/^[•\-\*]\s*/, '')}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

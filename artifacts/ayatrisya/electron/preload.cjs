@@ -81,6 +81,33 @@ contextBridge.exposeInMainWorld(
       ipcRenderer.on("desktop:auth:callback", listener);
       return () => ipcRenderer.removeListener("desktop:auth:callback", listener);
     },
+    // New Modular Desktop Models & Engines Subsystem
+    getInstalledModels: () => ipcRenderer.invoke("desktop:models:installed"),
+    verifyModelChecksum: (modelId) => ipcRenderer.invoke("desktop:models:verify", modelId),
+    deleteModel: (modelId) => ipcRenderer.invoke("desktop:models:delete", modelId),
+    startModelDownload: (modelEntry) => ipcRenderer.invoke("desktop:models:download:start", modelEntry),
+    cancelModelDownload: (modelId) => ipcRenderer.invoke("desktop:models:download:cancel", modelId),
+    onModelDownloadProgress: (callback) => {
+      if (typeof callback !== "function") return () => {};
+      const listener = (_event, progress) => {
+        if (progress && typeof progress === "object") callback(progress);
+      };
+      ipcRenderer.on("desktop:models:download:progress", listener);
+      return () => ipcRenderer.removeListener("desktop:models:download:progress", listener);
+    },
+    getActiveModelStatus: () => ipcRenderer.invoke("desktop:models:active:status"),
+    loadActiveModel: (modelId, catalogEntry) =>
+      ipcRenderer.invoke("desktop:models:active:load", modelId, catalogEntry),
+    unloadActiveModel: () => ipcRenderer.invoke("desktop:models:active:unload"),
+    chatActiveModel: (request) => ipcRenderer.invoke("desktop:models:active:chat", request),
+    // New Remote Connection & Explicit Routing Subsystem
+    getRoutingPolicy: () => ipcRenderer.invoke("desktop:remote:policy:get"),
+    setRoutingPolicy: (policy) => ipcRenderer.invoke("desktop:remote:policy:set", policy),
+    listRemoteEndpoints: () => ipcRenderer.invoke("desktop:remote:endpoints:list"),
+    saveRemoteEndpoint: (endpointData) => ipcRenderer.invoke("desktop:remote:endpoints:save", endpointData),
+    removeRemoteEndpoint: (id) => ipcRenderer.invoke("desktop:remote:endpoints:remove", id),
+    testRemoteEndpoint: (options) => ipcRenderer.invoke("desktop:remote:endpoints:test", options),
+    testAyatrisyaGateway: (options) => ipcRenderer.invoke("desktop:remote:gateway:test", options),
   }),
 );
 

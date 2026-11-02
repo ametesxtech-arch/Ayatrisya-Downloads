@@ -42,7 +42,7 @@ export const GetModelCapabilitiesResponse = zod.object({
   "models": zod.array(zod.object({
   "id": zod.enum(['v1-fast', 'v2-best']),
   "available": zod.boolean(),
-  "reason": zod.string().max(getModelCapabilitiesResponseModelsItemReasonMax).optional(),
+  "reason": zod.string().max(getModelCapabilitiesResponseModelsItemReasonMax).nullable().optional(),
   "streaming": zod.boolean().optional(),
   "attachments": zod.boolean().optional(),
   "modalities": zod.array(zod.string().max(getModelCapabilitiesResponseModelsItemModalitiesItemMax)).max(getModelCapabilitiesResponseModelsItemModalitiesMax).optional()

@@ -1,9 +1,20 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'wouter';
 import { MarkdownRenderer } from '@/components/MarkdownRenderer';
-import { ArrowDown, Check, Copy, RefreshCw, MoreHorizontal, Mic, Paperclip, Pencil, Send, Square, Trash2, X, Sparkles, ArrowUpRight, Code2, Lightbulb, ShieldCheck, Archive, HelpCircle, Radio } from 'lucide-react';
+import {
+  ArrowDown, Check, Copy, RefreshCw, MoreHorizontal, Mic, Paperclip, Pencil,
+  Send, Square, Trash2, X, Sparkles, ArrowUpRight, Code2, Lightbulb,
+  ShieldCheck, Archive, HelpCircle, Radio, Image as ImageIcon, Flame, Smile, MessageSquare, ExternalLink,
+  FileText, Presentation, FileArchive
+} from 'lucide-react';
+import { downloadDocx } from '@/lib/docx-export';
+import { downloadPdf } from '@/lib/pdf-export';
+import { downloadZip } from '@/lib/zip-export';
+
+
 import { Button, ConfirmDialog, IconButton, Modal, Notice, Skeleton, LoadError } from '@/components/Primitives';
 import { AttachmentChip, AttachmentThumbnail } from '@/components/AttachmentPreview';
+import { ChatInlineImage } from '@/components/ChatInlineImage';
 import { repository } from '@/storage/repository';
 import { useLocalQuery } from '@/storage/hooks';
 import { modelClient } from '@/ai/client';
@@ -13,7 +24,7 @@ import { useAuth } from '@/integrations/firebase/AuthProvider';
 import { MAX_UPLOAD, ago, errMsg, formatBytes } from '@/lib/format';
 import { ActionMenu } from '@/components/Menus';
 import { useConvActions } from '@/hooks/use-conv-actions';
-import type { Message } from '@/storage/types';
+import type { ChatMode, Message } from '@/storage/types';
 import type { MessageAttachment } from '@/ai/types';
 import { MotionText } from '@/components/MotionText';
 import { CanvasProvider, useCanvas } from '@/components/canvas/CanvasContext';
@@ -21,14 +32,26 @@ import { CanvasPanel } from '@/components/canvas/CanvasPanel';
 import { VoiceInputButton, MessageTtsButton, SpeechToSpeechModal } from '@/components/voice';
 import { parseScheduleRequest } from '@/lib/scheduled-tasks/schedule-parser';
 import { hasModelConsent, grantModelConsent } from '@/lib/model-consent';
+import { hasCloudImageConsent } from '@/features/image-studio/consent';
+import { CloudImageConsentModal } from '@/features/image-studio/CloudImageConsentModal';
+import { detectImageRequest } from '@/lib/image-intent';
+import { MemoryEngine } from '@/storage/memory-engine';
+import { KnowledgeBaseEngine } from '@/storage/knowledge-engine';
 
 type Turn = Array<{ role: 'user' | 'assistant'; content: string; attachments?: MessageAttachment[] }>;
+
 const starters = [
   { label: 'Explain a concept', prompt: 'Explain a concept I am trying to understand: ', icon: Lightbulb },
   { label: 'Generate an image', prompt: '/image A cinematic cyberpunk landscape with glowing neon: ', icon: Sparkles },
   { label: 'Quiz my knowledge', prompt: 'Give me an interactive quiz or multiple-choice test on: ', icon: HelpCircle },
   { label: 'Help me write', prompt: 'Help me write a clear first draft about: ', icon: Pencil },
   { label: 'Debug my code', prompt: 'Help me debug this code. I will share the code and what I expected: ', icon: Code2 },
+];
+
+const CHAT_MODES: Array<{ id: ChatMode; label: string; icon: typeof MessageSquare; desc: string }> = [
+  { id: 'Normal', label: 'Normal', icon: MessageSquare, desc: 'Helpful, balanced, accurate, professional' },
+  { id: 'Savage', label: 'Savage', icon: Flame, desc: 'Witty, bold, sharp, playful sarcasm & roasts' },
+  { id: 'Joke', label: 'Joke', icon: Smile, desc: 'Humorous, playful banter, punchlines & fun' },
 ];
 
 export function ChatPage(props: { path: string; goto: (h: string) => void; notify: (m: string) => void }) {
@@ -41,7 +64,7 @@ export function ChatPage(props: { path: string; goto: (h: string) => void; notif
 
 function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) => void; notify: (m: string) => void }) {
   const id = path.startsWith('/workspace/chat/') ? path.split('/')[3] : null;
-  const { prefs } = usePrefs();
+  const { prefs, save: savePrefs } = usePrefs();
   const studioWidth = prefs.workspaceMode === 'studio';
   const { caps } = useCaps();
   const { user, guest } = useAuth();
@@ -57,22 +80,33 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
   const [showStsModal, setShowStsModal] = useState(false);
   const [text, setText] = useState(''), [files, setFiles] = useState<File[]>([]), [busy, setBusy] = useState(false), [stream, setStream] = useState(''), [streamFor, setStreamFor] = useState<string | null>(null), [error, setError] = useState('');
   const [consent, setConsent] = useState(() => hasModelConsent()), [ask, setAsk] = useState<{ cid: string; history: Turn; after?: () => Promise<void> } | null>(null), [remember, setRemember] = useState(true);
+  const [showImageConsent, setShowImageConsent] = useState(false);
+  const [pendingImageGen, setPendingImageGen] = useState<{ cid: string; prompt: string; userMessageId?: string } | null>(null);
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null), [confirmDel, setConfirmDel] = useState(false), [renaming, setRenaming] = useState<string | null>(null), [delMsg, setDelMsg] = useState<Message | null>(null), [resubmit, setResubmit] = useState<{ m: Message; text: string } | null>(null), [copied, setCopied] = useState<string | null>(null), [atBottom, setAtBottom] = useState(true);
+
+  // Per-conversation mode: initialize from conversation record if present, otherwise fallback to global prefs
+  const activeMode: ChatMode = (conv.data?.mode as ChatMode | undefined) || prefs.mode || 'Normal';
+
   const acts = useConvActions({ notify, goto, onDeleted: () => goto('/workspace') });
   const abortRef = useRef<AbortController | null>(null), jobIdRef = useRef<string | null>(null), retryRef = useRef<{ cid: string; history: Turn } | null>(null), endRef = useRef<HTMLDivElement>(null), fileRef = useRef<HTMLInputElement>(null), taRef = useRef<HTMLTextAreaElement>(null);
+
   useEffect(() => () => {
     abortRef.current?.abort();
     if (jobIdRef.current) modelClient.cancelJob(jobIdRef.current);
   }, [uid]);
+
   const list = msgs.data ?? [];
+
   useEffect(() => {
     const main = document.getElementById('main'); if (!main) return;
     const f = () => setAtBottom(main.scrollHeight - main.scrollTop - main.clientHeight < 120);
     f(); main.addEventListener('scroll', f, { passive: true });
     return () => main.removeEventListener('scroll', f);
   }, []);
+
   const atBottomRef = useRef(true); atBottomRef.current = atBottom;
   useEffect(() => { if (atBottomRef.current) endRef.current?.scrollIntoView({ block: 'end' }); }, [list.length, stream]);
+
   useEffect(() => {
     const t = taRef.current; if (!t) return;
     const fit = () => { t.style.height = 'auto'; t.style.height = `${Math.min(Math.max(t.scrollHeight, 36), 200)}px`; };
@@ -83,50 +117,122 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
     return () => { window.removeEventListener('resize', fit); ro?.disconnect(); };
   }, [text]);
 
+  const setConversationMode = async (newMode: ChatMode) => {
+    if (id) {
+      try {
+        await repository.updateConversation(id, { mode: newMode });
+        notify(`Chat mode switched to ${newMode}.`);
+      } catch (e) {
+        notify(errMsg(e, 'Could not update conversation mode.'));
+      }
+    } else {
+      void savePrefs({ mode: newMode });
+      notify(`Default chat mode set to ${newMode}.`);
+    }
+  };
+
+  /** Executes image generation through Cloudflare Workers AI with consent verification */
+  async function executeImageGeneration(cid: string, imgPrompt: string) {
+    if (!hasCloudImageConsent()) {
+      setPendingImageGen({ cid, prompt: imgPrompt });
+      setShowImageConsent(true);
+      return;
+    }
+
+    if (runningRef.current) return;
+    runningRef.current = true;
+    const ac = new AbortController();
+    abortRef.current = ac;
+    setBusy(true); setStreamFor(cid); setStream('🎨 Generating image with Cloudflare Workers AI...'); setError('');
+
+    try {
+      const job = modelClient.submitJob({
+        kind: 'asset',
+        assetKind: 'image',
+        prompt: imgPrompt,
+        options: {
+          model: prefs.model,
+          format: 'PNG',
+          signal: ac.signal,
+        },
+      });
+      jobIdRef.current = job.id;
+      const asset = await job.result;
+      const file = new File([asset.blob], asset.fileName, { type: asset.blob.type });
+      const saved = await repository.addFile(file, null, cid);
+      const outText = `Generated image for **"${imgPrompt}"**:\n\n*Format: ${asset.blob.type === 'image/jpeg' ? 'JPEG' : 'PNG'} · Size: ${formatBytes(asset.blob.size)}*`;
+      if (!ac.signal.aborted) {
+        await repository.addMessage(cid, outText, 'assistant', [saved.id]);
+      }
+      retryRef.current = null;
+    } catch (e) {
+      setError(ac.signal.aborted ? 'Image generation stopped.' : errMsg(e, 'Image generation failed.'));
+    } finally {
+      runningRef.current = false; setBusy(false); setStream(''); setStreamFor(null);
+      abortRef.current = null; jobIdRef.current = null;
+    }
+  }
+
   async function run(cid: string, history: Turn) {
     if (runningRef.current) return;
+    const latestTurn = history[history.length - 1];
+
+    // Detect explicit (/image) or natural language image generation intent
+    const imageIntent = latestTurn?.content ? detectImageRequest(latestTurn.content) : null;
+    if (imageIntent && imageIntent.isImageRequest) {
+      await executeImageGeneration(cid, imageIntent.cleanPrompt);
+      return;
+    }
+
     runningRef.current = true;
     const ac = new AbortController();
     abortRef.current = ac; retryRef.current = { cid, history };
     setBusy(true); setStreamFor(cid); setStream(''); setError('');
     try {
-      const latestTurn = history[history.length - 1];
+      // Retrieve relevant AI memories for the user query (if memory is enabled)
+      let relevantMemories: Array<{ content: string; category?: string; pinned?: boolean }> = [];
+      if (prefs.personalization.enabled && prefs.personalization.useMemory && latestTurn?.content) {
+        try {
+          const memEngine = new MemoryEngine(repository);
+          const retrieved = await memEngine.retrieveContext(latestTurn.content, { maxTokens: 400 });
+          relevantMemories = retrieved.map((m) => ({
+            content: m.content,
+            category: m.category,
+            pinned: m.pinned,
+          }));
+        } catch {
+          // Graceful fallback: continue without memory context if retrieval fails
+        }
+      }
 
-      // Handle image generation command in chat (/image <prompt>)
-      const isImageCommand = latestTurn?.content && /^\/(image|img)\s+/i.test(latestTurn.content.trim());
-      if (isImageCommand) {
-        const imgPrompt = latestTurn.content.trim().replace(/^\/(image|img)\s+/i, '').trim();
-        if (imgPrompt) {
-          setStream('🎨 Generating image with Cloudflare Workers AI...');
-          const job = modelClient.submitJob({
-            kind: 'asset',
-            assetKind: 'image',
-            prompt: imgPrompt,
-            options: {
-              model: prefs.model,
-              format: 'PNG',
-              signal: ac.signal,
-            },
-          });
-          jobIdRef.current = job.id;
-          const asset = await job.result;
-          const file = new File([asset.blob], asset.fileName, { type: asset.blob.type });
-          const saved = await repository.addFile(file, null, cid);
-          const outText = `Generated image for **"${imgPrompt}"**:\n\n*Format: ${asset.blob.type === 'image/jpeg' ? 'JPEG' : 'PNG'} · Size: ${formatBytes(asset.blob.size)}*`;
-          if (!ac.signal.aborted) {
-            await repository.addMessage(cid, outText, 'assistant', [saved.id]);
+      // Retrieve relevant Knowledge Base documents if user query mentions or asks knowledge questions
+      let knowledgePassages: Array<{ text: string; citation: string }> = [];
+      if (latestTurn?.content && !latestTurn.content.startsWith('/')) {
+        try {
+          const kbEngine = new KnowledgeBaseEngine(repository);
+          const kbs = await kbEngine.listKnowledgeBases();
+          if (kbs.length > 0) {
+            // Check top active knowledge base for matching query terms
+            const matches = await kbEngine.searchKnowledgeBase(kbs[0].id, latestTurn.content, { maxMatches: 2 });
+            knowledgePassages = matches.map((m) => ({
+              text: m.chunk.text,
+              citation: m.citation,
+            }));
           }
-          retryRef.current = null;
-          return;
+        } catch {
+          // Graceful fallback
         }
       }
 
       const job = modelClient.submitJob({
         kind: "chat",
-        messages: applyPersonalization(history, prefs.personalization),
+        messages: applyPersonalization(history, prefs.personalization, {
+          memories: relevantMemories,
+          knowledgePassages,
+        }),
         options: {
           model: prefs.model,
-          mode: prefs.mode,
+          mode: activeMode,
           signal: ac.signal,
           onToken: (t: string) => setStream((s) => s + t),
           attachments: latestTurn?.attachments,
@@ -146,32 +252,38 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
           finalOut = `${finalOut.trim()}\n\n\`\`\`interactive\n${blockJson}\n\`\`\``;
         }
 
-        const wantsCanvas = /\b(in\s+canvas|open\s+canvas|create\s+in\s+canvas|code\s+canvas|canvas\s+panel)\b/i.test(latestTurn.content);
+        const wantsCanvas = /\b(in\s+canvas|open\s+canvas|create\s+in\s+canvas|code\s+canvas|canvas\s+panel|do\s+in\s+canvas|make\s+in\s+canvas|canvas)\b/i.test(latestTurn.content);
         if (wantsCanvas) {
           const codeMatch = /```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/.exec(finalOut);
-          if (codeMatch) {
-            const rawExt = (codeMatch[1] || 'ts').toLowerCase();
-            const code = codeMatch[2];
-            const extMap: Record<string, string> = {
-              typescript: 'ts',
-              javascript: 'js',
-              python: 'py',
-              html: 'html',
-              css: 'css',
-              json: 'json',
-              markdown: 'md',
-              rust: 'rs',
-              go: 'go',
-              sql: 'sql',
-            };
-            const extension = extMap[rawExt] || (rawExt.length <= 4 && rawExt !== 'code' ? rawExt : 'ts');
-            canvas.openCanvas({
-              name: `canvas-${Date.now().toString().slice(-4)}.${extension}`,
-              content: code,
-              language: rawExt !== 'code' && rawExt ? rawExt : 'typescript',
-            });
-          } else {
-            canvas.openCanvas();
+          const rawExt = (codeMatch ? codeMatch[1] : 'ts').toLowerCase();
+          const code = codeMatch ? codeMatch[2] : '// Project opened in Canvas\nconsole.log("Canvas ready");';
+          const extMap: Record<string, string> = {
+            typescript: 'ts',
+            javascript: 'js',
+            python: 'py',
+            html: 'html',
+            css: 'css',
+            json: 'json',
+            markdown: 'md',
+            rust: 'rs',
+            go: 'go',
+            sql: 'sql',
+          };
+          const extension = extMap[rawExt] || (rawExt.length <= 4 && rawExt !== 'code' ? rawExt : 'ts');
+          const canvasFilename = `project-${Date.now().toString().slice(-4)}.${extension}`;
+          
+          canvas.openCanvas({
+            name: canvasFilename,
+            content: code,
+            language: rawExt !== 'code' && rawExt ? rawExt : 'typescript',
+          });
+          
+          // Automatically launch dedicated full-screen Canvas IDE tab
+          window.open('/workspace/canvas', '_blank');
+
+          // Append an inline interactive launcher block into chat
+          if (!finalOut.includes('/workspace/canvas')) {
+            finalOut += `\n\n---\n🚀 **Canvas IDE Active:** Opened \`${canvasFilename}\` in Canvas. [Open Fullscreen Canvas IDE](/workspace/canvas)`;
           }
         }
       }
@@ -180,6 +292,7 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
     } catch (e) { setError(ac.signal.aborted ? 'Generation stopped. Your message is saved.' : errMsg(e, 'The model request failed.')); }
     finally { runningRef.current = false; setBusy(false); setStream(''); setStreamFor(null); abortRef.current = null; jobIdRef.current = null; }
   }
+
   function stop() {
     if (jobIdRef.current) modelClient.cancelJob(jobIdRef.current);
     abortRef.current?.abort();
@@ -189,7 +302,7 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
     let targetId = id;
     if (!targetId) {
       try {
-        const newConv = await repository.createConversation('Voice Conversation');
+        const newConv = await repository.createConversation('Voice Conversation', activeMode);
         targetId = newConv.id;
         goto(`/workspace/chat/${targetId}`);
       } catch (e) {
@@ -207,7 +320,7 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
     setError('');
     try {
       let cid = id;
-      if (!cid) cid = (await repository.createConversation((body || files[0].name).slice(0, 48))).id;
+      if (!cid) cid = (await repository.createConversation((body || files[0].name).slice(0, 48), activeMode)).id;
       const ids: string[] = [];
       const msgAttachments: MessageAttachment[] = [];
 
@@ -281,6 +394,19 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
       ];
       setText(''); setFiles([]);
       if (!id) goto(`/workspace/chat/${cid}`);
+
+      // Check if this is an image request
+      const imageIntent = detectImageRequest(content);
+      if (imageIntent.isImageRequest) {
+        if (!hasCloudImageConsent()) {
+          setPendingImageGen({ cid, prompt: imageIntent.cleanPrompt });
+          setShowImageConsent(true);
+        } else {
+          void executeImageGeneration(cid, imageIntent.cleanPrompt);
+        }
+        return;
+      }
+
       if (available) {
         if (hasModelConsent() || consent) void run(cid, history); else setAsk({ cid, history });
       } else {
@@ -298,25 +424,85 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
     } catch (e) { setError(errMsg(e, 'Could not save your message locally.')); }
     finally { savingRef.current = false; setSaving(false); }
   }
+
   function pick(fl: FileList | null) {
     const ok: File[] = [];
     for (const f of Array.from(fl ?? [])) { if (f.size > MAX_UPLOAD) notify(`${f.name} is ${formatBytes(f.size)}; the limit is ${formatBytes(MAX_UPLOAD)}.`); else ok.push(f); }
     setFiles((p) => [...p, ...ok]); if (fileRef.current) fileRef.current.value = '';
   }
+
   const attMap = new Map((atts.data ?? []).map((a) => [a.id, a]));
   const lastUserUnanswered = (m: Message, i: number) => m.role === 'user' && !list.slice(i + 1).some((x) => x.role === 'assistant');
 
+  // Find user prompt corresponding to an assistant image message
+  const getPromptForAssistantMessage = (index: number): string => {
+    for (let j = index - 1; j >= 0; j--) {
+      if (list[j].role === 'user') return list[j].content;
+    }
+    return '';
+  };
+
+  const currentModeObj = CHAT_MODES.find((m) => m.id === activeMode) || CHAT_MODES[0];
+  const CurrentModeIcon = currentModeObj.icon;
+
   return (
     <div className="flex h-full w-full min-h-0 overflow-hidden">
-      <div className={`chat-page flex flex-col flex-1 min-h-0 h-full min-w-0 transition-all duration-200 ${canvas.isOpen ? 'hidden md:flex' : ''}`}>
-        {id && <div className="chat-conversation-bar flex items-center justify-end gap-1 px-4 py-2 text-xs text-slate-500">
-          <span className="mr-auto flex min-w-0 items-center gap-2 truncate" data-testid="status-local-storage"><ShieldCheck size={14} className="shrink-0 text-teal-300" /><span className="truncate">Saved in this browser{conv.data ? ` · started ${ago(conv.data.createdAt)}` : ''}</span></span>
-          <Button variant="quiet" onClick={() => canvas.isOpen ? canvas.closeCanvas() : canvas.openCanvas()} data-testid="button-toggle-canvas" title="Toggle interactive Code Canvas"><Code2 size={13} className="text-teal-300" /><span>{canvas.isOpen ? 'Canvas (open)' : 'Canvas'}</span></Button>
-          <Button variant="quiet" onClick={openSts} data-testid="button-header-sts" title="Start real-time Voice Conversation"><Radio size={13} className="text-teal-300 animate-pulse" /><span>Voice</span></Button>
-          {!guest && <><Button variant="quiet" onClick={() => setRenaming(conv.data?.title ?? '')}><Pencil size={13} />Rename</Button>
-          <Button variant="quiet" onClick={() => setConfirmDel(true)}><Trash2 size={13} />Delete</Button>
-          {conv.data && <ActionMenu label="More conversation actions" items={acts.items(conv.data)}><MoreHorizontal size={15} /></ActionMenu>}</>}
-        </div>}
+      <div className="chat-page flex flex-col flex-1 min-h-0 h-full min-w-0 transition-all duration-200">
+        <div className="chat-conversation-bar flex items-center justify-between gap-2 px-4 py-2 text-xs text-slate-500 border-b border-white/[.05] bg-[#121319]/60 backdrop-blur-sm">
+          <div className="flex items-center gap-2 min-w-0">
+            {/* Persistent, clearly visible Chat Mode Selector */}
+            <div className="flex items-center rounded-lg border border-white/10 bg-white/[.03] p-0.5" data-testid="chat-mode-selector">
+
+              {CHAT_MODES.map((mode) => {
+                const Icon = mode.icon;
+                const isSelected = activeMode === mode.id;
+                return (
+                  <button
+                    key={mode.id}
+                    type="button"
+                    onClick={() => void setConversationMode(mode.id)}
+                    title={`${mode.label} Mode: ${mode.desc}`}
+                    data-testid={`mode-tab-${mode.id.toLowerCase()}`}
+                    className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md transition-all ${
+                      isSelected
+                        ? mode.id === 'Savage'
+                          ? 'bg-rose-500/20 text-rose-300 shadow-sm border border-rose-500/30'
+                          : mode.id === 'Joke'
+                            ? 'bg-amber-500/20 text-amber-300 shadow-sm border border-amber-500/30'
+                            : 'bg-violet-500/20 text-violet-200 shadow-sm border border-violet-500/30'
+                        : 'text-slate-400 hover:text-slate-200 hover:bg-white/[.05]'
+                    }`}
+                  >
+                    <Icon size={12} className={isSelected ? 'animate-pulse' : ''} />
+                    <span>{mode.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1 shrink-0">
+            <Button
+              variant="quiet"
+              onClick={() => {
+                window.open('/workspace/canvas', '_blank');
+              }}
+              data-testid="button-toggle-canvas"
+              title="Open full-screen Canvas IDE in a dedicated workspace tab"
+            >
+              <Code2 size={13} className="text-teal-300" />
+              <span>Canvas IDE</span>
+              <ExternalLink size={10} className="text-slate-400 ml-0.5" />
+            </Button>
+            <Button variant="quiet" onClick={openSts} data-testid="button-header-sts" title="Start real-time Voice Conversation"><Radio size={13} className="text-teal-300 animate-pulse" /><span>Voice</span></Button>
+            {id && !guest && <>
+              <Button variant="quiet" onClick={() => setRenaming(conv.data?.title ?? '')}><Pencil size={13} />Rename</Button>
+              <Button variant="quiet" onClick={() => setConfirmDel(true)}><Trash2 size={13} />Delete</Button>
+              {conv.data && <ActionMenu label="More conversation actions" items={acts.items(conv.data)}><MoreHorizontal size={15} /></ActionMenu>}
+            </>}
+          </div>
+        </div>
+
         <div className={`chat-content mx-auto w-full ${studioWidth ? 'max-w-[1060px]' : 'max-w-[820px]'} flex-1 min-h-0 overflow-y-auto px-4 pb-8 pt-7 sm:px-7 sm:pt-10`}>
           {id && msgs.loading && !msgs.data && <div className="space-y-7 pt-8" role="status" aria-label="Loading conversation"><Skeleton className="h-20 w-3/5" /><Skeleton className="ml-auto h-16 w-2/5" /><Skeleton className="h-24 w-4/5" /></div>}
           {msgs.error && <LoadError message={msgs.error} retry={msgs.refresh} />}
@@ -325,7 +511,7 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
             <div className="chat-welcome-mark" aria-hidden><Sparkles size={19} /></div>
             <p className="chat-kicker"><span /> A space to think clearly</p>
             <h2 id="welcome-title" className="display"><MotionText>{prefs.displayName ? `Good to see you, ${prefs.displayName}.` : 'Where should we start?'}</MotionText></h2>
-            <p className="chat-welcome-copy">Bring a question, a rough draft, or a problem you are working through. Your conversations stay in this browser unless you choose to send context to a model.</p>
+            <p className="chat-welcome-copy">Bring a question, a creative prompt, or a problem to solve. Current mode: <span className="font-semibold text-violet-300">{currentModeObj.label}</span> ({currentModeObj.desc}).</p>
             {!available && <div className="chat-model-notice" data-testid="status-model-unavailable"><span className="chat-notice-indicator" aria-hidden /><div><b>{prefs.model === 'v1-fast' ? 'V1 Fast' : 'V2 Best Result'} is unavailable.</b><p>{cap?.reason ?? 'No model connection is configured for this deployment.'} You can still write and save {guest ? 'chats in this browser' : 'messages and drafts'}.{!guest && <> <Link href="/workspace/settings" className="underline" data-testid="link-model-settings">Review model status</Link> · <Link href="/workspace/models" className="underline font-semibold text-violet-300">Models & Engines setup</Link></>}</p></div></div>}
             <div className="chat-starter-grid" aria-label="Prompt suggestions">{starters.map(({ label, prompt, icon: Icon }, index) => <button key={label} type="button" data-testid={`button-prompt-${index + 1}`} onClick={() => { setText(prompt); taRef.current?.focus(); }} className="chat-starter"><span className="chat-starter-icon"><Icon size={15} /></span><span>{label}</span><ArrowUpRight size={13} className="chat-starter-arrow" aria-hidden /></button>)}</div>
           </section>}
@@ -339,23 +525,80 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
                 <div className="mt-2 flex flex-wrap justify-end gap-2"><Button variant="outline" onClick={() => setEditing(null)} data-testid="button-cancel-edit">Cancel</Button><Button onClick={async () => { try { await repository.editMessage(m.id, editing.text); setEditing(null); } catch (e) { notify(errMsg(e)); } }} data-testid="button-save-edit">Save edit</Button><Button disabled={!available || busy || !editing.text.trim()} title={available ? undefined : 'Resubmitting needs a connected model'} onClick={() => setResubmit({ m, text: editing.text })} data-testid="button-resubmit-edit">{available ? 'Save and resubmit' : 'Resubmit unavailable'}</Button></div></div>
                 : <div className={m.role === 'user' ? 'chat-user-content' : 'chat-prose prose prose-invert prose-sm max-w-none'}>
                   <MarkdownRenderer content={m.content} messageId={m.id} />
-                  {m.attachmentIds.length > 0 && <div className="mt-2.5 flex flex-wrap gap-2">
+
+                  {/* Render generated images and attachments */}
+                  {m.attachmentIds.length > 0 && <div className="mt-3 flex flex-col gap-2">
                     {m.attachmentIds.map((a) => {
                       const att = attMap.get(a);
                       if (!att) return null;
-                      return att.mimeType.startsWith('image/')
-                        ? <div key={a} className="flex flex-col gap-1.5"><AttachmentThumbnail attachment={att} /><AttachmentChip attachment={att} /></div>
-                        : <AttachmentChip key={a} attachment={att} />;
+                      if (att.mimeType.startsWith('image/')) {
+                        const originatingPrompt = m.role === 'assistant' ? getPromptForAssistantMessage(i) : undefined;
+                        return (
+                          <ChatInlineImage
+                            key={a}
+                            attachment={att}
+                            promptText={originatingPrompt}
+                            onRegenerate={m.role === 'assistant' && originatingPrompt ? () => {
+                              void executeImageGeneration(id || conv.data?.id || 'current', originatingPrompt);
+                            } : undefined}
+                            onRefine={(refinePrefix) => {
+                              setText(refinePrefix);
+                              taRef.current?.focus();
+                            }}
+                            notify={notify}
+                          />
+                        );
+                      }
+                      return <AttachmentChip key={a} attachment={att} />;
                     })}
                   </div>}
                 </div>}
               <div className="chat-message-actions">
                 {m.role === 'user' && lastUserUnanswered(m, i) && !busy && <span data-testid="status-not-sent">{available ? 'No reply recorded' : 'Saved locally, not sent to any model'}</span>}
                 {m.role === 'assistant' && <MessageTtsButton content={m.content} messageId={m.id} />}
+                
+                {/* Instant Docx / PDF / Zip Export for any AI message in chat */}
+                {m.role === 'assistant' && (
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => downloadDocx(`Ayatrisya_${m.id.slice(0, 6)}`, m.content)}
+                      className="chat-action flex items-center gap-1 rounded px-2 py-1 text-[11px] text-slate-300 hover:bg-white/[.07] hover:text-white"
+                      title="Export as Word (.docx)"
+                      data-testid={`button-export-docx-${m.id}`}
+                    >
+                      <FileText size={12} className="text-blue-400" />
+                      <span>.docx</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => downloadPdf(`Ayatrisya_${m.id.slice(0, 6)}`, m.content)}
+                      className="chat-action flex items-center gap-1 rounded px-2 py-1 text-[11px] text-slate-300 hover:bg-white/[.07] hover:text-white"
+                      title="Export as PDF"
+                      data-testid={`button-export-pdf-${m.id}`}
+                    >
+                      <FileText size={12} className="text-red-400" />
+                      <span>.pdf</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => downloadZip(`Ayatrisya_${m.id.slice(0, 6)}`, [
+                        { path: `response-${m.id.slice(0, 6)}.md`, data: m.content }
+                      ])}
+                      className="chat-action flex items-center gap-1 rounded px-2 py-1 text-[11px] text-slate-300 hover:bg-white/[.07] hover:text-white"
+                      title="Export as .ZIP package"
+                      data-testid={`button-export-zip-${m.id}`}
+                    >
+                      <FileArchive size={12} className="text-amber-400" />
+                      <span>.zip</span>
+                    </button>
+                  </div>
+                )}
+
                 <IconButton label={copied === m.id ? 'Copied' : 'Copy message'} onClick={() => navigator.clipboard.writeText(m.content).then(() => { setCopied(m.id); window.setTimeout(() => setCopied(null), 1600); }, () => notify('Copy was blocked by the browser.'))} className="chat-action" data-testid={`button-copy-message-${m.id}`}>{copied === m.id ? <Check size={13} className="text-teal-300" /> : <Copy size={13} />}</IconButton>
                 {m.role === 'user' && <IconButton label="Edit message" onClick={() => setEditing({ id: m.id, text: m.content })} className="chat-action" data-testid={`button-edit-message-${m.id}`}><Pencil size={13} /></IconButton>}
                 {m.role === 'assistant' && i === list.length - 1 && <button type="button" disabled={!available || busy} title={available ? 'Regenerate this reply' : 'Regeneration needs a connected model'} aria-label={available ? 'Regenerate reply' : 'Regenerate unavailable: no model connected'} data-testid={`button-regenerate-${m.id}`} onClick={() => { const history: Turn = list.slice(0, i).map((x) => ({ role: x.role, content: x.content })); const go = async () => { try { await repository.deleteMessage(m.id); void run(id!, history); } catch (e) { notify(errMsg(e)); } }; if (hasModelConsent() || consent) void go(); else setAsk({ cid: id!, history, after: go }); }} className="chat-action grid size-9 place-items-center rounded-lg text-slate-400 hover:bg-white/[.07] hover:text-slate-100 disabled:opacity-40"><RefreshCw size={13} /></button>}
-                <IconButton label="Delete message" onClick={() => setDelMsg(m)} className="chat-action" data-testid={`button-delete-message-${m.id}`}><Trash2 size={13} /></IconButton>
+                <IconButton label="Delete message" onClick={() => setDelMsg(m)} className="chat-action" data-testid={`button-delete-message-${m.id}`}>{copied === m.id ? <Check size={13} className="text-teal-300" /> : <Trash2 size={13} />}</IconButton>
               </div>
               </div></div>
             </li>)}
@@ -373,9 +616,25 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
                 <input id="chat-zip-attachment" type="file" accept=".zip,application/zip" className="sr-only" onChange={(e) => { pick(e.target.files); e.currentTarget.value = ''; }} data-testid="input-zip-attachment" />
                 <IconButton label="Attach files" onClick={() => fileRef.current?.click()} className="chat-composer-tool" data-testid="button-attach"><Paperclip size={17} /></IconButton>
                 <label htmlFor="chat-zip-attachment" aria-label="Upload ZIP archive" title="Upload ZIP archive" data-testid="button-upload-zip" className="chat-composer-tool grid size-9 shrink-0 cursor-pointer place-items-center rounded-lg text-slate-400 hover:bg-white/[.07] hover:text-white focus-within:ring-2 focus-within:ring-violet-400"><Archive size={17} /></label>
+                
+                {/* Dedicated Generate Image button in chat composer */}
+                <IconButton
+                  label="Generate an image (/image)"
+                  onClick={() => {
+                    setText((prev) => (prev.trim() ? `${prev.trim()} /image ` : '/image '));
+                    taRef.current?.focus();
+                  }}
+                  className="chat-composer-tool text-violet-300 hover:text-violet-200"
+                  data-testid="button-composer-image"
+                >
+                  <ImageIcon size={17} />
+                </IconButton>
+
                 <ActionMenu label="Other chat actions" up items={[
                   { label: canvas.isOpen ? 'Close Code Canvas' : 'Open Code Canvas', onSelect: () => canvas.isOpen ? canvas.closeCanvas() : canvas.openCanvas() },
+                  { label: 'Generate image with Cloudflare (/image)', onSelect: () => { setText('/image '); taRef.current?.focus(); } },
                   { label: 'Voice Conversation (STS)', onSelect: openSts },
+                  { label: 'Open Image Studio', onSelect: () => goto('/workspace/images') },
                   { label: 'Open voice studio', onSelect: () => goto('/workspace/voice') },
                   { label: 'Open coding workspace', onSelect: () => goto('/workspace/coding') },
                 ]} className="!flex !h-10 !w-auto gap-1 px-2"><MoreHorizontal size={16} /><span className="text-[11px]">Other</span></ActionMenu></>}
@@ -394,7 +653,7 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
                     setFiles((prev) => [...prev, ...pastedFiles]);
                   }
                 }
-              }} onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing && (prefs.enterToSend ? !e.shiftKey : (e.ctrlKey || e.metaKey))) { e.preventDefault(); void send(); } }} placeholder="Write a message..." className="chat-composer-input" data-testid="input-message" aria-describedby="composer-hint" />
+              }} onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing && (prefs.enterToSend ? !e.shiftKey : (e.ctrlKey || e.metaKey))) { e.preventDefault(); void send(); } }} placeholder={activeMode === 'Savage' ? "Enter prompt for Savage mode (roasts, bold wit)..." : activeMode === 'Joke' ? "Enter prompt for Joke mode (humor, punchlines)..." : "Write a message or type /image to generate visuals..."} className="chat-composer-input" data-testid="input-message" aria-describedby="composer-hint" />
               <VoiceInputButton
                 onSendTranscript={(transcript) => void send(transcript)}
                 onInsertInComposer={(transcript) => {
@@ -429,12 +688,29 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
           <label className="mt-4 flex items-center gap-2 text-xs text-slate-300"><input data-testid="input-remember-model-consent" type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} className="accent-violet-500" />Do not ask again until I reload this page</label>
           <div className="mt-5 flex justify-end gap-2"><Button variant="outline" onClick={() => setAsk(null)} data-testid="button-keep-local">Keep local only</Button><Button onClick={() => { const a = ask; setAsk(null); grantModelConsent({ rememberUntilReload: remember }); setConsent(true); if (a.after) void a.after(); else void run(a.cid, a.history); }} data-testid="button-confirm-model-send">Send</Button></div>
         </Modal>}
+
+        {/* Cloud Image Generation Consent Modal */}
+        {showImageConsent && (
+          <CloudImageConsentModal
+            onConsentGranted={() => {
+              setShowImageConsent(false);
+              if (pendingImageGen) {
+                const target = pendingImageGen;
+                setPendingImageGen(null);
+                void executeImageGeneration(target.cid, target.prompt);
+              }
+            }}
+            onCancel={() => {
+              setShowImageConsent(false);
+              setPendingImageGen(null);
+              notify('Image generation cancelled: cloud permission not granted.');
+            }}
+          />
+        )}
+
         {confirmDel && id && <ConfirmDialog danger title="Delete conversation" confirmLabel="Delete" body="Delete this conversation and its messages and attachments from this browser? This cannot be undone." onConfirm={async () => { try { await repository.deleteConversation(id); goto('/workspace'); } catch (e) { notify(errMsg(e)); setConfirmDel(false); } }} onClose={() => setConfirmDel(false)} />}
         {renaming !== null && id && <Modal title="Rename conversation" onClose={() => setRenaming(null)}><form onSubmit={async (e) => { e.preventDefault(); if (!renaming.trim()) return; try { await repository.renameConversation(id, renaming.trim()); setRenaming(null); } catch (er) { notify(errMsg(er)); } }}><input data-autofocus aria-label="Conversation title" value={renaming} onChange={(e) => setRenaming(e.target.value)} className="h-11 w-full rounded-lg border border-white/10 bg-[#101116] px-3 text-sm" /><div className="mt-5 flex justify-end gap-2"><Button variant="outline" onClick={() => setRenaming(null)}>Cancel</Button><Button type="submit">Save</Button></div></form></Modal>}
       </div>
-
-      {/* Side-by-side Gemini-style Canvas Panel */}
-      <CanvasPanel />
 
       {/* Full Speech-to-Speech Conversation Modal */}
       {showStsModal && (
@@ -444,7 +720,7 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
           onNewMessage={async (role, content) => {
             let cid = id;
             if (!cid) {
-              const newConv = await repository.createConversation(content.slice(0, 48));
+              const newConv = await repository.createConversation(content.slice(0, 48), activeMode);
               cid = newConv.id;
               goto(`/workspace/chat/${cid}`);
             }

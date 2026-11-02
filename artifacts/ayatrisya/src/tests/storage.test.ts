@@ -95,8 +95,9 @@ describe("IndexedDB local repository",()=>{
     await v1.put("conversations",{id:"preserved",ownerId:"guest",title:"Keep me",createdAt:now,updatedAt:now});v1.close();
     const repo=new LocalRepository(name);active.push(repo);repo.setOwner("guest");
     expect((await repo.getConversation("preserved"))?.title).toBe("Keep me");
-    expect((await repo.db()).version).toBe(4);
+    expect((await repo.db()).version).toBe(5);
     expect((await repo.db()).objectStoreNames.contains("syncQueue")).toBe(true);
+    expect((await repo.db()).objectStoreNames.contains("aiMemories")).toBe(true);
   });
   it("reports storage-quota errors without silently falling back to temporary state",()=>{
     expect(storageError(new DOMException("full","QuotaExceededError")).message).toContain("storage is full");

@@ -1,4 +1,7 @@
 import type { HardwareProfileTier } from "./hardware";
+import { AYATRISYA_MODEL_CATALOG, type ModelDefinition } from "./models/catalog";
+
+export * from "./models/catalog";
 
 export type ModelModality = "chat" | "code" | "3d" | "music";
 export type SupportedRuntime = "ollama" | "llama-cpp" | "seed-host" | "direct-onnx";
@@ -253,5 +256,30 @@ export function getSpecialistModels(): RegisteredModel[] {
 }
 
 export function getModelById(id: string): RegisteredModel | undefined {
-  return AMETESX_MODEL_REGISTRY[id];
+  if (AMETESX_MODEL_REGISTRY[id]) return AMETESX_MODEL_REGISTRY[id];
+  const cat = AYATRISYA_MODEL_CATALOG[id];
+  if (!cat) return undefined;
+  return {
+    id: cat.id,
+    name: cat.name,
+    tier: cat.tier,
+    modalities: [cat.category === "coding" ? "code" : cat.category === "3d-mesh" ? "3d" : "chat"],
+    architecture: cat.architecture,
+    quantization: cat.quantization,
+    parameterCount: cat.parameterCount,
+    license: cat.license,
+    licenseUrl: cat.licenseUrl,
+    downloadSource: cat.downloadSource,
+    expectedSha256: cat.expectedSha256,
+    diskSizeBytes: cat.requirements.diskSizeBytes,
+    diskSizeGb: cat.requirements.diskSizeGb,
+    minRamGb: cat.requirements.minRamGb,
+    minVramGb: cat.requirements.minVramGb,
+    recommendedContextTokens: cat.requirements.recommendedContextTokens,
+    maxContextTokens: cat.requirements.maxContextTokens,
+    supportedRuntimes: cat.supportedRuntimes as SupportedRuntime[],
+    recommendedRuntime: cat.recommendedRuntime as SupportedRuntime,
+    isSpecialist: cat.isSpecialist,
+    description: cat.description,
+  };
 }

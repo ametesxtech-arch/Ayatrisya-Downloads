@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import type { CanvasFile, CanvasDiff, CanvasHistoryEntry } from './types';
 
 interface CanvasContextValue {
@@ -12,6 +12,7 @@ interface CanvasContextValue {
   openCanvas: (file?: { name: string; content: string; language?: string }) => void;
   closeCanvas: () => void;
   addFile: (file: { name: string; content: string; language?: string }) => void;
+  loadProjectFiles: (newFiles: Array<{ name: string; content: string; language?: string }>) => void;
   removeFile: (id: string) => void;
   setActiveFile: (id: string) => void;
   updateContent: (content: string) => void;
@@ -26,35 +27,160 @@ interface CanvasContextValue {
 
 const CanvasContext = createContext<CanvasContextValue | null>(null);
 
-const DEFAULT_FILE: CanvasFile = {
-  id: 'file-1',
-  name: 'index.ts',
-  language: 'typescript',
-  content: `// Welcome to Ayatrisya Canvas
-// Edit code directly, test safe execution, or ask AI to refactor
+const STORAGE_KEY = 'ayatrisya_canvas_project_state_v1';
 
-export function example() {
-  console.log("Ayatrisya Canvas Active");
+const DEFAULT_FILES: CanvasFile[] = [
+  {
+    id: 'file-1',
+    name: 'index.html',
+    language: 'html',
+    content: `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ayatrisya Canvas Project</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-card">
+    <h1>🚀 Welcome to Ayatrisya Canvas IDE</h1>
+    <p>A full-screen, Replit-style development environment with live preview, AI generation, and terminal execution.</p>
+    <button id="actionBtn">Click to Test</button>
+    <div id="output"></div>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
+`,
+  },
+  {
+    id: 'file-2',
+    name: 'style.css',
+    language: 'css',
+    content: `body {
+  margin: 0;
+  padding: 30px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: #0f1117;
+  color: #e2e8f0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 80vh;
+}
+
+.app-card {
+  background: #181b24;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 32px;
+  max-width: 500px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  text-align: center;
+}
+
+h1 {
+  font-size: 20px;
+  color: #38bdf8;
+  margin-top: 0;
+}
+
+p {
+  color: #94a3b8;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+button {
+  background: linear-gradient(135deg, #06b6d4, #3b82f6);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  padding: 10px 20px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.1s, opacity 0.2s;
+  margin-top: 10px;
+}
+
+button:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+#output {
+  margin-top: 16px;
+  font-family: monospace;
+  font-size: 13px;
+  color: #10b981;
 }
 `,
-};
+  },
+  {
+    id: 'file-3',
+    name: 'app.js',
+    language: 'javascript',
+    content: `// Ayatrisya Canvas Client Logic
+document.addEventListener('DOMContentLoaded', () => {
+  const btn = document.getElementById('actionBtn');
+  const output = document.getElementById('output');
+  let clicks = 0;
+
+  btn?.addEventListener('click', () => {
+    clicks++;
+    output.innerText = \`Executed successfully! Active click count: \${clicks}\`;
+    console.log(\`[Canvas App] Button clicked: \${clicks} times.\`);
+  });
+});
+`,
+  },
+];
+
+function loadPersistedFiles(): { files: CanvasFile[]; activeFileId: string } {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed.files) && parsed.files.length > 0) {
+        return {
+          files: parsed.files,
+          activeFileId: parsed.activeFileId || parsed.files[0].id,
+        };
+      }
+    }
+  } catch {
+    // ignore parse error and fallback
+  }
+  return { files: DEFAULT_FILES, activeFileId: 'file-1' };
+}
 
 export function CanvasProvider({ children }: { children: ReactNode }) {
+  const [initial] = useState(loadPersistedFiles);
   const [isOpen, setIsOpen] = useState(false);
-  const [files, setFiles] = useState<CanvasFile[]>([DEFAULT_FILE]);
-  const [activeFileId, setActiveFileId] = useState<string>('file-1');
+  const [files, setFiles] = useState<CanvasFile[]>(initial.files);
+  const [activeFileId, setActiveFileId] = useState<string>(initial.activeFileId);
   const [pendingDiff, setPendingDiff] = useState<CanvasDiff | null>(null);
 
   // Undo/Redo history stack
   const [history, setHistory] = useState<CanvasHistoryEntry[]>([
-    { files: [DEFAULT_FILE], activeFileId: 'file-1' },
+    { files: initial.files, activeFileId: initial.activeFileId },
   ]);
   const [historyIndex, setHistoryIndex] = useState(0);
+
+  // Auto-persist files to localStorage on change
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ files, activeFileId }));
+    } catch {
+      // quota or private mode safe
+    }
+  }, [files, activeFileId]);
 
   const pushHistory = (newFiles: CanvasFile[], activeId: string) => {
     const nextHistory = history.slice(0, historyIndex + 1);
     nextHistory.push({ files: newFiles, activeFileId: activeId });
-    if (nextHistory.length > 50) nextHistory.shift(); // Limit to 50 snapshots
+    if (nextHistory.length > 50) nextHistory.shift();
     setHistory(nextHistory);
     setHistoryIndex(nextHistory.length - 1);
   };
@@ -108,10 +234,27 @@ export function CanvasProvider({ children }: { children: ReactNode }) {
     [history, historyIndex]
   );
 
+  const loadProjectFiles = useCallback(
+    (incomingFiles: Array<{ name: string; content: string; language?: string }>) => {
+      if (!incomingFiles.length) return;
+      const formatted: CanvasFile[] = incomingFiles.map((f, i) => ({
+        id: `file-${Date.now()}-${i}`,
+        name: f.name,
+        content: f.content,
+        language: f.language || 'typescript',
+      }));
+      setFiles(formatted);
+      setActiveFileId(formatted[0].id);
+      pushHistory(formatted, formatted[0].id);
+      setIsOpen(true);
+    },
+    [history, historyIndex]
+  );
+
   const removeFile = useCallback(
     (id: string) => {
       setFiles((prev) => {
-        if (prev.length <= 1) return prev; // keep at least 1 file
+        if (prev.length <= 1) return prev;
         const next = prev.filter((f) => f.id !== id);
         const nextActive = activeFileId === id ? next[0].id : activeFileId;
         setActiveFileId(nextActive);
@@ -176,27 +319,25 @@ export function CanvasProvider({ children }: { children: ReactNode }) {
 
   const undo = useCallback(() => {
     if (historyIndex > 0) {
-      const prevIdx = historyIndex - 1;
-      const snapshot = history[prevIdx];
+      const nextIndex = historyIndex - 1;
+      const snapshot = history[nextIndex];
+      setHistoryIndex(nextIndex);
       setFiles(snapshot.files);
       setActiveFileId(snapshot.activeFileId);
-      setHistoryIndex(prevIdx);
-      setPendingDiff(null);
     }
   }, [history, historyIndex]);
 
   const redo = useCallback(() => {
     if (historyIndex < history.length - 1) {
-      const nextIdx = historyIndex + 1;
-      const snapshot = history[nextIdx];
+      const nextIndex = historyIndex + 1;
+      const snapshot = history[nextIndex];
+      setHistoryIndex(nextIndex);
       setFiles(snapshot.files);
       setActiveFileId(snapshot.activeFileId);
-      setHistoryIndex(nextIdx);
-      setPendingDiff(null);
     }
   }, [history, historyIndex]);
 
-  const activeFile = files.find((f) => f.id === activeFileId);
+  const activeFile = files.find((f) => f.id === activeFileId) || files[0];
 
   return (
     <CanvasContext.Provider
@@ -211,6 +352,7 @@ export function CanvasProvider({ children }: { children: ReactNode }) {
         openCanvas,
         closeCanvas,
         addFile,
+        loadProjectFiles,
         removeFile,
         setActiveFile: setActiveFileId,
         updateContent,
@@ -231,9 +373,13 @@ export function CanvasProvider({ children }: { children: ReactNode }) {
 export function useCanvas() {
   const ctx = useContext(CanvasContext);
   if (!ctx) {
-    throw new Error('useCanvas must be used within CanvasProvider');
+    throw new Error('useCanvas must be used within a CanvasProvider');
   }
   return ctx;
+}
+
+export function useCanvasSafe() {
+  return useContext(CanvasContext);
 }
 
 export function useOptionalCanvas() {
