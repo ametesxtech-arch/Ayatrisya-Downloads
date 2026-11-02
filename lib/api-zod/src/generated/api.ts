@@ -124,8 +124,14 @@ export const generateModelImageResponseDataBase64Max = 20000000;
 export const GenerateModelImageResponse = zod.object({
   "fileName": zod.string().min(1).max(generateModelImageResponseFileNameMax),
   "mimeType": zod.string().min(1).max(generateModelImageResponseMimeTypeMax),
-  "dataBase64": zod.string().min(1).max(generateModelImageResponseDataBase64Max)
-})
+  "dataBase64": zod.string().min(1).max(generateModelImageResponseDataBase64Max),
+  "provider": zod.string().optional(),
+  "model": zod.string().optional(),
+  "stage": zod.number().int().optional(),
+  "fallbackUsed": zod.boolean().optional(),
+  "version": zod.string().optional(),
+  "stageAudit": zod.array(zod.any()).optional(),
+}).passthrough()
 
 
 /**

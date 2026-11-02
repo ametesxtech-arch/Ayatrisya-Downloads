@@ -26,7 +26,13 @@ const generatedAssetSchema = z.object({
   dataBase64: z.string().min(1).max(25_000_000).optional(),
   fileUrl: z.string().url().max(2048).optional(),
   url: z.string().url().max(2048).optional(),
-}).strict().refine((data) => Boolean(data.dataBase64 || data.fileUrl || data.url), {
+  provider: z.string().optional(),
+  model: z.string().optional(),
+  stage: z.number().int().optional(),
+  fallbackUsed: z.boolean().optional(),
+  version: z.string().optional(),
+  stageAudit: z.array(z.any()).optional(),
+}).passthrough().refine((data) => Boolean(data.dataBase64 || data.fileUrl || data.url), {
   message: "Either dataBase64 or a valid fileUrl must be provided by the Ayatrisya model.",
 });
 const labels = {"v1-fast":"V1 Fast","v2-best":"V2 Best Result"} as const;
@@ -269,7 +275,16 @@ async function decodeGeneratedAsset(
   const rawBase = asset.fileName.replace(/\.[^.]+$/, "").replace(/[^a-zA-Z0-9_-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80);
   const extension = kind === "image" ? (isJpeg ? ".jpg" : isWebp ? ".webp" : ".png") : spec[1];
   const mimeType = kind === "image" ? (isJpeg ? "image/jpeg" : isWebp ? "image/webp" : "image/png") : spec[0];
-  return { blob: new Blob([bytes as BlobPart], { type: mimeType }), fileName: `${rawBase || `ayatrisya-${kind}`}${extension}` };
+  return {
+    blob: new Blob([bytes as BlobPart], { type: mimeType }),
+    fileName: `${rawBase || `ayatrisya-${kind}`}${extension}`,
+    provider: asset.provider,
+    model: asset.model,
+    stage: asset.stage,
+    fallbackUsed: asset.fallbackUsed,
+    version: asset.version,
+    stageAudit: asset.stageAudit,
+  };
 }
 function throwIfAborted(signal?: AbortSignal): void {
   if (signal?.aborted) throw new DOMException("Model request cancelled.", "AbortError");
@@ -698,7 +713,16 @@ export class AyatrisyaModelClient implements ModelTransport {
     const {response,dispose}=await this.request("/speech",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text})},options.signal,"speech");
     try{if(!response.headers.get("content-type")?.startsWith("audio/"))throw new Error("Invalid speech audio response.");return await response.blob();}finally{dispose();}
   }
-  async generateAsset(kind:AssetGenerationKind,prompt:string,options:AssetGenerationOptions):Promise<{blob:Blob;fileName:string}> {
+  async generateAsset(kind:AssetGenerationKind,prompt:string,options:AssetGenerationOptions):Promise<{
+    blob: Blob;
+    fileName: string;
+    provider?: string;
+    model?: string;
+    stage?: number;
+    fallbackUsed?: boolean;
+    version?: string;
+    stageAudit?: any[];
+  }> {
     throwIfAborted(options.signal);
     if (kind === "3d" && this.targetPolicy === "cloud_model") {
       throw new Error("3D model generation is strictly local desktop-only and cannot be executed on cloud providers. Please ensure Ayatrisya Desktop is active.");

@@ -1,11 +1,12 @@
 import "fake-indexeddb/auto";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocalRepository } from "../storage/repository";
 import { MemoryEngine } from "../storage/memory-engine";
 import { AIMemorySummaryEngine } from "../storage/ai-memory-summary-engine";
 import { applyPersonalization } from "../ai/personalization";
 import { defaultPreferences } from "../storage/types";
 import { exportBackup, restoreBackup } from "../storage/backup";
+import { modelClient } from "../ai/client";
 
 const active: LocalRepository[] = [];
 function local(owner = "user-alice") {
@@ -14,6 +15,10 @@ function local(owner = "user-alice") {
   active.push(repo);
   return repo;
 }
+
+beforeEach(() => {
+  vi.spyOn(modelClient, "getModelCapabilities").mockResolvedValue([]);
+});
 
 afterEach(async () => {
   vi.restoreAllMocks();
@@ -268,3 +273,4 @@ describe("Ayatrisya AI Memory Summary Engine (Two-Layer Architecture)", () => {
     expect(importedSummary?.sections.activeProjects).toContain("Export Test");
   });
 });
+

@@ -37,7 +37,19 @@ export type ModelJobRequest =
   | { kind: "asset"; assetKind: AssetGenerationKind; prompt: string; options: AssetGenerationOptions }
   | { kind: "transcribe"; audio: Blob; options?: { signal?: AbortSignal } }
   | { kind: "speech"; text: string; options?: { signal?: AbortSignal } };
-export type ModelJobResult = string | { blob: Blob; fileName: string } | Blob;
+export type ModelJobResult =
+  | string
+  | {
+      blob: Blob;
+      fileName: string;
+      provider?: string;
+      model?: string;
+      stage?: number;
+      fallbackUsed?: boolean;
+      version?: string;
+      stageAudit?: any[];
+    }
+  | Blob;
 export interface ModelJobHandle<T extends ModelJobResult = ModelJobResult> {
   id: string;
   result: Promise<T>;

@@ -22,4 +22,10 @@ export interface GeneratedAsset {
      * @maxLength 20000000
      */
   dataBase64: string;
+  provider?: string;
+  model?: string;
+  stage?: number;
+  fallbackUsed?: boolean;
+  version?: string;
+  stageAudit?: any[];
 }

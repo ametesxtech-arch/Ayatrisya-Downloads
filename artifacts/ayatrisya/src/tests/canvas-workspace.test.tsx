@@ -3,8 +3,15 @@ import { describe, it, expect } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { CanvasProvider, useCanvas } from '@/components/canvas/CanvasContext';
 import { CanvasPanel } from '@/components/canvas/CanvasPanel';
+import { CanvasIDEPage } from '@/pages/workspace/CanvasIDE';
 
 describe('Ayatrisya Code Canvas Workspace', () => {
+  it('renders CanvasIDEPage standalone without throwing context errors', () => {
+    // Should render even without an outer CanvasProvider
+    const html = renderToStaticMarkup(<CanvasIDEPage />);
+    expect(html).toContain('Ayatrisya Virtual Dev Environment');
+  });
+
   it('renders CanvasPanel with interactive controls when open', () => {
     function TestApp() {
       const { openCanvas } = useCanvas();

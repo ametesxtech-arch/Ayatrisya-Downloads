@@ -31,13 +31,13 @@ import {
   Layers,
   Settings as SettingsIcon,
 } from 'lucide-react';
-import { useCanvas } from '@/components/canvas/CanvasContext';
+import { useCanvas, CanvasProvider, useOptionalCanvas } from '@/components/canvas/CanvasContext';
 import { usePrefs } from '@/hooks/use-prefs';
 import { useDesktopRuntime } from '@/desktop/use-runtime';
 import { generateProjectFromPrompt, type ProjectGenerationProgress } from '@/ai/project-generator';
 import { modelClient } from '@/ai/client';
 
-export function CanvasIDEPage() {
+function CanvasIDEInternal() {
   const canvas = useCanvas();
   const { prefs } = usePrefs();
   const desktop = useDesktopRuntime();
@@ -1037,5 +1037,17 @@ Return ONLY the complete updated file content without markdown code fences or co
         </div>
       )}
     </div>
+  );
+}
+
+export function CanvasIDEPage() {
+  const existing = useOptionalCanvas();
+  if (existing) {
+    return <CanvasIDEInternal />;
+  }
+  return (
+    <CanvasProvider>
+      <CanvasIDEInternal />
+    </CanvasProvider>
   );
 }

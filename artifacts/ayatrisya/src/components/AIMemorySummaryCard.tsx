@@ -378,3 +378,4 @@ export function AIMemorySummaryCard({ notify }: AIMemorySummaryCardProps) {
     </div>
   );
 }
+

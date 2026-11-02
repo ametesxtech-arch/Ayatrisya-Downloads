@@ -242,6 +242,12 @@ export function ImageStudioConversation({
         sizeBytes: output.blob.size,
         format,
         aspectRatio: ratio,
+        provider: (output as any).provider,
+        model: (output as any).model,
+        stage: (output as any).stage,
+        fallbackUsed: (output as any).fallbackUsed,
+        version: (output as any).version,
+        stageAudit: (output as any).stageAudit,
       };
 
       setMessages((prev) =>
@@ -577,11 +583,72 @@ export function ImageStudioConversation({
                       />
                     </div>
 
+                    {/* Provider & Model Honest Attribution Badge */}
+                    <div className="rounded-lg border border-white/[.07] bg-white/[.02] p-2.5 text-xs space-y-1.5">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          {msg.generated.provider === 'ayatrisya-own-model' ? (
+                            <span className="inline-flex items-center gap-1 rounded bg-teal-500/10 border border-teal-500/20 px-2 py-0.5 text-[10px] font-semibold text-teal-300">
+                              <Sparkles size={11} /> Ayatrisya Proprietary Model
+                            </span>
+                          ) : msg.generated.provider === 'huggingface' ? (
+                            <span className="inline-flex items-center gap-1 rounded bg-violet-500/10 border border-violet-500/20 px-2 py-0.5 text-[10px] font-semibold text-violet-300">
+                              Hugging Face
+                            </span>
+                          ) : msg.generated.provider === 'gemini' ? (
+                            <span className="inline-flex items-center gap-1 rounded bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 text-[10px] font-semibold text-blue-300">
+                              Google Gemini
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 text-[10px] font-semibold text-amber-300">
+                              Cloudflare Workers AI
+                            </span>
+                          )}
+
+                          {msg.generated.fallbackUsed && (
+                            <span className="rounded bg-rose-500/10 border border-rose-500/20 px-1.5 py-0.5 text-[9px] text-rose-300">
+                              Fallback (Stage {msg.generated.stage || 2})
+                            </span>
+                          )}
+
+                          <span className="font-mono text-[10px] text-slate-400">
+                            {msg.generated.model || 'Default Model'}
+                          </span>
+                        </div>
+
+                        <span className="text-[10px] text-slate-500 font-mono">
+                          {msg.generated.width} × {msg.generated.height} px · {msg.generated.format}
+                        </span>
+                      </div>
+
+                      {/* Expandable Provider Fallback Audit Trail */}
+                      {msg.generated.stageAudit && msg.generated.stageAudit.length > 0 && (
+                        <details className="text-[10px] text-slate-500 pt-1 border-t border-white/[.04]">
+                          <summary className="cursor-pointer text-slate-400 hover:text-slate-300 font-medium">
+                            Provider fallback execution trace ({msg.generated.stageAudit.length} stages checked)
+                          </summary>
+                          <div className="mt-1.5 space-y-1 pl-2 border-l border-white/10">
+                            {msg.generated.stageAudit.map((audit: any, idx: number) => (
+                              <div key={idx} className="flex items-start justify-between gap-2">
+                                <span>
+                                  Stage {audit.stage} ({audit.provider}):{' '}
+                                  <span className={audit.status === 'success' ? 'text-teal-300' : 'text-slate-400'}>
+                                    {audit.status}
+                                  </span>
+                                  {audit.reason ? ` — ${audit.reason}` : ''}
+                                </span>
+                                <span className="font-mono text-slate-600">{audit.durationMs}ms</span>
+                              </div>
+                            ))}
+                          </div>
+                        </details>
+                      )}
+                    </div>
+
                     {/* Metadata */}
                     <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400">
                       <span>
-                        {msg.generated.width} × {msg.generated.height} px · {msg.generated.format} ·{' '}
-                        {formatBytes(msg.generated.sizeBytes)}
+                        Size: {formatBytes(msg.generated.sizeBytes)}
                       </span>
                       <span className="text-slate-500 font-mono text-[10px]">
                         {msg.generated.fileName}

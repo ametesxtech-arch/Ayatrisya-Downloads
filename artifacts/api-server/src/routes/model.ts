@@ -24,6 +24,7 @@ import { handleCloudflareChatFallback } from "../lib/cloudflare-chat-handler";
 import { generateHfImage, isHfImageConfigured } from "../lib/hf-image";
 import { generateProceduralWav } from "../lib/music-generator";
 import { callHfGradioApi, isHuggingFaceSpaceUrl, normalizeHfSpaceBaseUrl } from "../lib/hf-space-client";
+import { imageOrchestrator } from "../lib/image-engine/orchestrator";
 
 const router: IRouter = Router();
 const MAX_JSON_RESPONSE_BYTES = 25 * 1024 * 1024;
@@ -468,28 +469,41 @@ async function proxyModelRequest(
   route: ModelRoute,
   method: "GET" | "POST",
 ): Promise<void> {
-  // Cloud image generation: Cloudflare Workers AI exclusively
+  // 4-Stage Sequential Image Generation Orchestrator (Own Model -> Hugging Face -> Gemini -> Cloudflare)
   if (route.upstreamPath === "/generate/image" && method === "POST") {
     const parsed = route.schema?.safeParse(req.body);
     if (!parsed?.success) {
       sendError(res, 400, "The image generation request is invalid.");
       return;
     }
-    if (isCloudflareConfigured()) {
-      const handled = await generateCloudflareImage(res, parsed.data as any);
-      if (handled) return;
-    }
-    if (isHfImageConfigured()) {
-      const handled = await generateHfImage(res, parsed.data as any);
-      if (handled) return;
-    }
-    const config = getModelConfig();
-    if (!config.ok) {
-      sendError(
-        res,
-        503,
-        "No image generation model is configured. Configure CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN on the server to enable Cloudflare Workers AI image generation."
-      );
+    try {
+      const generated = await imageOrchestrator.generateImage(parsed.data as any);
+      res.status(200).set({
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "x-image-provider": generated.provider,
+        "x-image-model": generated.model,
+        "x-fallback-used": String(generated.fallbackUsed),
+        "x-image-stage": String(generated.stage),
+      }).json({
+        fileName: generated.fileName,
+        mimeType: generated.mimeType,
+        dataBase64: generated.dataBase64,
+        provider: generated.provider,
+        model: generated.model,
+        stage: generated.stage,
+        fallbackUsed: generated.fallbackUsed,
+        version: generated.version,
+        stageAudit: generated.stageAudit,
+      });
+      return;
+    } catch (err: any) {
+      if (err.isSafetyRefusal) {
+        sendError(res, 400, `Image generation refused: ${err.message}`);
+        return;
+      }
+      const statusCode = err.status || (err.isRateLimit ? 429 : 503);
+      sendError(res, statusCode, err?.message || "All image generation stages failed.");
       return;
     }
   }
@@ -536,7 +550,11 @@ async function proxyModelRequest(
     // If capabilities request and Cloudflare or Gemini is configured, report ready model capabilities
     if (route.upstreamPath === "/capabilities" && method === "GET" && (isCloudflareConfigured() || process.env.GEMINI_API_KEY?.trim())) {
       const modalities = ["chat"];
-      if (isCloudflareConfigured() || isHfImageConfigured()) {
+      if (
+        Boolean(process.env.AYATRISYA_IMAGE_MODEL_ENDPOINT) ||
+        isHfImageConfigured() ||
+        isCloudflareConfigured()
+      ) {
         modalities.push("image");
       }
       res.status(200).set({ "Cache-Control": "no-store", "Content-Type": "application/json" }).json({

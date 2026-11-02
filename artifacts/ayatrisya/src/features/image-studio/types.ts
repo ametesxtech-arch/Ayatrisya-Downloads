@@ -59,6 +59,12 @@ export interface GeneratedImageDetails {
   sizeBytes: number;
   format: 'PNG' | 'JPEG';
   aspectRatio: string;
+  provider?: string;
+  model?: string;
+  stage?: number;
+  fallbackUsed?: boolean;
+  version?: string;
+  stageAudit?: any[];
 }
 
 export interface ImageStudioMessage {
