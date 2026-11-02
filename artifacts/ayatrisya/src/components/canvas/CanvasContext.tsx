@@ -370,16 +370,41 @@ export function CanvasProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useCanvas() {
+const FALLBACK_CONTEXT: CanvasContextValue = {
+  isOpen: false,
+  files: DEFAULT_FILES,
+  activeFileId: DEFAULT_FILES[0].id,
+  activeFile: DEFAULT_FILES[0],
+  pendingDiff: null,
+  canUndo: false,
+  canRedo: false,
+  openCanvas: () => {},
+  closeCanvas: () => {},
+  addFile: () => {},
+  loadProjectFiles: () => {},
+  removeFile: () => {},
+  setActiveFile: () => {},
+  updateContent: () => {},
+  updateLanguage: () => {},
+  updateFileName: () => {},
+  stagePatch: () => {},
+  acceptPatch: () => {},
+  rejectPatch: () => {},
+  undo: () => {},
+  redo: () => {},
+};
+
+export function useCanvas(): CanvasContextValue {
   const ctx = useContext(CanvasContext);
   if (!ctx) {
-    throw new Error('useCanvas must be used within a CanvasProvider');
+    console.warn('useCanvas was called outside of a CanvasProvider; using safe fallback context.');
+    return FALLBACK_CONTEXT;
   }
   return ctx;
 }
 
 export function useCanvasSafe() {
-  return useContext(CanvasContext);
+  return useContext(CanvasContext) || FALLBACK_CONTEXT;
 }
 
 export function useOptionalCanvas() {

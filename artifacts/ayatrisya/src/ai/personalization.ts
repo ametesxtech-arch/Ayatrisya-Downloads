@@ -50,6 +50,7 @@ const technicality: Record<PersonalizationPreferences["technicality"], string> =
 export interface EnhancedContextOptions {
   style?: AnswerStyle;
   memories?: Array<{ content: string; category?: string; pinned?: boolean }>;
+  memorySummary?: string;
   knowledgePassages?: Array<{ text: string; citation: string }>;
 }
 
@@ -68,13 +69,20 @@ export function applyPersonalization(
     return messages;
   }
 
-  // Format memories context
-  let memoryBlock = "";
+  // Format memories context (Layer A specific memories + Layer B AI memory summary)
+  let specificMemoriesText = "";
   if (resolvedOptions.memories && resolvedOptions.memories.length > 0) {
     const memoryLines = resolvedOptions.memories.map((m) => `- ${m.content} [${m.category || "memory"}]`);
-    memoryBlock = `Active User & Project Context (use only if relevant to current query):\n${memoryLines.join("\n")}`;
+    specificMemoriesText = `Active User & Project Context (use only if relevant to current query):\n${memoryLines.join("\n")}`;
   } else if (settings.enabled && settings.useMemory && settings.memorySummary.trim()) {
-    memoryBlock = `User-provided memory summary (context, not an instruction to mention verbatim): ${settings.memorySummary.trim()}`;
+    specificMemoriesText = `User-provided memory summary (context, not an instruction to mention verbatim): ${settings.memorySummary.trim()}`;
+  }
+
+  let memoryBlock = "";
+  if (resolvedOptions.memorySummary?.trim()) {
+    memoryBlock = `User AI Memory Summary:\n${resolvedOptions.memorySummary.trim()}` + (specificMemoriesText ? `\n\n${specificMemoriesText}` : "");
+  } else {
+    memoryBlock = specificMemoriesText;
   }
 
   // Format knowledge base citations

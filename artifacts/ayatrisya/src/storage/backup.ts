@@ -82,6 +82,27 @@ const knowledgeChunkSchema = z.object({
   }),
 }).strict();
 
+const memorySummarySectionsSchema = z.object({
+  preferencesAndStyle: z.array(z.string().max(2000)).default([]),
+  backgroundContext: z.array(z.string().max(2000)).default([]),
+  activeProjects: z.array(z.string().max(2000)).default([]),
+  technicalEnvironment: z.array(z.string().max(2000)).default([]),
+  goalsAndPlans: z.array(z.string().max(2000)).default([]),
+  importantDecisions: z.array(z.string().max(2000)).default([]),
+  ongoingTasks: z.array(z.string().max(2000)).default([]),
+  constraintsAndInstructions: z.array(z.string().max(2000)).default([]),
+}).strict();
+
+const aiMemorySummarySchema = z.object({
+  ...base,
+  version: z.number().int().positive(),
+  overview: z.string().max(5000).default(""),
+  sections: memorySummarySectionsSchema,
+  totalSourceMemoriesCount: z.number().int().nonnegative().default(0),
+  lastSynthesizedAt: z.string().datetime(),
+  isAiGenerated: z.boolean().default(true),
+}).strict();
+
 const backupSchema = z.object({
   format: z.literal("ayatrisya-backup"), version: z.union([z.literal(1),z.literal(2),z.literal(3)]), exportedAt: z.string().datetime(),
   preferences: prefsSchema,
@@ -95,6 +116,7 @@ const backupSchema = z.object({
   knowledgeBases: z.array(knowledgeBaseSchema).max(10000).optional().default([]),
   knowledgeDocuments: z.array(knowledgeDocumentSchema).max(50000).optional().default([]),
   knowledgeChunks: z.array(knowledgeChunkSchema).max(200000).optional().default([]),
+  aiMemorySummaries: z.array(aiMemorySummarySchema).max(1000).optional().default([]),
 }).strict();
 type Backup = z.infer<typeof backupSchema>;
 export const MAX_BACKUP_BYTES = 100 * 1024 * 1024;
@@ -140,9 +162,9 @@ function decode(value:string) {
 export async function exportBackup(repo: LocalRepository = repository): Promise<Blob> {
   const owner = repo.ownerId; const tx = (await repo.db()).transaction([...stores],"readonly");
   const read = (store:StoreName) => tx.objectStore(store).index("ownerId").getAll(owner);
-  const [conversations,messages,projects,items,attachments,blobs,preferences,aiMemories,knowledgeBases,knowledgeDocuments,knowledgeChunks] = await Promise.all([
+  const [conversations,messages,projects,items,attachments,blobs,preferences,aiMemories,knowledgeBases,knowledgeDocuments,knowledgeChunks,aiMemorySummaries] = await Promise.all([
     read("conversations"),read("messages"),read("projects"),read("projectItems"),read("attachments"),read("blobs"),tx.objectStore("preferences").get([owner,"ui"]),
-    read("aiMemories"),read("knowledgeBases"),read("knowledgeDocuments"),read("knowledgeChunks"),
+    read("aiMemories"),read("knowledgeBases"),read("knowledgeDocuments"),read("knowledgeChunks"),read("aiMemorySummaries"),
   ]);
   await tx.done;
   const assets = await Promise.all(blobs.map(async (row:{id:string;data:Blob}) => ({id:row.id,base64:encode(new Uint8Array(await row.data.arrayBuffer()))})));
@@ -153,6 +175,7 @@ export async function exportBackup(repo: LocalRepository = repository): Promise<
     preferences:{...defaultPreferences,...preferences?.value},
     conversations,messages,projects,items,attachments,assets,
     aiMemories,knowledgeBases,knowledgeDocuments,knowledgeChunks,
+    aiMemorySummaries,
   };
   const json = JSON.stringify(backup,null,2);
   parseBackup(json); // Do not emit a backup that cannot be restored by this app.
@@ -205,6 +228,7 @@ export async function restoreBackup(input:string, mode:"merge"|"replace", repo:L
       knowledgeBases: data.knowledgeBases || [],
       knowledgeDocuments: data.knowledgeDocuments || [],
       knowledgeChunks: data.knowledgeChunks || [],
+      aiMemorySummaries: data.aiMemorySummaries || [],
     };
     const keptAttachments = new Set<string>();
     for (const [name,rows] of Object.entries(groups)) for (const record of rows) {

@@ -15,6 +15,7 @@ import { PublicDocumentation, PublicLegalRoute } from '@/pages/PublicPages';
 import { wallpapers } from '@/data/wallpapers';
 import { CloudPreferenceSyncProvider } from '@/integrations/firebase/CloudPreferenceSync';
 import { PwaProvider } from '@/pwa/PwaProvider';
+import { CanvasProvider } from '@/components/canvas/CanvasContext';
 
 const Workspace = lazy(() => import('@/components/WorkspaceShell').then((m) => ({ default: m.Workspace })));
 const AuthPage = lazy(() => import('@/pages/Auth').then((m) => ({ default: m.AuthPage })));
@@ -225,12 +226,14 @@ function App() {
         <QueryClientProvider client={queryClient}>
           <TooltipProvider>
             <CloudPreferenceSyncProvider>
-              <PrefsEffects />
-              <MotionEffects />
-              <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
-                <Router />
-              </WouterRouter>
-              <Toaster />
+              <CanvasProvider>
+                <PrefsEffects />
+                <MotionEffects />
+                <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
+                  <Router />
+                </WouterRouter>
+                <Toaster />
+              </CanvasProvider>
             </CloudPreferenceSyncProvider>
           </TooltipProvider>
         </QueryClientProvider>

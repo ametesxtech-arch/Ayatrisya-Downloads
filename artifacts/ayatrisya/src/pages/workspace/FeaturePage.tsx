@@ -23,9 +23,9 @@ export function FeaturePage({ path, goto, notify }: { path: string; goto: (href:
   const { guest } = useAuth();
   const seg = path.split('/');
   let body;
-  if (path === '/workspace/canvas' || path.startsWith('/workspace/canvas/')) return <CanvasIDE />;
-  if (path === '/workspace/chat' || path === '/workspace/chat/' || (path.startsWith('/workspace/chat/') && seg.length === 4)) return <ChatPage path={path} goto={goto} notify={notify} />;
-  if (guest && path === '/workspace/images') body = <GuestImageAccess notify={notify} />;
+  if (path === '/workspace/canvas' || path.startsWith('/workspace/canvas/')) body = <CanvasIDE />;
+  else if (path === '/workspace/chat' || path === '/workspace/chat/' || (path.startsWith('/workspace/chat/') && seg.length === 4)) return <ChatPage path={path} goto={goto} notify={notify} />;
+  else if (guest && path === '/workspace/images') body = <GuestImageAccess notify={notify} />;
   else if (path === '/workspace/research') body = <Research notify={notify} />;
   else if (path === '/workspace/coding' || path === '/workspace/coding/desktop-preview') body = <Coding notify={notify} />;
   else if (path === '/workspace/tasks') body = <Tasks notify={notify} goto={goto} />;

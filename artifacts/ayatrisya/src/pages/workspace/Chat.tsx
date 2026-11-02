@@ -37,6 +37,7 @@ import { CloudImageConsentModal } from '@/features/image-studio/CloudImageConsen
 import { detectImageRequest } from '@/lib/image-intent';
 import { MemoryEngine } from '@/storage/memory-engine';
 import { KnowledgeBaseEngine } from '@/storage/knowledge-engine';
+import { AIMemorySummaryEngine } from '@/storage/ai-memory-summary-engine';
 
 type Turn = Array<{ role: 'user' | 'assistant'; content: string; attachments?: MessageAttachment[] }>;
 
@@ -189,10 +190,16 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
     abortRef.current = ac; retryRef.current = { cid, history };
     setBusy(true); setStreamFor(cid); setStream(''); setError('');
     try {
-      // Retrieve relevant AI memories for the user query (if memory is enabled)
+      // Retrieve relevant AI memories & structured memory summary (if memory is enabled)
+      let memorySummaryText = '';
       let relevantMemories: Array<{ content: string; category?: string; pinned?: boolean }> = [];
       if (prefs.personalization.enabled && prefs.personalization.useMemory && latestTurn?.content) {
         try {
+          const summaryEngine = new AIMemorySummaryEngine(repository);
+          const summaryRecord = await summaryEngine.getSummary();
+          if (summaryRecord) {
+            memorySummaryText = summaryEngine.formatSummaryForPrompt(summaryRecord, 1500);
+          }
           const memEngine = new MemoryEngine(repository);
           const retrieved = await memEngine.retrieveContext(latestTurn.content, { maxTokens: 400 });
           relevantMemories = retrieved.map((m) => ({
@@ -228,6 +235,7 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
         kind: "chat",
         messages: applyPersonalization(history, prefs.personalization, {
           memories: relevantMemories,
+          memorySummary: memorySummaryText,
           knowledgePassages,
         }),
         options: {
@@ -287,7 +295,19 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
           }
         }
       }
-      if (finalOut.trim() && !ac.signal.aborted) await repository.addMessage(cid, finalOut, 'assistant');
+      if (finalOut.trim() && !ac.signal.aborted) {
+        await repository.addMessage(cid, finalOut, 'assistant');
+        if (prefs.personalization.enabled && prefs.personalization.useMemory && latestTurn?.content) {
+          void (async () => {
+            try {
+              const summaryEngine = new AIMemorySummaryEngine(repository);
+              await summaryEngine.processNewTurn(latestTurn.content, finalOut, cid);
+            } catch (err) {
+              console.warn('[AI Memory] Auto-summarization turn processing notice:', err);
+            }
+          })();
+        }
+      }
       retryRef.current = null;
     } catch (e) { setError(ac.signal.aborted ? 'Generation stopped. Your message is saved.' : errMsg(e, 'The model request failed.')); }
     finally { runningRef.current = false; setBusy(false); setStream(''); setStreamFor(null); abortRef.current = null; jobIdRef.current = null; }

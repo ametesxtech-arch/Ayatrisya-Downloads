@@ -151,6 +151,34 @@ export interface MemoryEntry extends BaseRecord {
   temporary: boolean;
   expiresAt?: string | null;
   tags: string[];
+  confidence?: number; // 0 to 1
+  importance?: number; // 1 to 5
+}
+
+// ==========================================
+// Phase 4/5: AI Memory Summary Architecture
+// ==========================================
+export interface MemorySummarySection {
+  title: string;
+  items: string[];
+}
+
+export interface AIMemorySummary extends BaseRecord {
+  version: number;
+  overview: string;
+  sections: {
+    preferencesAndStyle: string[];
+    backgroundContext: string[];
+    activeProjects: string[];
+    technicalEnvironment: string[];
+    goalsAndPlans: string[];
+    importantDecisions: string[];
+    ongoingTasks: string[];
+    constraintsAndInstructions: string[];
+  };
+  totalSourceMemoriesCount: number;
+  lastSynthesizedAt: string;
+  isAiGenerated: boolean;
 }
 
 // ==========================================

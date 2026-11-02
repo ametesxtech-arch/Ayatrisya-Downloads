@@ -9,6 +9,7 @@ import { useCloudPreferenceSync } from '@/integrations/firebase/CloudPreferenceS
 import { readCloudPersonalization, writeCloudPersonalization } from '@/integrations/firebase/personalization-sync';
 import { MemorySummaryBuilder } from './MemorySummaryBuilder';
 import { MemoryManager } from '@/components/MemoryManager';
+import { AIMemorySummaryCard } from '@/components/AIMemorySummaryCard';
 
 type SaveStatus = { kind: 'success' | 'error'; message: string } | null;
 
@@ -404,7 +405,8 @@ export function PersonalizationPage() {
       <textarea id="memory-summary" value={draft.memorySummary} onChange={(event) => updateDraft('memorySummary', event.target.value)} disabled={!draft.enabled} rows={4} maxLength={2400} placeholder="For example: I prefer examples in TypeScript and appreciate a brief explanation before the details." className={`${inputClass} mt-1.5 resize-y leading-5 disabled:cursor-not-allowed`} data-testid="textarea-memory-summary" />
       <div className="mt-1 flex justify-between text-[10px] text-slate-500"><span>Only use details you are comfortable keeping in this browser.</span><span>{draft.memorySummary.length}/2,400</span></div>
       <MemorySummaryBuilder onUse={(summary) => updateDraft('memorySummary', summary)} />
-      <div className="mt-6 border-t border-white/[.08] pt-6">
+      <div className="mt-6 border-t border-white/[.08] pt-6 space-y-6">
+        <AIMemorySummaryCard notify={(msg) => setStatus({ kind: 'success', message: msg })} />
         <MemoryManager notify={(msg) => setStatus({ kind: 'success', message: msg })} />
       </div>
     </section>

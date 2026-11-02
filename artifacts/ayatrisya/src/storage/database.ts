@@ -1,10 +1,11 @@
 import { openDB, type IDBPDatabase } from "idb";
 
-export const DATABASE_VERSION = 5;
+export const DATABASE_VERSION = 6;
 export const stores = [
   "profiles", "conversations", "messages", "projects", "projectItems",
   "attachments", "blobs", "preferences", "syncQueue", "syncMetadata",
   "aiMemories", "knowledgeBases", "knowledgeDocuments", "knowledgeChunks",
+  "aiMemorySummaries",
 ] as const;
 export type StoreName = typeof stores[number];
 
@@ -62,6 +63,13 @@ export function openLocalDatabase(name = "ayatrisya-local"): Promise<IDBPDatabas
               store.createIndex("documentId", ["ownerId", "documentId"]);
             }
           }
+        }
+      }
+      if (oldVersion < 6) {
+        if (!db.objectStoreNames.contains("aiMemorySummaries")) {
+          const store = db.createObjectStore("aiMemorySummaries", { keyPath: ["ownerId", "id"] });
+          store.createIndex("ownerId", "ownerId");
+          store.createIndex("updatedAt", ["ownerId", "updatedAt"]);
         }
       }
     },
