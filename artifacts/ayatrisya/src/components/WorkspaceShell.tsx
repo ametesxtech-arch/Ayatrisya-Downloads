@@ -206,7 +206,7 @@ function WorkspaceContent() {
           {L('/workspace/documents', path.startsWith('/workspace/documents'), <FileText size={15} />, 'Documents')}
           {L('/workspace/presentations', path === '/workspace/presentations', <Presentation size={15} />, 'Presentations')}
           {L('/workspace/coding', path.startsWith('/workspace/coding'), <Code2 size={15} />, 'Coding')}
-          {L('/workspace/canvas', path.startsWith('/workspace/canvas'), <Code2 size={15} className="text-teal-400" />, 'Canvas IDE')}
+          {L('/workspace/canvas', path.startsWith('/workspace/canvas'), <Code2 size={15} className="text-violet-400" />, 'Canvas IDE')}
           {h('Studios')}
           {L('/workspace/images', path === '/workspace/images', <Image size={15} />, 'Image studio')}
           {L('/workspace/3d', path === '/workspace/3d', <Box size={15} />, '3D studio')}

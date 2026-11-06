@@ -2,34 +2,25 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   Code2,
   Play,
-  Square,
   RotateCcw,
   Plus,
-  FolderPlus,
   Trash2,
   Download,
   Copy,
   Check,
   Search,
   Sparkles,
-  Columns2,
   Monitor,
   Smartphone,
   Tablet,
-  Maximize2,
   Terminal as TerminalIcon,
   AlertCircle,
   FileCode,
-  FileText,
-  FileJson,
   X,
   Undo2,
   Redo2,
-  ExternalLink,
-  ChevronRight,
-  ChevronDown,
   Layers,
-  Settings as SettingsIcon,
+  Cpu,
 } from 'lucide-react';
 import { useCanvas, CanvasProvider, useOptionalCanvas } from '@/components/canvas/CanvasContext';
 import { usePrefs } from '@/hooks/use-prefs';
@@ -38,6 +29,25 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { generateProjectFromPrompt, type ProjectGenerationProgress } from '@/ai/project-generator';
 import { generateGameProjectFromPrompt, createPlayable2DGame, createPlayable3DGame } from '@/ai/game-generator';
 import { modelClient } from '@/ai/client';
+import { LinuxVM } from '@/lib/linux-vm';
+
+function getLangFromExt(fileName: string): string {
+  const ext = fileName.split('.').pop()?.toLowerCase();
+  switch (ext) {
+    case 'html': return 'html';
+    case 'css': return 'css';
+    case 'js': return 'javascript';
+    case 'ts': return 'typescript';
+    case 'py': return 'python';
+    case 'json': return 'json';
+    case 'md': return 'markdown';
+    case 'rs': return 'rust';
+    case 'go': return 'go';
+    case 'sql': return 'sql';
+    case 'sh': return 'shell';
+    default: return 'plaintext';
+  }
+}
 
 function CanvasIDEInternal() {
   const canvas = useCanvas();
@@ -70,13 +80,15 @@ function CanvasIDEInternal() {
   const [editorAiPrompt, setEditorAiPrompt] = useState('');
   const [editorAiBusy, setEditorAiBusy] = useState(false);
 
-  // Terminal & Command Execution State
+  // Linux Virtual Machine & Command Execution State
+  const linuxVmRef = useRef<LinuxVM>(new LinuxVM());
   const [commandInput, setCommandInput] = useState('');
+  const [historyIndex, setHistoryIndex] = useState<number>(-1);
   const [terminalLogs, setTerminalLogs] = useState<Array<{ text: string; type: 'cmd' | 'stdout' | 'stderr' | 'info' }>>([
-    { text: 'Ayatrisya Virtual Dev Environment [Version 2.0.0-web]', type: 'info' },
-    { text: 'Type "help" for a list of supported commands or click "Run" to test your project.', type: 'info' },
+    { text: 'Ayatrisya Virtual Dev Environment [Linux 6.6.0-ayatrisya x86_64 GNU/Linux]', type: 'info' },
+    { text: 'Ayatrisya OS 2.0 LTS (Noble Nectar) — Type "help" for a list of supported Linux commands or click "Run" to test your project.', type: 'info' },
   ]);
-  const [activeProcess, setActiveProcess] = useState<string | null>(null);
+  const [, setActiveProcess] = useState<string | null>(null);
   const terminalEndRef = useRef<HTMLDivElement>(null);
 
   // Live Preview Key (increment to trigger clean iframe re-render)
@@ -91,7 +103,6 @@ function CanvasIDEInternal() {
 
   // Construct Virtual Sandboxed HTML from Canvas Files
   const bundledPreviewHtml = useMemo(() => {
-    // Prefer the currently active file if it is an HTML document or snippet
     const activeIsHtml =
       canvas.activeFile &&
       (canvas.activeFile.name.endsWith('.html') ||
@@ -108,9 +119,39 @@ function CanvasIDEInternal() {
     const cssFiles = canvas.files.filter((f) => f.name.endsWith('.css') || f.language === 'css');
     const jsFiles = canvas.files.filter((f) => f.name.endsWith('.js') || f.name.endsWith('.ts') || f.language === 'javascript');
 
-    let baseHtml = htmlFile ? htmlFile.content : `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Preview</title></head><body><div id="app"></div></body></html>`;
+    let baseHtml = htmlFile
+      ? htmlFile.content
+      : `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Ayatrisya Canvas</title>
+  <style>
+    body { margin: 0; font-family: system-ui, sans-serif; background: #101014; color: #ece9f3; display: flex; align-items: center; justify-content: center; height: 100vh; }
+    .card { background: #16151f; border: 1px solid rgba(255,255,255,0.08); padding: 32px; border-radius: 16px; text-align: center; max-width: 440px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
+    h1 { font-size: 20px; font-weight: 600; margin-bottom: 8px; color: #fff; }
+    p { font-size: 13px; color: #94919f; line-height: 1.6; margin-bottom: 20px; }
+    button { background: linear-gradient(135deg, #8b5cf6, #6366f1); border: 0; padding: 10px 20px; border-radius: 8px; color: #fff; font-weight: 600; cursor: pointer; transition: opacity 0.2s; }
+    button:hover { opacity: 0.9; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>🚀 Welcome to Ayatrisya Canvas IDE</h1>
+    <p>A full-screen development environment with live preview, AI generation, and full Linux terminal execution.</p>
+    <button id="actionBtn">Click to Test</button>
+    <div id="output" style="margin-top: 14px; font-size: 12px; color: #c4b5fd;"></div>
+  </div>
+  <script>
+    document.getElementById('actionBtn').addEventListener('click', () => {
+      document.getElementById('output').innerText = '✓ Interaction verified at ' + new Date().toLocaleTimeString();
+      console.log('User interaction logged in Ayatrisya Canvas Preview');
+    });
+  </script>
+</body>
+</html>`;
 
-    // Inject combined CSS only if the active document doesn't already contain inline style sheets
+    // Inject combined CSS
     const combinedCss = cssFiles.map((c) => `<style data-file="${c.name}">\n${c.content}\n</style>`).join('\n');
     if (combinedCss && (!activeIsHtml || !baseHtml.includes('<style'))) {
       if (baseHtml.includes('</head>')) {
@@ -120,65 +161,73 @@ function CanvasIDEInternal() {
       }
     }
 
-    // Intercept console.log and errors for IDE preview dock
+    // Capture console logs inside the sandboxed preview iframe
     const loggerScript = `
 <script>
   (function() {
-    const origLog = console.log;
-    const origErr = console.error;
-    window.addEventListener('message', function(e) {
-      if (e.data === 'ping') window.parent.postMessage('pong', '*');
-    });
-    console.log = function(...args) {
-      origLog(...args);
-      window.parent.postMessage({ type: 'canvas-log', message: args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ') }, '*');
-    };
-    console.error = function(...args) {
-      origErr(...args);
-      window.parent.postMessage({ type: 'canvas-error', message: args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ') }, '*');
-    };
+    const _origLog = console.log;
+    const _origErr = console.error;
+    const _origWarn = console.warn;
+    function send(type, args) {
+      try {
+        const text = Array.from(args).map(x => typeof x === 'object' ? JSON.stringify(x) : String(x)).join(' ');
+        window.parent.postMessage({ type: 'CANVAS_PREVIEW_LOG', level: type, text }, '*');
+      } catch (e) {}
+    }
+    console.log = function() { send('info', arguments); _origLog.apply(console, arguments); };
+    console.error = function() { send('error', arguments); _origErr.apply(console, arguments); };
+    console.warn = function() { send('warn', arguments); _origWarn.apply(console, arguments); };
     window.onerror = function(msg, url, line) {
-      window.parent.postMessage({ type: 'canvas-error', message: 'Error: ' + msg + ' (Line ' + line + ')' }, '*');
+      send('error', ['[Uncaught] ' + msg + ' (line ' + line + ')']);
     };
   })();
 </script>
 `;
 
-    // Inject scripts
-    const combinedJs = jsFiles.map((j) => `<script data-file="${j.name}">\ntry {\n${j.content}\n} catch(err) { console.error(err.message); }\n</script>`).join('\n');
-
-    const injection = `${loggerScript}\n${combinedJs}`;
-    if (baseHtml.includes('</body>')) {
-      baseHtml = baseHtml.replace('</body>', `${injection}\n</body>`);
+    if (baseHtml.includes('<head>')) {
+      baseHtml = baseHtml.replace('<head>', `<head>\n${loggerScript}`);
     } else {
-      baseHtml = `${baseHtml}\n${injection}`;
+      baseHtml = `${loggerScript}\n${baseHtml}`;
+    }
+
+    // Inject JS scripts
+    const combinedJs = jsFiles.map((j) => `<script data-file="${j.name}">\n${j.content}\n</script>`).join('\n');
+    if (combinedJs && (!activeIsHtml || !baseHtml.includes('<script'))) {
+      if (baseHtml.includes('</body>')) {
+        baseHtml = baseHtml.replace('</body>', `${combinedJs}\n</body>`);
+      } else {
+        baseHtml = `${baseHtml}\n${combinedJs}`;
+      }
     }
 
     return baseHtml;
-  }, [canvas.files, canvas.activeFile, canvas.activeFileId]);
+  }, [canvas.files, canvas.activeFile]);
 
-  // Listen for logs from preview iframe
+  // Listen for iframe log messages
   useEffect(() => {
     const handleMsg = (e: MessageEvent) => {
-      if (e.data?.type === 'canvas-log') {
-        setPreviewLogs((prev) => [...prev.slice(-100), `[LOG] ${e.data.message}`]);
-      } else if (e.data?.type === 'canvas-error') {
-        setPreviewLogs((prev) => [...prev.slice(-100), `[ERR] ${e.data.message}`]);
+      if (e.data && e.data.type === 'CANVAS_PREVIEW_LOG') {
+        const entry = e.data.level === 'error' ? `[ERR] ${e.data.text}` : `[LOG] ${e.data.text}`;
+        setPreviewLogs((prev) => [...prev.slice(-100), entry]);
       }
     };
     window.addEventListener('message', handleMsg);
     return () => window.removeEventListener('message', handleMsg);
   }, []);
 
-  // Handle Command Execution (Desktop Native or Web Isolated Sandbox)
+  // Handle Command Execution (Full Linux VM or Desktop Native)
   const executeCommand = async (cmdStr: string) => {
     const trimmed = cmdStr.trim();
     if (!trimmed) return;
 
-    setTerminalLogs((prev) => [...prev, { text: `$ ${trimmed}`, type: 'cmd' }]);
-    setCommandInput('');
+    const vm = linuxVmRef.current;
+    const promptDisplay = vm.getPrompt();
 
-    // Check if Desktop runtime is available
+    setTerminalLogs((prev) => [...prev, { text: `${promptDisplay} ${trimmed}`, type: 'cmd' }]);
+    setCommandInput('');
+    setHistoryIndex(-1);
+
+    // Check if Desktop native runtime is available
     if (desktop && desktop.desktop) {
       try {
         setActiveProcess(trimmed);
@@ -200,163 +249,57 @@ function CanvasIDEInternal() {
       return;
     }
 
-    // Web Virtual Environment Command Interpreter
-    const parts = trimmed.split(' ');
-    const cmd = parts[0].toLowerCase();
-    const args = parts.slice(1);
+    // Web Full Linux Virtual Machine Execution
+    try {
+      const res = await vm.execute(trimmed, canvas.files);
 
-    setActiveProcess(cmd);
-    await new Promise((r) => setTimeout(r, 80)); // Simulate async execution tick
-
-    switch (cmd) {
-      case 'help':
-        setTerminalLogs((prev) => [
-          ...prev,
-          { text: 'Available virtual commands in Ayatrisya Web IDE:', type: 'info' },
-          { text: '  ls                 List project files and sizes', type: 'info' },
-          { text: '  cat <file>         Print file contents', type: 'info' },
-          { text: '  touch <file>       Create a new blank file', type: 'info' },
-          { text: '  rm <file>          Delete a file from project', type: 'info' },
-          { text: '  run / test         Trigger application build and live preview refresh', type: 'info' },
-          { text: '  clear              Clear the terminal log', type: 'info' },
-          { text: '  npm test           Run simulated project test suite', type: 'info' },
-          { text: '  node <file>        Run JavaScript file in sandbox worker', type: 'info' },
-          { text: '  python <file>      Report Python interpreter requirements', type: 'info' },
-          { text: 'Note: Full native bash/PowerShell is active when using Ayatrisya Desktop.', type: 'info' },
-        ]);
-        break;
-
-      case 'clear':
+      if (res.clear) {
         setTerminalLogs([]);
-        break;
-
-      case 'ls': {
-        const fileList = canvas.files.map((f) => `${f.name.padEnd(20)} ${f.content.length} B`).join('\n');
-        setTerminalLogs((prev) => [...prev, { text: fileList, type: 'stdout' }]);
-        break;
+        return;
       }
 
-      case 'cat':
-        if (!args[0]) {
-          setTerminalLogs((prev) => [...prev, { text: 'usage: cat <filename>', type: 'stderr' }]);
-        } else {
-          const target = canvas.files.find((f) => f.name === args[0]);
-          if (target) {
-            setTerminalLogs((prev) => [...prev, { text: target.content, type: 'stdout' }]);
-          } else {
-            setTerminalLogs((prev) => [...prev, { text: `cat: ${args[0]}: No such file`, type: 'stderr' }]);
-          }
-        }
-        break;
-
-      case 'touch':
-        if (!args[0]) {
-          setTerminalLogs((prev) => [...prev, { text: 'usage: touch <filename>', type: 'stderr' }]);
-        } else {
-          canvas.addFile({ name: args[0], content: '', language: getLangFromExt(args[0]) });
-          setTerminalLogs((prev) => [...prev, { text: `Created file: ${args[0]}`, type: 'info' }]);
-        }
-        break;
-
-      case 'rm':
-        if (!args[0]) {
-          setTerminalLogs((prev) => [...prev, { text: 'usage: rm <filename>', type: 'stderr' }]);
-        } else {
-          const target = canvas.files.find((f) => f.name === args[0]);
-          if (target) {
-            canvas.removeFile(target.id);
-            setTerminalLogs((prev) => [...prev, { text: `Removed file: ${args[0]}`, type: 'info' }]);
-          } else {
-            setTerminalLogs((prev) => [...prev, { text: `rm: ${args[0]}: No such file`, type: 'stderr' }]);
-          }
-        }
-        break;
-
-      case 'run':
-      case 'build':
+      if (res.refreshPreview) {
         setPreviewKey((k) => k + 1);
-        setTerminalLogs((prev) => [
-          ...prev,
-          { text: `✓ Compiled ${canvas.files.length} project files. Live preview reloaded.`, type: 'stdout' },
-        ]);
-        break;
-
-      case 'npm':
-        if (args[0] === 'test') {
-          setTerminalLogs((prev) => [
-            ...prev,
-            { text: '> project@0.0.0 test', type: 'stdout' },
-            { text: `✓ syntax check (${canvas.files.length} files passed)`, type: 'stdout' },
-            { text: `✓ sandboxed runtime verified without warnings`, type: 'stdout' },
-          ]);
-        } else if (args[0] === 'run') {
-          setPreviewKey((k) => k + 1);
-          setTerminalLogs((prev) => [
-            ...prev,
-            { text: `> dev server online at internal preview port`, type: 'stdout' },
-          ]);
-        } else {
-          setTerminalLogs((prev) => [
-            ...prev,
-            { text: `npm: package installation in web sandbox is virtualized. Use Ayatrisya Desktop for native npm/pnpm.`, type: 'info' },
-          ]);
-        }
-        break;
-
-      case 'node': {
-        const jsTarget = canvas.files.find((f) => f.name === (args[0] || 'app.js') || f.name === 'index.js');
-        if (jsTarget) {
-          try {
-            // Safe evaluation of console logs
-            const captured: string[] = [];
-            const safeLog = (...a: any[]) => captured.push(a.map(x => String(x)).join(' '));
-            const fn = new Function('console', jsTarget.content);
-            fn({ log: safeLog, error: safeLog, warn: safeLog });
-            setTerminalLogs((prev) => [
-              ...prev,
-              { text: captured.join('\n') || 'Execution completed with return code 0.', type: 'stdout' },
-            ]);
-          } catch (e: any) {
-            setTerminalLogs((prev) => [...prev, { text: `Runtime error: ${e.message}`, type: 'stderr' }]);
-          }
-        } else {
-          setTerminalLogs((prev) => [...prev, { text: `node: ${args[0] || 'file'}: not found`, type: 'stderr' }]);
-        }
-        break;
       }
 
-      case 'python':
-        setTerminalLogs((prev) => [
-          ...prev,
-          { text: `Python execution requires native CPython host. Switch to Ayatrisya Desktop for full native Python environments.`, type: 'info' },
-        ]);
-        break;
+      if (res.createdFile) {
+        canvas.addFile({
+          name: res.createdFile.name,
+          content: res.createdFile.content,
+          language: getLangFromExt(res.createdFile.name),
+        });
+      }
 
-      default:
-        setTerminalLogs((prev) => [
-          ...prev,
-          { text: `bash: ${cmd}: command not found. Type "help" for available commands.`, type: 'stderr' },
-        ]);
-        break;
-    }
+      if (res.removedFile) {
+        const found = canvas.files.find((f) => f.name === res.removedFile);
+        if (found) canvas.removeFile(found.id);
+      }
 
-    setActiveProcess(null);
-  };
+      if (res.updatedFile) {
+        const target = canvas.files.find((f) => f.name === res.updatedFile?.name);
+        if (target) {
+          canvas.setActiveFile(target.id);
+          canvas.updateContent(res.updatedFile.content);
+        } else {
+          canvas.addFile({
+            name: res.updatedFile.name,
+            content: res.updatedFile.content,
+            language: getLangFromExt(res.updatedFile.name),
+          });
+        }
+      }
 
-  const getLangFromExt = (fileName: string) => {
-    const ext = fileName.split('.').pop()?.toLowerCase();
-    switch (ext) {
-      case 'html': return 'html';
-      case 'css': return 'css';
-      case 'js': return 'javascript';
-      case 'ts': return 'typescript';
-      case 'py': return 'python';
-      case 'json': return 'json';
-      case 'md': return 'markdown';
-      case 'rs': return 'rust';
-      case 'go': return 'go';
-      case 'sql': return 'sql';
-      default: return 'plaintext';
+      if (res.stdout) {
+        setTerminalLogs((prev) => [...prev, { text: res.stdout!, type: 'stdout' }]);
+      }
+      if (res.stderr) {
+        setTerminalLogs((prev) => [...prev, { text: res.stderr!, type: 'stderr' }]);
+      }
+    } catch (err) {
+      setTerminalLogs((prev) => [
+        ...prev,
+        { text: `bash: runtime error: ${err instanceof Error ? err.message : String(err)}`, type: 'stderr' },
+      ]);
     }
   };
 
@@ -465,11 +408,11 @@ function CanvasIDEInternal() {
         setPreviewKey((k) => k + 1);
         setTerminalLogs((prev) => [
           ...prev,
-          { text: `✓ AI generated ${res.files.length} project files (${res.files.map(f => f.path).join(', ')}).`, type: 'info' },
+          { text: `✓ AI generated ${res.files.length} project files (${res.files.map((f) => f.path).join(', ')}).`, type: 'info' },
         ]);
       }
-    } catch (err: any) {
-      setAiStatus(`Error: ${err?.message || 'Project generation failed'}`);
+    } catch (err: unknown) {
+      setAiStatus(`Error: ${err instanceof Error ? err.message : 'Project generation failed'}`);
     } finally {
       setAiBusy(false);
     }
@@ -509,8 +452,8 @@ Return ONLY the complete updated file content without markdown code fences or co
 
       canvas.stagePatch(clean);
       setEditorAiPrompt('');
-    } catch (err: any) {
-      alert(`AI modification error: ${err?.message || 'Failed'}`);
+    } catch (err: unknown) {
+      alert(`AI modification error: ${err instanceof Error ? err.message : 'Failed'}`);
     } finally {
       setEditorAiBusy(false);
     }
@@ -536,64 +479,65 @@ Return ONLY the complete updated file content without markdown code fences or co
   }, [canvas.files, filterQuery]);
 
   const active = canvas.activeFile;
+  const currentVm = linuxVmRef.current;
 
   return (
-    <div className="flex h-full w-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#0d0f17] text-slate-200 select-none font-sans">
-      {/* 1. TOP TOOLBAR */}
-      <header className="flex h-11 sm:h-12 shrink-0 items-center justify-between border-b border-white/[.08] bg-[#12141e]/90 px-2 sm:px-3 backdrop-blur-md gap-1 sm:gap-2">
+    <div className="flex h-full w-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#101014] text-[#ebe8f1] select-none font-sans">
+      {/* 1. TOP TOOLBAR - Aligned with Ayatrisya Workspace Palette */}
+      <header className="flex h-11 sm:h-12 shrink-0 items-center justify-between border-b border-white/[.07] bg-[#121116]/95 px-2.5 sm:px-4 backdrop-blur-md gap-2 overflow-x-auto scrollbar-none">
         {/* Left: Branding & Project Meta */}
-        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
-          <div className="flex items-center gap-1.5 sm:gap-2 pr-1.5 sm:pr-3 border-r border-white/10">
-            <div className="flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-lg bg-teal-500/20 text-teal-300 font-bold shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <div className="flex items-center gap-2 pr-2.5 sm:pr-3 border-r border-white/[.08]">
+            <div className="flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-lg bg-violet-500/20 text-violet-300 font-bold shrink-0">
               <Code2 size={14} />
             </div>
             <span className="text-xs font-semibold tracking-wide text-white hidden sm:inline">Canvas IDE</span>
           </div>
 
-          <div className="flex items-center gap-1 text-[11px] text-slate-400">
-            <span className="font-mono text-slate-300 font-medium truncate max-w-[80px] sm:max-w-none">{active ? active.name : 'project'}</span>
+          <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
+            <span className="font-mono text-violet-200 font-medium truncate max-w-[100px] sm:max-w-none">{active ? active.name : 'project'}</span>
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400 shrink-0" title="Saved locally in browser" />
           </div>
         </div>
 
         {/* Center: Mobile Navigation Switcher vs Desktop Mode Selector */}
         {isMobile ? (
-          <div className="flex items-center gap-0.5 bg-black/50 p-0.5 rounded-lg border border-white/10 shrink-0">
+          <div className="flex items-center gap-0.5 bg-black/40 p-0.5 rounded-lg border border-white/[.08] shrink-0">
             <button
               type="button"
               onClick={() => setMobileTab('files')}
-              className={`shrink-0 whitespace-nowrap min-w-max px-2 py-1 text-[11px] rounded font-medium transition ${mobileTab === 'files' ? 'bg-teal-500/25 text-teal-300 font-semibold shadow-sm' : 'text-slate-400 hover:text-white'}`}
+              className={`shrink-0 whitespace-nowrap min-w-max px-2.5 py-1 text-[11px] rounded font-medium transition ${mobileTab === 'files' ? 'bg-violet-500/25 text-violet-200 font-semibold shadow-sm' : 'text-slate-400 hover:text-white'}`}
             >
               Files
             </button>
             <button
               type="button"
               onClick={() => setMobileTab('code')}
-              className={`shrink-0 whitespace-nowrap min-w-max px-2 py-1 text-[11px] rounded font-medium transition ${mobileTab === 'code' ? 'bg-teal-500/25 text-teal-300 font-semibold shadow-sm' : 'text-slate-400 hover:text-white'}`}
+              className={`shrink-0 whitespace-nowrap min-w-max px-2.5 py-1 text-[11px] rounded font-medium transition ${mobileTab === 'code' ? 'bg-violet-500/25 text-violet-200 font-semibold shadow-sm' : 'text-slate-400 hover:text-white'}`}
             >
               Code
             </button>
             <button
               type="button"
               onClick={() => setMobileTab('preview')}
-              className={`shrink-0 whitespace-nowrap min-w-max px-2 py-1 text-[11px] rounded font-medium transition ${mobileTab === 'preview' ? 'bg-teal-500/25 text-teal-300 font-semibold shadow-sm' : 'text-slate-400 hover:text-white'}`}
+              className={`shrink-0 whitespace-nowrap min-w-max px-2.5 py-1 text-[11px] rounded font-medium transition ${mobileTab === 'preview' ? 'bg-violet-500/25 text-violet-200 font-semibold shadow-sm' : 'text-slate-400 hover:text-white'}`}
             >
               Preview
             </button>
             <button
               type="button"
               onClick={() => setMobileTab('terminal')}
-              className={`shrink-0 whitespace-nowrap min-w-max px-2 py-1 text-[11px] rounded font-medium transition ${mobileTab === 'terminal' ? 'bg-teal-500/25 text-teal-300 font-semibold shadow-sm' : 'text-slate-400 hover:text-white'}`}
+              className={`shrink-0 whitespace-nowrap min-w-max px-2.5 py-1 text-[11px] rounded font-medium transition ${mobileTab === 'terminal' ? 'bg-violet-500/25 text-violet-200 font-semibold shadow-sm' : 'text-slate-400 hover:text-white'}`}
             >
               Terminal
             </button>
           </div>
         ) : (
-          <div className="flex items-center gap-1 bg-black/40 p-0.5 rounded-lg border border-white/10 shrink-0">
+          <div className="flex items-center gap-1 bg-black/30 p-0.5 rounded-lg border border-white/[.08] shrink-0">
             <button
               type="button"
               onClick={() => setViewMode('editor-only')}
-              className={`shrink-0 whitespace-nowrap min-w-max px-2.5 py-1 text-xs rounded font-medium transition ${viewMode === 'editor-only' ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30' : 'text-slate-400 hover:text-white'}`}
+              className={`shrink-0 whitespace-nowrap min-w-max px-2.5 py-1 text-xs rounded-md font-medium transition ${viewMode === 'editor-only' ? 'bg-violet-500/20 text-violet-200 border border-violet-500/30 font-semibold shadow-sm' : 'text-slate-400 hover:text-white'}`}
               title="Editor Only"
             >
               Editor
@@ -601,7 +545,7 @@ Return ONLY the complete updated file content without markdown code fences or co
             <button
               type="button"
               onClick={() => setViewMode('split')}
-              className={`shrink-0 whitespace-nowrap min-w-max px-2.5 py-1 text-xs rounded font-medium transition ${viewMode === 'split' ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30' : 'text-slate-400 hover:text-white'}`}
+              className={`shrink-0 whitespace-nowrap min-w-max px-2.5 py-1 text-xs rounded-md font-medium transition ${viewMode === 'split' ? 'bg-violet-500/20 text-violet-200 border border-violet-500/30 font-semibold shadow-sm' : 'text-slate-400 hover:text-white'}`}
               title="Editor + Preview Split"
             >
               Split
@@ -609,7 +553,7 @@ Return ONLY the complete updated file content without markdown code fences or co
             <button
               type="button"
               onClick={() => setViewMode('preview-only')}
-              className={`shrink-0 whitespace-nowrap min-w-max px-2.5 py-1 text-xs rounded font-medium transition ${viewMode === 'preview-only' ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30' : 'text-slate-400 hover:text-white'}`}
+              className={`shrink-0 whitespace-nowrap min-w-max px-2.5 py-1 text-xs rounded-md font-medium transition ${viewMode === 'preview-only' ? 'bg-violet-500/20 text-violet-200 border border-violet-500/30 font-semibold shadow-sm' : 'text-slate-400 hover:text-white'}`}
               title="Full-screen Preview"
             >
               Preview
@@ -617,8 +561,8 @@ Return ONLY the complete updated file content without markdown code fences or co
             <button
               type="button"
               onClick={() => setViewMode('terminal-only')}
-              className={`shrink-0 whitespace-nowrap min-w-max px-2.5 py-1 text-xs rounded font-medium transition ${viewMode === 'terminal-only' ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30' : 'text-slate-400 hover:text-white'}`}
-              title="Terminal Focused"
+              className={`shrink-0 whitespace-nowrap min-w-max px-2.5 py-1 text-xs rounded-md font-medium transition ${viewMode === 'terminal-only' ? 'bg-violet-500/20 text-violet-200 border border-violet-500/30 font-semibold shadow-sm' : 'text-slate-400 hover:text-white'}`}
+              title="Linux Terminal Focused"
             >
               Terminal
             </button>
@@ -626,27 +570,30 @@ Return ONLY the complete updated file content without markdown code fences or co
         )}
 
         {/* Right: Actions */}
-        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           {/* Run Button */}
           <button
             type="button"
             onClick={() => {
-              if (isMobile) setMobileTab('preview');
               setPreviewKey((k) => k + 1);
-              setTerminalLogs((prev) => [...prev, { text: 'Running preview server update…', type: 'info' }]);
+              setTerminalLogs((prev) => [
+                ...prev,
+                { text: `✓ Compiled ${canvas.files.length} project files. Live preview reloaded.`, type: 'stdout' },
+              ]);
             }}
-            className="shrink-0 whitespace-nowrap min-w-max flex items-center gap-1 sm:gap-1.5 rounded-md bg-emerald-500 px-2 sm:px-3 py-1 text-xs font-semibold text-slate-950 hover:bg-emerald-400 shadow-md transition"
+            className="shrink-0 whitespace-nowrap min-w-max flex items-center gap-1 sm:gap-1.5 rounded-lg bg-emerald-500 px-2.5 sm:px-3 py-1 text-xs font-semibold text-slate-950 hover:bg-emerald-400 shadow-sm transition"
             title="Compile & Run Project (Ctrl+Enter)"
           >
             <Play size={12} fill="currentColor" />
-            <span className="hidden sm:inline">Run</span>
+            <span>Run</span>
           </button>
 
-          {/* AI Project Generator */}
+          {/* AI Generate Project Modal Trigger */}
           <button
             type="button"
             onClick={() => setShowAiModal(true)}
-            className="shrink-0 whitespace-nowrap min-w-max flex items-center gap-1 sm:gap-1.5 rounded-md border border-teal-500/40 bg-teal-500/10 px-2 sm:px-2.5 py-1 text-xs font-medium text-teal-300 hover:bg-teal-500/20 transition"
+            className="shrink-0 whitespace-nowrap min-w-max flex items-center gap-1 sm:gap-1.5 rounded-lg border border-violet-500/40 bg-violet-500/15 px-2.5 sm:px-3 py-1 text-xs font-medium text-violet-200 hover:bg-violet-500/25 transition shadow-sm"
+            title="Generate whole project or game with AI"
           >
             <Sparkles size={12} />
             <span className="hidden sm:inline">AI Generate</span>
@@ -656,7 +603,7 @@ Return ONLY the complete updated file content without markdown code fences or co
           <button
             type="button"
             onClick={handleDownloadAll}
-            className="shrink-0 whitespace-nowrap min-w-max hidden sm:flex items-center gap-1.5 rounded-md border border-white/10 px-2 py-1 text-xs text-slate-300 hover:bg-white/[.06] transition"
+            className="shrink-0 whitespace-nowrap min-w-max hidden sm:flex items-center gap-1.5 rounded-lg border border-white/10 px-2.5 py-1 text-xs text-slate-300 hover:bg-white/[.06] transition"
             title="Export files to local drive"
           >
             <Download size={13} />
@@ -668,7 +615,7 @@ Return ONLY the complete updated file content without markdown code fences or co
       {/* 2. MAIN WORKSPACE GRID */}
       <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* LEFT: FILE EXPLORER */}
-        <aside className={`shrink-0 border-r border-white/[.08] bg-[#0f111a] flex flex-col ${isMobile ? (mobileTab === 'files' ? 'w-full flex-1' : 'hidden') : 'w-56'}`}>
+        <aside className={`shrink-0 border-r border-white/[.07] bg-[#13121a] flex flex-col ${isMobile ? (mobileTab === 'files' ? 'w-full flex-1' : 'hidden') : 'w-56'}`}>
           <div className="flex items-center justify-between px-3 py-2 border-b border-white/[.06]">
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Files</span>
             <div className="flex items-center gap-1">
@@ -692,21 +639,21 @@ Return ONLY the complete updated file content without markdown code fences or co
                 value={filterQuery}
                 onChange={(e) => setFilterQuery(e.target.value)}
                 placeholder="Search files…"
-                className="w-full rounded bg-black/40 pl-6 pr-2 py-1 text-xs text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-teal-500 border border-white/[.06]"
+                className="w-full rounded-md bg-black/40 pl-6 pr-2 py-1 text-xs text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-violet-500 border border-white/[.06]"
               />
             </div>
           </div>
 
           {/* File creation form */}
           {isCreatingFile && (
-            <form onSubmit={handleCreateFile} className="p-2 border-b border-teal-500/30 bg-teal-500/5">
+            <form onSubmit={handleCreateFile} className="p-2 border-b border-violet-500/30 bg-violet-500/5">
               <input
                 autoFocus
                 type="text"
                 value={newFileName}
                 onChange={(e) => setNewFileName(e.target.value)}
                 placeholder="filename.js..."
-                className="w-full rounded bg-black/60 px-2 py-1 text-xs text-white border border-teal-500/50 focus:outline-none"
+                className="w-full rounded bg-black/60 px-2 py-1 text-xs text-white border border-violet-500/50 focus:outline-none"
               />
               <div className="mt-1.5 flex justify-end gap-1">
                 <button
@@ -718,7 +665,7 @@ Return ONLY the complete updated file content without markdown code fences or co
                 </button>
                 <button
                   type="submit"
-                  className="rounded bg-teal-500 px-2 py-0.5 text-[10px] font-semibold text-slate-950"
+                  className="rounded bg-violet-600 px-2 py-0.5 text-[10px] font-semibold text-white hover:bg-violet-500"
                 >
                   Create
                 </button>
@@ -737,14 +684,14 @@ Return ONLY the complete updated file content without markdown code fences or co
                     canvas.setActiveFile(file.id);
                     if (isMobile) setMobileTab('code');
                   }}
-                  className={`group flex items-center justify-between rounded px-2 py-1 text-xs font-mono cursor-pointer transition ${
+                  className={`group flex items-center justify-between rounded-md px-2 py-1.5 text-xs font-mono cursor-pointer transition ${
                     isActive
-                      ? 'bg-teal-500/15 text-teal-300 font-semibold border border-teal-500/30'
+                      ? 'bg-violet-500/15 text-violet-200 font-semibold border border-violet-500/30'
                       : 'text-slate-400 hover:bg-white/[.04] hover:text-slate-200'
                   }`}
                 >
-                  <div className="flex items-center gap-1.5 min-w-0 truncate">
-                    <FileCode size={13} className={isActive ? 'text-teal-400' : 'text-slate-500'} />
+                  <div className="flex items-center gap-1.5 truncate">
+                    <FileCode size={13} className={isActive ? 'text-violet-400' : 'text-slate-500'} />
                     <span className="truncate">{file.name}</span>
                   </div>
                   {canvas.files.length > 1 && (
@@ -769,7 +716,7 @@ Return ONLY the complete updated file content without markdown code fences or co
         {/* CENTER / RIGHT WORKSPACE */}
         <div className={`flex flex-1 flex-col min-w-0 overflow-hidden ${isMobile && mobileTab === 'files' ? 'hidden' : 'flex'}`}>
           {/* TABS & ACTIONS */}
-          <div className="flex h-9 shrink-0 items-center justify-between border-b border-white/[.08] bg-[#11131c] px-2 overflow-x-auto">
+          <div className="flex h-9 shrink-0 items-center justify-between border-b border-white/[.07] bg-[#14131d] px-2 overflow-x-auto scrollbar-none">
             <div className="flex items-center gap-1 overflow-x-auto scrollbar-none shrink-0">
               {canvas.files.map((file) => {
                 const isActive = file.id === canvas.activeFileId;
@@ -782,7 +729,7 @@ Return ONLY the complete updated file content without markdown code fences or co
                     }}
                     className={`shrink-0 whitespace-nowrap min-w-max flex items-center gap-1.5 rounded-t-md px-3 py-1.5 text-xs font-mono cursor-pointer border-t-2 select-none transition ${
                       isActive
-                        ? 'border-teal-400 bg-[#0d0f17] text-teal-200 font-medium'
+                        ? 'border-violet-400 bg-[#171622] text-violet-200 font-medium'
                         : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-white/[.03]'
                     }`}
                   >
@@ -834,7 +781,7 @@ Return ONLY the complete updated file content without markdown code fences or co
           <div className="flex flex-1 min-h-0 overflow-hidden">
             {/* CODE EDITOR PANE */}
             {(!isMobile ? (viewMode === 'editor-only' || viewMode === 'split') : (mobileTab === 'code')) && (
-              <div className="flex flex-1 flex-col min-w-0 border-r border-white/[.08] bg-[#0d0f17]">
+              <div className="flex flex-1 flex-col min-w-0 border-r border-white/[.07] bg-[#111018]">
                 {/* Diff Banner if pending */}
                 {canvas.pendingDiff && (
                   <div className="flex items-center justify-between bg-amber-500/10 border-b border-amber-500/30 px-3 py-1.5 text-xs text-amber-200">
@@ -861,7 +808,7 @@ Return ONLY the complete updated file content without markdown code fences or co
                 {/* Editor Surface */}
                 <div className="relative flex-1 min-h-0 overflow-auto font-mono text-xs flex">
                   {/* Line Numbers */}
-                  <div className="shrink-0 w-12 bg-[#090b10] py-3 text-right pr-3 text-slate-600 select-none border-r border-white/[.05]">
+                  <div className="shrink-0 w-12 bg-[#0e0d14] py-3 text-right pr-3 text-slate-600 select-none border-r border-white/[.05]">
                     {active ? (
                       active.content.split('\n').map((_, idx) => (
                         <div key={idx} className="leading-5">
@@ -886,21 +833,21 @@ Return ONLY the complete updated file content without markdown code fences or co
                 {/* Bottom AI Refactor Bar */}
                 <form
                   onSubmit={handleEditorAiRefactor}
-                  className="flex items-center gap-2 border-t border-white/[.08] bg-[#12141e] p-2"
+                  className="flex items-center gap-2 border-t border-white/[.07] bg-[#13121b] p-2"
                 >
-                  <Sparkles size={14} className="text-teal-400 ml-1" />
+                  <Sparkles size={14} className="text-violet-400 ml-1" />
                   <input
                     type="text"
                     value={editorAiPrompt}
                     onChange={(e) => setEditorAiPrompt(e.target.value)}
                     disabled={editorAiBusy || !active}
-                    placeholder={active ? `Ask AI to modify ${active.name} (e.g. "Add error handling, responsive grid styling")...` : 'Select a file...'}
-                    className="flex-1 rounded bg-black/40 px-2.5 py-1 text-xs text-white border border-white/10 focus:outline-none focus:border-teal-500"
+                    placeholder={active ? `Ask AI to modify ${active.name} (e.g. "Add responsive styling, error handling")...` : 'Select a file...'}
+                    className="flex-1 rounded-md bg-black/40 px-2.5 py-1 text-xs text-white border border-white/10 focus:outline-none focus:border-violet-400"
                   />
                   <button
                     type="submit"
                     disabled={editorAiBusy || !editorAiPrompt.trim()}
-                    className="shrink-0 whitespace-nowrap min-w-max rounded bg-teal-500 px-3 py-1 text-xs font-semibold text-slate-950 hover:bg-teal-400 disabled:opacity-40 transition"
+                    className="shrink-0 whitespace-nowrap min-w-max rounded-md bg-violet-600 px-3 py-1 text-xs font-semibold text-white hover:bg-violet-500 disabled:opacity-40 transition shadow-sm"
                   >
                     {editorAiBusy ? 'Refactoring…' : 'Refactor'}
                   </button>
@@ -910,9 +857,9 @@ Return ONLY the complete updated file content without markdown code fences or co
 
             {/* PREVIEW PANE */}
             {(!isMobile ? (viewMode === 'preview-only' || viewMode === 'split') : (mobileTab === 'preview')) && (
-              <div className="flex flex-1 flex-col min-w-0 bg-[#090a0f]">
+              <div className="flex flex-1 flex-col min-w-0 bg-[#0c0c10]">
                 {/* Preview Toolbar */}
-                <div className="flex h-9 shrink-0 items-center justify-between border-b border-white/[.08] bg-[#11131c] px-3">
+                <div className="flex h-9 shrink-0 items-center justify-between border-b border-white/[.07] bg-[#14131d] px-3">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-semibold text-slate-300">Live Preview</span>
                     <button
@@ -955,7 +902,7 @@ Return ONLY the complete updated file content without markdown code fences or co
                 </div>
 
                 {/* Sandboxed iframe Container */}
-                <div className="flex-1 min-h-0 flex items-center justify-center p-2 overflow-auto bg-[#050608]">
+                <div className="flex-1 min-h-0 flex items-center justify-center p-2 overflow-auto bg-[#09090d]">
                   <div
                     className={`h-full transition-all duration-200 bg-white shadow-2xl rounded-md overflow-hidden ${
                       deviceViewport === 'mobile'
@@ -978,24 +925,24 @@ Return ONLY the complete updated file content without markdown code fences or co
             )}
           </div>
 
-          {/* 3. BOTTOM DOCK (TERMINAL, OUTPUT, PROBLEMS) */}
+          {/* 3. BOTTOM DOCK (LINUX TERMINAL, OUTPUT, PROBLEMS, PACKAGES) */}
           {(!isMobile ? (isBottomDockOpen || viewMode === 'terminal-only') : (mobileTab === 'terminal')) && (
-            <div className={`border-t border-white/[.08] bg-[#0d0f17] flex flex-col ${isMobile || viewMode === 'terminal-only' ? 'flex-1' : 'h-44'}`}>
+            <div className={`border-t border-white/[.07] bg-[#0f0e15] flex flex-col ${isMobile || viewMode === 'terminal-only' ? 'flex-1' : 'h-48'}`}>
               {/* Dock Header */}
-              <div className="flex h-8 shrink-0 items-center justify-between border-b border-white/[.06] bg-[#11131c] px-3">
+              <div className="flex h-8 shrink-0 items-center justify-between border-b border-white/[.06] bg-[#13121b] px-3">
                 <div className="flex items-center gap-2 sm:gap-4 text-xs overflow-x-auto scrollbar-none shrink-0">
                   <button
                     type="button"
                     onClick={() => setBottomTab('terminal')}
-                    className={`shrink-0 whitespace-nowrap min-w-max flex items-center gap-1.5 font-medium py-1 transition ${bottomTab === 'terminal' ? 'text-teal-300 border-b-2 border-teal-400' : 'text-slate-400 hover:text-slate-200'}`}
+                    className={`shrink-0 whitespace-nowrap min-w-max flex items-center gap-1.5 font-medium py-1 transition ${bottomTab === 'terminal' ? 'text-violet-300 border-b-2 border-violet-400' : 'text-slate-400 hover:text-slate-200'}`}
                   >
                     <TerminalIcon size={12} />
-                    <span>Terminal</span>
+                    <span>Terminal (Linux bash)</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => setBottomTab('output')}
-                    className={`shrink-0 whitespace-nowrap min-w-max flex items-center gap-1.5 font-medium py-1 transition ${bottomTab === 'output' ? 'text-teal-300 border-b-2 border-teal-400' : 'text-slate-400 hover:text-slate-200'}`}
+                    className={`shrink-0 whitespace-nowrap min-w-max flex items-center gap-1.5 font-medium py-1 transition ${bottomTab === 'output' ? 'text-violet-300 border-b-2 border-violet-400' : 'text-slate-400 hover:text-slate-200'}`}
                   >
                     <Layers size={12} />
                     <span>Console Output</span>
@@ -1003,7 +950,7 @@ Return ONLY the complete updated file content without markdown code fences or co
                   <button
                     type="button"
                     onClick={() => setBottomTab('problems')}
-                    className={`shrink-0 whitespace-nowrap min-w-max flex items-center gap-1.5 font-medium py-1 transition ${bottomTab === 'problems' ? 'text-teal-300 border-b-2 border-teal-400' : 'text-slate-400 hover:text-slate-200'}`}
+                    className={`shrink-0 whitespace-nowrap min-w-max flex items-center gap-1.5 font-medium py-1 transition ${bottomTab === 'problems' ? 'text-violet-300 border-b-2 border-violet-400' : 'text-slate-400 hover:text-slate-200'}`}
                   >
                     <AlertCircle size={12} />
                     <span>Problems (0)</span>
@@ -1011,9 +958,10 @@ Return ONLY the complete updated file content without markdown code fences or co
                   <button
                     type="button"
                     onClick={() => setBottomTab('packages')}
-                    className={`shrink-0 whitespace-nowrap min-w-max flex items-center gap-1.5 font-medium py-1 transition ${bottomTab === 'packages' ? 'text-teal-300 border-b-2 border-teal-400' : 'text-slate-400 hover:text-slate-200'}`}
+                    className={`shrink-0 whitespace-nowrap min-w-max flex items-center gap-1.5 font-medium py-1 transition ${bottomTab === 'packages' ? 'text-violet-300 border-b-2 border-violet-400' : 'text-slate-400 hover:text-slate-200'}`}
                   >
-                    <span>Packages</span>
+                    <Cpu size={12} />
+                    <span>Environment</span>
                   </button>
                 </div>
 
@@ -1029,7 +977,7 @@ Return ONLY the complete updated file content without markdown code fences or co
               </div>
 
               {/* Dock Body */}
-              <div className="flex-1 min-h-0 overflow-y-auto p-2 font-mono text-xs">
+              <div className="flex-1 min-h-0 overflow-y-auto p-2.5 font-mono text-xs">
                 {bottomTab === 'terminal' && (
                   <div className="space-y-1">
                     {terminalLogs.map((log, index) => (
@@ -1037,12 +985,12 @@ Return ONLY the complete updated file content without markdown code fences or co
                         key={index}
                         className={
                           log.type === 'cmd'
-                            ? 'text-teal-300 font-bold'
+                            ? 'text-violet-200 font-medium whitespace-pre-wrap'
                             : log.type === 'stderr'
-                            ? 'text-rose-400'
+                            ? 'text-rose-400 whitespace-pre-wrap'
                             : log.type === 'info'
-                            ? 'text-slate-400 italic'
-                            : 'text-slate-200'
+                            ? 'text-violet-400/80 italic whitespace-pre-wrap'
+                            : 'text-slate-200 whitespace-pre-wrap'
                         }
                       >
                         {log.text}
@@ -1057,12 +1005,36 @@ Return ONLY the complete updated file content without markdown code fences or co
                       }}
                       className="flex items-center gap-1 pt-1"
                     >
-                      <span className="text-teal-400 font-bold">$</span>
+                      <span className="text-violet-400 font-semibold shrink-0">ayatrisya@workspace</span>
+                      <span className="text-slate-500 shrink-0">:</span>
+                      <span className="text-violet-300 font-medium shrink-0">{currentVm.getDisplayPath()}</span>
+                      <span className="text-slate-400 font-bold ml-0.5 mr-1 shrink-0">$</span>
                       <input
                         type="text"
                         value={commandInput}
                         onChange={(e) => setCommandInput(e.target.value)}
-                        placeholder="Type a command (ls, cat, run, npm test, help)..."
+                        onKeyDown={(e) => {
+                          const hist = currentVm.getHistory();
+                          if (e.key === 'ArrowUp') {
+                            e.preventDefault();
+                            if (hist.length === 0) return;
+                            const nextIdx = historyIndex === -1 ? hist.length - 1 : Math.max(0, historyIndex - 1);
+                            setHistoryIndex(nextIdx);
+                            setCommandInput(hist[nextIdx] || '');
+                          } else if (e.key === 'ArrowDown') {
+                            e.preventDefault();
+                            if (historyIndex === -1) return;
+                            const nextIdx = historyIndex + 1;
+                            if (nextIdx >= hist.length) {
+                              setHistoryIndex(-1);
+                              setCommandInput('');
+                            } else {
+                              setHistoryIndex(nextIdx);
+                              setCommandInput(hist[nextIdx] || '');
+                            }
+                          }
+                        }}
+                        placeholder="Type a Linux command (ls, cat, touch, node, python3, help)..."
                         className="flex-1 bg-transparent text-white focus:outline-none"
                       />
                     </form>
@@ -1088,9 +1060,13 @@ Return ONLY the complete updated file content without markdown code fences or co
                 )}
 
                 {bottomTab === 'packages' && (
-                  <div className="text-slate-400 space-y-1">
-                    <div>Environment: <span className="text-teal-300">{desktop ? 'Desktop Native Local Host' : 'Web Sandboxed Client Engine'}</span></div>
-                    <div>Virtual modules: Standard Web APIs, ES Modules, HTML5, CSS3</div>
+                  <div className="text-slate-300 space-y-1.5 leading-relaxed">
+                    <div>Environment: <span className="text-violet-300 font-semibold">{desktop ? 'Desktop Native Linux Host' : 'Ayatrisya Linux 2.0 LTS (Virtual POSIX Environment)'}</span></div>
+                    <div>Kernel: <span className="text-slate-400 font-mono">6.6.0-ayatrisya #1 SMP PREEMPT_DYNAMIC x86_64</span></div>
+                    <div>Architecture: <span className="text-slate-400 font-mono">x86_64 (GNU/Linux)</span></div>
+                    <div>User & Shell: <span className="text-slate-400 font-mono">ayatrisya (uid 1000) / /bin/bash (5.2.21)</span></div>
+                    <div>Runtimes: <span className="text-slate-400 font-mono">Node.js v20.12.2, Python 3.12.3, GCC 13.2.0, npm 10.5.0</span></div>
+                    <div>Virtual Filesystem: <span className="text-slate-400 font-mono">/home/ayatrisya/project mounted with real-time bidirectional canvas sync</span></div>
                   </div>
                 )}
               </div>
@@ -1098,16 +1074,16 @@ Return ONLY the complete updated file content without markdown code fences or co
           )}
 
           {!isBottomDockOpen && viewMode !== 'terminal-only' && (
-            <div className="flex h-6 shrink-0 items-center justify-between border-t border-white/[.08] bg-[#0d0f17] px-3 text-[11px] text-slate-400">
+            <div className="flex h-6 shrink-0 items-center justify-between border-t border-white/[.07] bg-[#0f0e15] px-3 text-[11px] text-slate-400">
               <button
                 type="button"
                 onClick={() => setIsBottomDockOpen(true)}
-                className="flex items-center gap-1.5 hover:text-teal-300 font-medium transition"
+                className="flex items-center gap-1.5 hover:text-violet-300 font-medium transition"
               >
                 <TerminalIcon size={11} />
-                <span>Show Terminal & Console</span>
+                <span>Show Linux Terminal & Console</span>
               </button>
-              <span className="text-[10px] text-slate-600">Ayatrisya Dev Environment</span>
+              <span className="text-[10px] text-slate-500">Ayatrisya Linux Environment</span>
             </div>
           )}
         </div>
@@ -1115,11 +1091,11 @@ Return ONLY the complete updated file content without markdown code fences or co
 
       {/* 4. AI PROJECT GENERATION MODAL */}
       {showAiModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="w-full max-w-lg rounded-xl border border-white/10 bg-[#12141c] p-5 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
+          <div className="w-full max-w-lg rounded-xl border border-white/10 bg-[#13121b] p-5 shadow-2xl">
             <div className="flex items-center justify-between pb-3 border-b border-white/10">
               <h3 className="flex items-center gap-2 text-sm font-semibold text-white">
-                <Sparkles size={16} className="text-teal-400" />
+                <Sparkles size={16} className="text-violet-400" />
                 Generate Multi-File Project with AI
               </h3>
               <button
@@ -1136,7 +1112,7 @@ Return ONLY the complete updated file content without markdown code fences or co
                 type="button"
                 disabled={aiBusy}
                 onClick={load2DGameTemplate}
-                className="flex items-center gap-1.5 rounded-lg border border-teal-500/30 bg-teal-500/10 px-2.5 py-1 text-xs text-teal-300 hover:bg-teal-500/20 transition"
+                className="flex items-center gap-1.5 rounded-lg border border-violet-500/30 bg-violet-500/10 px-2.5 py-1 text-xs text-violet-300 hover:bg-violet-500/20 transition"
               >
                 <span>🎮 2D Cyber Arcade</span>
               </button>
@@ -1159,11 +1135,11 @@ Return ONLY the complete updated file content without markdown code fences or co
                   value={aiPrompt}
                   onChange={(e) => setAiPrompt(e.target.value)}
                   placeholder="e.g. Build a 2D dungeon crawler with collision, inventory, and enemies, or an interactive task dashboard..."
-                  className="mt-1.5 min-h-24 w-full rounded-lg border border-white/10 bg-black/50 p-2.5 font-mono text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-teal-400"
+                  className="mt-1.5 min-h-24 w-full rounded-lg border border-white/10 bg-black/50 p-2.5 font-mono text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-violet-400"
                 />
               </label>
               {aiStatus && (
-                <p className="mt-2 text-xs text-teal-300 flex items-center gap-1.5">
+                <p className="mt-2 text-xs text-violet-300 flex items-center gap-1.5">
                   <Sparkles size={12} className="animate-spin" />
                   {aiStatus}
                 </p>
@@ -1180,7 +1156,7 @@ Return ONLY the complete updated file content without markdown code fences or co
                 <button
                   type="submit"
                   disabled={aiBusy || !aiPrompt.trim()}
-                  className="flex items-center gap-1.5 rounded-lg bg-teal-500 px-4 py-1.5 text-xs font-semibold text-slate-950 hover:bg-teal-400 disabled:opacity-40"
+                  className="flex items-center gap-1.5 rounded-lg bg-violet-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-violet-500 disabled:opacity-40 shadow-sm transition"
                 >
                   <Sparkles size={13} />
                   {aiBusy ? 'Generating Project…' : 'Generate Project'}

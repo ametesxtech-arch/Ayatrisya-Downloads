@@ -260,21 +260,21 @@ Return ONLY the complete updated file content. Do not include markdown code fenc
 
   return (
     <div
-      className="canvas-side-panel flex h-full w-full md:w-[480px] lg:w-[560px] xl:w-[620px] shrink-0 flex-col border-l border-white/10 bg-[#0d0e12] text-slate-200 z-30 shadow-2xl"
+      className="canvas-side-panel flex h-full w-full md:w-[480px] lg:w-[560px] xl:w-[620px] shrink-0 flex-col border-l border-white/[.07] bg-[#101014] text-slate-200 z-30 shadow-2xl"
       data-testid="canvas-panel"
       role="region"
       aria-label="Code Canvas Workspace"
     >
       {/* Header & Tabs */}
-      <div className="flex items-center justify-between border-b border-white/[.08] bg-[#12141a] px-3 py-1.5">
-        <div className="flex items-center gap-2 overflow-x-auto">
+      <div className="flex items-center justify-between border-b border-white/[.07] bg-[#121116] px-3 py-1.5">
+        <div className="flex items-center gap-2 overflow-x-auto scrollbar-none">
           {files.map((f) => (
             <div
               key={f.id}
               onClick={() => setActiveFile(f.id)}
               className={`group flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-mono cursor-pointer transition-colors ${
                 f.id === activeFileId
-                  ? 'bg-teal-500/15 text-teal-300 font-semibold border border-teal-500/30'
+                  ? 'bg-violet-500/15 text-violet-200 font-semibold border border-violet-500/30'
                   : 'text-slate-400 hover:bg-white/[.04] hover:text-white'
               }`}
             >
@@ -324,7 +324,7 @@ Return ONLY the complete updated file content. Do not include markdown code fenc
           <button
             type="button"
             onClick={() => setShowProjectModal(true)}
-            className="flex items-center gap-1 rounded bg-teal-500/10 border border-teal-500/30 px-2 py-1 text-xs text-teal-300 hover:bg-teal-500/20"
+            className="flex items-center gap-1 rounded bg-violet-500/10 border border-violet-500/30 px-2 py-1 text-xs text-violet-300 hover:bg-violet-500/20"
             title="Generate Multi-file Project with AI"
             data-testid="canvas-generate-project-button"
           >
@@ -344,13 +344,13 @@ Return ONLY the complete updated file content. Do not include markdown code fenc
       </div>
 
       {/* Action Toolbar */}
-      <div className="flex flex-wrap items-center justify-between border-b border-white/[.06] bg-[#101218] px-3 py-1.5 text-xs text-slate-400">
+      <div className="flex flex-wrap items-center justify-between border-b border-white/[.06] bg-[#121116] px-3 py-1.5 text-xs text-slate-400">
         <div className="flex items-center gap-2">
           {/* Language selector */}
           <select
             value={activeFile.language}
             onChange={(e) => updateLanguage(e.target.value)}
-            className="h-7 rounded border border-white/10 bg-[#0d0e12] px-2 font-mono text-[11px] text-teal-300 focus:outline-none"
+            className="h-7 rounded border border-white/10 bg-[#14131d] px-2 font-mono text-[11px] text-violet-300 focus:outline-none"
           >
             {SUPPORTED_LANGUAGES.map((l) => (
               <option key={l} value={l}>
@@ -413,7 +413,7 @@ Return ONLY the complete updated file content. Do not include markdown code fenc
             title="Copy code"
             data-testid="canvas-copy-button"
           >
-            {copied ? <Check size={11} className="text-teal-300" /> : <Copy size={11} />}
+            {copied ? <Check size={11} className="text-violet-300" /> : <Copy size={11} />}
             <span>{copied ? 'Copied' : 'Copy'}</span>
           </button>
           <button
@@ -433,7 +433,7 @@ Return ONLY the complete updated file content. Do not include markdown code fenc
         {/* Pending Diff Review Modal / Overlay */}
         {pendingDiff && (
           <div
-            className="absolute inset-0 z-20 flex flex-col bg-[#0b0c10]/95 backdrop-blur-md p-4"
+            className="absolute inset-0 z-20 flex flex-col bg-[#101014]/95 backdrop-blur-md p-4"
             data-testid="canvas-diff-view"
           >
             <div className="mb-2 flex items-center justify-between border-b border-white/10 pb-2">
@@ -455,7 +455,7 @@ Return ONLY the complete updated file content. Do not include markdown code fenc
                 <button
                   type="button"
                   onClick={acceptPatch}
-                  className="rounded bg-teal-500 px-3 py-1 text-xs font-semibold text-slate-950 hover:bg-teal-400"
+                  className="rounded bg-violet-600 px-3 py-1 text-xs font-semibold text-white hover:bg-violet-500 shadow-sm"
                   data-testid="canvas-accept-diff"
                 >
                   Accept Changes
@@ -490,7 +490,7 @@ Return ONLY the complete updated file content. Do not include markdown code fenc
           <div className="flex h-full overflow-hidden">
             {/* Line numbers gutter */}
             <div
-              className="select-none bg-[#090a0d] px-3 py-3 text-right font-mono text-xs leading-relaxed text-slate-600 border-r border-white/[.04]"
+              className="select-none bg-[#0e0d14] px-3 py-3 text-right font-mono text-xs leading-relaxed text-slate-600 border-r border-white/[.04]"
               aria-hidden
             >
               {lines.map((_, i) => (
@@ -503,7 +503,7 @@ Return ONLY the complete updated file content. Do not include markdown code fenc
               value={activeFile.content}
               onChange={(e) => updateContent(e.target.value)}
               spellCheck={false}
-              className="h-full flex-1 resize-none bg-transparent p-3 font-mono text-xs leading-relaxed text-slate-100 focus:outline-none selection:bg-teal-500/30"
+              className="h-full flex-1 resize-none bg-transparent p-3 font-mono text-xs leading-relaxed text-slate-100 focus:outline-none selection:bg-violet-500/30"
               data-testid="canvas-editor-textarea"
               aria-label="Code Editor"
             />
@@ -537,9 +537,9 @@ Return ONLY the complete updated file content. Do not include markdown code fenc
       {/* Bottom Dock: Ask AI to Refactor */}
       <form
         onSubmit={handleAiEdit}
-        className="flex items-center gap-2 border-t border-white/[.08] bg-[#12141a] p-2.5"
+        className="flex items-center gap-2 border-t border-white/[.07] bg-[#121116] p-2.5"
       >
-        <Sparkles size={14} className="text-teal-400 ml-1 shrink-0" />
+        <Sparkles size={14} className="text-violet-400 ml-1 shrink-0" />
         <input
           type="text"
           value={promptText}
@@ -552,7 +552,7 @@ Return ONLY the complete updated file content. Do not include markdown code fenc
         <button
           type="submit"
           disabled={!promptText.trim() || isAiBusy}
-          className="rounded-lg bg-teal-500 px-3 py-1.5 text-xs font-semibold text-slate-950 hover:bg-teal-400 disabled:opacity-40 transition-colors"
+          className="rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-500 disabled:opacity-40 transition-colors shadow-sm"
           data-testid="canvas-ai-submit"
         >
           {isAiBusy ? 'Thinking…' : 'Refactor'}
@@ -562,10 +562,10 @@ Return ONLY the complete updated file content. Do not include markdown code fenc
       {/* Multi-file Project Generation Modal */}
       {showProjectModal && (
         <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-xl border border-white/10 bg-[#12141c] p-5 shadow-2xl">
+          <div className="w-full max-w-md rounded-xl border border-white/10 bg-[#13121b] p-5 shadow-2xl">
             <div className="flex items-center justify-between pb-3 border-b border-white/10">
               <h3 className="flex items-center gap-2 text-sm font-semibold text-white">
-                <FolderPlus size={16} className="text-teal-400" />
+                <FolderPlus size={16} className="text-violet-400" />
                 Generate Multi-File Project
               </h3>
               <button
@@ -585,11 +585,11 @@ Return ONLY the complete updated file content. Do not include markdown code fenc
                   value={projectPrompt}
                   onChange={(e) => setProjectPrompt(e.target.value)}
                   placeholder="e.g. Build a complete REST API client with retry logic, Zod validation schemas, and rate-limiting..."
-                  className="mt-1.5 min-h-28 w-full rounded-lg border border-white/10 bg-black/50 p-2.5 font-mono text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-teal-400"
+                  className="mt-1.5 min-h-28 w-full rounded-lg border border-white/10 bg-black/50 p-2.5 font-mono text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-violet-400"
                 />
               </label>
               {projectStatus && (
-                <p className="mt-2 text-xs text-teal-300 flex items-center gap-1.5">
+                <p className="mt-2 text-xs text-violet-300 flex items-center gap-1.5">
                   <Sparkles size={12} className="animate-spin" />
                   {projectStatus}
                 </p>
@@ -606,7 +606,7 @@ Return ONLY the complete updated file content. Do not include markdown code fenc
                 <button
                   type="submit"
                   disabled={projectBusy || !projectPrompt.trim()}
-                  className="flex items-center gap-1.5 rounded-lg bg-teal-500 px-4 py-1.5 text-xs font-semibold text-slate-950 hover:bg-teal-400 disabled:opacity-40"
+                  className="flex items-center gap-1.5 rounded-lg bg-violet-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-violet-500 disabled:opacity-40 shadow-sm transition"
                   data-testid="canvas-project-submit"
                 >
                   <Sparkles size={13} />
