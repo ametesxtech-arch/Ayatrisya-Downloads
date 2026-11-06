@@ -26,10 +26,27 @@ const MAX_BACKUP = 100 * 1024 * 1024;
 export function SettingsPage({ notify, goto, initial = 'appearance' }: { notify: (m: string) => void; goto: (h: string) => void; initial?: Section }) {
   const [section, setSection] = useState<Section>(initial);
   useEffect(() => setSection(initial), [initial]);
-  return <div className="mx-auto max-w-[900px] p-4 sm:p-8">
+  return <div className="mx-auto max-w-[900px] p-3 sm:p-8">
     {section !== 'personalization' && <PageHeading eyebrow="Settings" title={section === 'storage' ? 'Storage and backup' : 'Settings'} description="Preferences are saved in this browser for the current workspace owner." />}
-    <div role="tablist" aria-label="Settings sections" className="mb-6 flex gap-1 overflow-x-auto border-b border-white/[.07]">
-      {sections.map(([k, l]) => <button key={k} role="tab" aria-selected={section === k} onClick={() => setSection(k)} className={`whitespace-nowrap border-b-2 px-4 py-3 text-xs font-medium ${section === k ? 'border-violet-400 text-white' : 'border-transparent text-slate-400 hover:text-slate-100'}`}>{l}</button>)}
+    
+    {/* Mobile Compact Category Dropdown */}
+    <div className="mb-4 sm:hidden">
+      <label htmlFor="mobile-settings-category" className="sr-only">Settings section</label>
+      <select
+        id="mobile-settings-category"
+        value={section}
+        onChange={(e) => setSection(e.target.value as Section)}
+        className="w-full rounded-lg border border-white/10 bg-[#161822] px-3 py-2.5 text-xs font-medium text-slate-200 focus:outline-none focus:ring-1 focus:ring-violet-400"
+      >
+        {sections.map(([k, l]) => (
+          <option key={k} value={k}>{l}</option>
+        ))}
+      </select>
+    </div>
+
+    {/* Desktop/Tablet Horizontal Tabs */}
+    <div role="tablist" aria-label="Settings sections" className="mb-6 hidden sm:flex gap-1 overflow-x-auto border-b border-white/[.07] scrollbar-none">
+      {sections.map(([k, l]) => <button key={k} role="tab" aria-selected={section === k} onClick={() => setSection(k)} className={`shrink-0 whitespace-nowrap border-b-2 px-4 py-3 text-xs font-medium transition ${section === k ? 'border-violet-400 text-white' : 'border-transparent text-slate-400 hover:text-slate-100'}`}>{l}</button>)}
     </div>
     {section === 'appearance' && <Appearance />}
     {section === 'personalization' && <PersonalizationPage />}
@@ -42,7 +59,7 @@ export function SettingsPage({ notify, goto, initial = 'appearance' }: { notify:
 }
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
-  return <section className="mb-5 rounded-xl border border-white/[.075] bg-[#15171e] p-5"><h2 className="mb-1 text-sm font-semibold">{title}</h2><div className="divide-y divide-white/[.05]">{children}</div></section>;
+  return <section className="mb-5 rounded-xl border border-white/[.075] bg-[#15171e] p-4 sm:p-5"><h2 className="mb-1 text-sm font-semibold text-slate-200">{title}</h2><div className="divide-y divide-white/[.05]">{children}</div></section>;
 }
 
 function Appearance() {
@@ -58,11 +75,11 @@ function Appearance() {
       <Switch label="Send with Enter" description="On: Enter sends and Shift+Enter adds a line. Off: Ctrl+Enter sends." checked={prefs.enterToSend} onChange={(v) => void save({ enterToSend: v })} />
       <Switch label="Pinned chats first" description="Keep pinned conversations at the top of history and the sidebar." checked={prefs.historyPinnedFirst} onChange={(v) => void save({ historyPinnedFirst: v })} />
       <Switch label="Quiet logo animation while idle" description="Plays a short orbit nudge on the sidebar logo every 40 seconds. Pauses when the tab is hidden." checked={prefs.logoIdle} onChange={(v) => void save({ logoIdle: v })} />
-      <label className="flex items-center justify-between gap-4 py-3 text-sm">Workspace mode<select aria-label="Workspace mode" value={prefs.workspaceMode} onChange={(e) => void save({ workspaceMode: e.target.value as Preferences['workspaceMode'] })} className="rounded-md border border-white/10 bg-[#101116] px-3 py-2 text-xs"><option value="standard">Standard</option><option value="focus">Focus</option><option value="studio">Studio</option><option value="developer">Developer</option><option value="compact">Compact</option></select></label>
+      <label className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-3 text-sm">Workspace mode<select aria-label="Workspace mode" value={prefs.workspaceMode} onChange={(e) => void save({ workspaceMode: e.target.value as Preferences['workspaceMode'] })} className="rounded-md border border-white/10 bg-[#101116] px-3 py-2 text-xs w-full sm:w-auto"><option value="standard">Standard</option><option value="focus">Focus</option><option value="studio">Studio</option><option value="developer">Developer</option><option value="compact">Compact</option></select></label>
       <p className="pb-2 text-[11px] leading-5 text-slate-500">Focus hides desktop navigation; Studio widens chat; Developer shows real local and model status; Compact tightens navigation. The mode is saved with your browser preferences.</p>
-      <label className="flex items-center justify-between gap-4 py-3 text-sm">History order<select value={prefs.historySort} onChange={(e) => void save({ historySort: e.target.value as typeof prefs.historySort })} className="rounded-md border border-white/10 bg-[#101116] px-3 py-2 text-xs"><option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="title">Title A to Z</option></select></label>
-      <label className="flex items-center justify-between gap-4 py-3 text-sm">Project view<select value={prefs.projectView} onChange={(e) => void save({ projectView: e.target.value as typeof prefs.projectView })} className="rounded-md border border-white/10 bg-[#101116] px-3 py-2 text-xs"><option value="grid">Grid</option><option value="list">List</option></select></label>
-      <label className="flex items-center justify-between gap-4 py-3 text-sm">Animation intensity<select value={prefs.animationIntensity} onChange={(e) => void save({ animationIntensity: e.target.value as typeof prefs.animationIntensity })} className="rounded-md border border-white/10 bg-[#101116] px-3 py-2 text-xs"><option value="full">Full</option><option value="subtle">Subtle</option><option value="none">None</option></select></label>
+      <label className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-3 text-sm">History order<select value={prefs.historySort} onChange={(e) => void save({ historySort: e.target.value as typeof prefs.historySort })} className="rounded-md border border-white/10 bg-[#101116] px-3 py-2 text-xs w-full sm:w-auto"><option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="title">Title A to Z</option></select></label>
+      <label className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-3 text-sm">Project view<select value={prefs.projectView} onChange={(e) => void save({ projectView: e.target.value as typeof prefs.projectView })} className="rounded-md border border-white/10 bg-[#101116] px-3 py-2 text-xs w-full sm:w-auto"><option value="grid">Grid</option><option value="list">List</option></select></label>
+      <label className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-3 text-sm">Animation intensity<select value={prefs.animationIntensity} onChange={(e) => void save({ animationIntensity: e.target.value as typeof prefs.animationIntensity })} className="rounded-md border border-white/10 bg-[#101116] px-3 py-2 text-xs w-full sm:w-auto"><option value="full">Full</option><option value="subtle">Subtle</option><option value="none">None</option></select></label>
       <Switch label="Skip the intro screen" description="Go straight to your workspace when opening Ayatrisya." checked={prefs.skipIntro} onChange={(v) => void save({ skipIntro: v })} />
     </Card>
   </>;

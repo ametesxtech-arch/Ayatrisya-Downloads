@@ -936,3 +936,4 @@ export async function generateGameProjectFromPrompt(
   onProgress?.({ step: 'completed', message: '2D Game project generated and ready.' });
   return game;
 }
+
