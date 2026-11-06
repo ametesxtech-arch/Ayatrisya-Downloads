@@ -185,7 +185,8 @@ button,input,textarea,select{ min-width:0; }
 }
 @media(max-width:639px){
   .workspace-main-content :where(input,select,textarea){ max-width:100%; }
-  .workspace-main-content :where(button,a){ overflow-wrap:anywhere; }
+  .workspace-main-content :where(button,a){ overflow-wrap:normal; word-break:normal; }
+  .workspace-main-content :where(button, [role="button"]){ white-space:nowrap; flex-shrink:0; }
 }
 
 /* Ayatrisya chat: a quiet, editorial canvas for long-form work. */
@@ -313,10 +314,11 @@ button,input,textarea,select{ min-width:0; }
   background:linear-gradient(130deg,rgba(112,96,157,.15),rgba(89,81,122,.095));
   color:#e6e2ed;
   font-size:14px;line-height:1.75;
-  overflow-wrap:anywhere;
+  overflow-wrap:break-word;
+  word-break:normal;
 }
 .chat-user-content p{margin:0;white-space:pre-wrap}
-.chat-prose{min-width:0;color:#d9d6e0;font-size:14px;line-height:1.8;overflow-wrap:anywhere}
+.chat-prose{min-width:0;color:#d9d6e0;font-size:14px;line-height:1.8;overflow-wrap:break-word;word-break:normal}
 .chat-prose :where(p,ul,ol,blockquote,pre,table){margin-top:.65em;margin-bottom:.9em}
 .chat-prose :where(h1,h2,h3,h4){color:#efecf3;line-height:1.3;letter-spacing:-.025em}
 .chat-prose :where(h1){font-size:1.5rem}.chat-prose :where(h2){font-size:1.25rem}.chat-prose :where(h3){font-size:1.08rem}
@@ -326,7 +328,7 @@ button,input,textarea,select{ min-width:0; }
 .chat-prose :where(code:not(pre code)){
   border:1px solid rgba(197,188,221,.12);border-radius:5px;
   background:rgba(173,158,208,.09);padding:.12em .36em;
-  color:#d7c8ff;font-size:.89em;overflow-wrap:anywhere;
+  color:#d7c8ff;font-size:.89em;overflow-wrap:break-word;word-break:normal;
 }
 .chat-prose :where(hr){border-color:var(--chat-line)}
 .chat-table-wrap{max-width:100%;overflow-x:auto;border:1px solid var(--chat-line);border-radius:9px;overscroll-behavior-inline:contain}
@@ -390,6 +392,7 @@ html[data-appearance="light"] .chat-prose .katex-display>.katex{color:#0d9488}
   display:block;width:100%;min-width:0;max-height:200px;min-height:40px;flex:1;resize:none;
   padding:6px 4px;border:0;background:transparent;color:#ebe8f1;
   font-size:14px;line-height:1.5;overflow-y:auto;outline:none;
+  word-break:normal;overflow-wrap:break-word;white-space:pre-wrap;
 }
 .chat-composer-input::placeholder{color:#797684}
 .chat-composer-input:focus{outline:none}

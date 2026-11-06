@@ -250,7 +250,7 @@ Respond with ONLY valid JSON adhering strictly to this schema:
     }
 
     // Identify preference, instruction, and project clues
-    const preferenceClues = /\b(i prefer|i want|i always|always|never|i never|my name is|i am working on|i am building|building|my project is|our stack is|we use|do not use|avoid using|my goal is|i decided to|switch(?:ed)? to|switched the framework to|remember to)\b/i;
+    const preferenceClues = /\b(i prefer|i want|i always|always|never|i never|my name is|i am working on|i am building|building|my project is|our stack is|we use|do not use|avoid using|my goal is|i decided to|switch(?:ed)? to|switched the framework to|remember to|actually|instead of|no longer|stop using|changed to)\b/i;
     if (!preferenceClues.test(text)) {
       return { addedMemories: [], summaryUpdated: false };
     }
@@ -258,20 +258,49 @@ Respond with ONLY valid JSON adhering strictly to this schema:
     // Extract sentences with preference markers
     const sentences = text.match(/[^.!?]+[.!?]?/g) || [text];
     const addedMemories: MemoryEntry[] = [];
+    let hadSuperseded = false;
 
     for (const rawSentence of sentences) {
       const sentence = rawSentence.trim().replace(/^[-*•\s]+/, '');
       if (sentence.length < 10 || !preferenceClues.test(sentence)) continue;
+      const normalizedSentence = sentence.toLowerCase().replace(/[^\w\s]/g, '');
 
       let category: MemoryCategory = 'user_preference';
       if (/project|app|codebase|repo|building|dashboard/i.test(sentence)) category = 'project_context';
-      else if (/decided|chosen|architect|settled on|switch(?:ed)?/i.test(sentence)) category = 'technical_decision';
+      else if (/decided|chosen|architect|settled on|switch(?:ed)?|changed|database|stack|we use|framework/i.test(sentence)) category = 'technical_decision';
       else if (/work|workflow|team|schedule/i.test(sentence)) category = 'work_preference';
 
-      // Duplicate check against existing memories
-      const existing = await this.memoryEngine.listMemories({ category });
-      const normalizedSentence = sentence.toLowerCase().replace(/[^\w\s]/g, '');
-      const isDuplicate = existing.some((m) => {
+      // Detect corrections / superseding: e.g. "switched from X to Y", "actually I use Y", "no longer use X"
+      const isCorrection = /\b(actually|switch(?:ed)? from|instead of|no longer|stop using|changed (?:from|to)|prefer .* instead of|not .* but)\b/i.test(sentence);
+
+      if (isCorrection) {
+        // Find existing memories across system that contain superseded items
+        const switchMatch = sentence.match(/(?:switch(?:ed)? from|instead of|no longer use|stop using)\s+([a-zA-Z0-9_\-]+)/i);
+        const supersededTarget = switchMatch ? switchMatch[1].toLowerCase() : null;
+        const allExisting = await this.memoryEngine.listMemories();
+
+        for (const oldMem of allExisting) {
+          const oldNorm = oldMem.content.toLowerCase();
+          const shouldSupersede = supersededTarget 
+            ? oldNorm.includes(supersededTarget) 
+            : (oldMem.category === 'technical_decision' || oldMem.category === 'user_preference') && 
+              (/\b(use|using|prefer|framework|stack|database|language)\b/i.test(oldMem.content) && /\b(use|using|prefer|framework|stack|database|language)\b/i.test(sentence));
+
+          if (shouldSupersede) {
+            await this.memoryEngine.deleteMemory(oldMem.id);
+            hadSuperseded = true;
+          }
+        }
+
+        // If this sentence is purely a negative removal directive (e.g. "Stop using X"), do not persist it as a new memory
+        if (/\b(stop using|no longer use|don't use|do not use)\b/i.test(sentence) && !/\b(instead|prefer|switch(?:ed)? to)\b/i.test(sentence)) {
+          continue;
+        }
+      }
+
+      // Duplicate check against remaining existing memories
+      const currentList = await this.memoryEngine.listMemories({ category });
+      const isDuplicate = currentList.some((m) => {
         const normalizedExisting = m.content.toLowerCase().replace(/[^\w\s]/g, '');
         return normalizedExisting.includes(normalizedSentence) || normalizedSentence.includes(normalizedExisting);
       });
@@ -281,15 +310,13 @@ Respond with ONLY valid JSON adhering strictly to this schema:
           category,
           content: sentence,
           sourceConversationId: conversationId || null,
-          importance: 3,
-          confidence: 0.95,
         });
         addedMemories.push(mem);
       }
     }
 
     let summaryUpdated = false;
-    if (addedMemories.length > 0) {
+    if (addedMemories.length > 0 || hadSuperseded) {
       await this.generateSummary();
       summaryUpdated = true;
     }

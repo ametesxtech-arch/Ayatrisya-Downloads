@@ -25,5 +25,6 @@ export * from './ChartProgressBlockRenderer';
 export * from './CreativeMediaBlockRenderer';
 export * from './MediaBlockRenderer';
 export * from './ScheduledTaskBlockRenderer';
+export * from './CitationBlockRenderer';
 export * from './quiz-detector';
 export * from './interactive-detector';

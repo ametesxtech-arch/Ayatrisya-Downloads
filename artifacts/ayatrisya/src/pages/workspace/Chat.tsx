@@ -5,7 +5,7 @@ import {
   ArrowDown, Check, Copy, RefreshCw, MoreHorizontal, Mic, Paperclip, Pencil,
   Send, Square, Trash2, X, Sparkles, ArrowUpRight, Code2, Lightbulb,
   ShieldCheck, Archive, HelpCircle, Radio, Image as ImageIcon, Flame, Smile, MessageSquare, ExternalLink,
-  FileText, Presentation, FileArchive
+  FileText, Presentation, FileArchive, ChevronDown, ChevronUp, Play
 } from 'lucide-react';
 import { downloadDocx } from '@/lib/docx-export';
 import { downloadPdf } from '@/lib/pdf-export';
@@ -84,6 +84,8 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
   const [showImageConsent, setShowImageConsent] = useState(false);
   const [pendingImageGen, setPendingImageGen] = useState<{ cid: string; prompt: string; userMessageId?: string } | null>(null);
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null), [confirmDel, setConfirmDel] = useState(false), [renaming, setRenaming] = useState<string | null>(null), [delMsg, setDelMsg] = useState<Message | null>(null), [resubmit, setResubmit] = useState<{ m: Message; text: string } | null>(null), [copied, setCopied] = useState<string | null>(null), [atBottom, setAtBottom] = useState(true);
+  const [expandedMsgs, setExpandedMsgs] = useState<Record<string, boolean>>({});
+  const streamRef = useRef('');
 
   // Per-conversation mode: initialize from conversation record if present, otherwise fallback to global prefs
   const activeMode: ChatMode = (conv.data?.mode as ChatMode | undefined) || prefs.mode || 'Normal';
@@ -188,6 +190,7 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
     runningRef.current = true;
     const ac = new AbortController();
     abortRef.current = ac; retryRef.current = { cid, history };
+    streamRef.current = '';
     setBusy(true); setStreamFor(cid); setStream(''); setError('');
     try {
       // Retrieve relevant AI memories & structured memory summary (if memory is enabled)
@@ -242,7 +245,10 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
           model: prefs.model,
           mode: activeMode,
           signal: ac.signal,
-          onToken: (t: string) => setStream((s) => s + t),
+          onToken: (t: string) => {
+            streamRef.current += t;
+            setStream(streamRef.current);
+          },
           attachments: latestTurn?.attachments,
         },
       });
@@ -309,7 +315,14 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
         }
       }
       retryRef.current = null;
-    } catch (e) { setError(ac.signal.aborted ? 'Generation stopped. Your message is saved.' : errMsg(e, 'The model request failed.')); }
+    } catch (e) {
+      if (ac.signal.aborted && streamRef.current.trim()) {
+        const partial = `${streamRef.current.trim()}\n\n*[Response generation was stopped by user]*`;
+        void repository.addMessage(cid, partial, 'assistant');
+        streamRef.current = '';
+      }
+      setError(ac.signal.aborted ? 'Generation stopped. Partial response preserved.' : errMsg(e, 'The model request failed.'));
+    }
     finally { runningRef.current = false; setBusy(false); setStream(''); setStreamFor(null); abortRef.current = null; jobIdRef.current = null; }
   }
 
@@ -317,6 +330,23 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
     if (jobIdRef.current) modelClient.cancelJob(jobIdRef.current);
     abortRef.current?.abort();
   }
+
+  const copyEntireConversation = async () => {
+    if (!list.length) return;
+    const formatted = list
+      .map((m) => {
+        const sender = m.role === 'user' ? 'User' : 'Ayatrisya';
+        const time = new Date(m.createdAt).toLocaleString();
+        return `[${time}] ${sender}:\n${m.content}\n`;
+      })
+      .join('\n---\n\n');
+    try {
+      await navigator.clipboard.writeText(formatted);
+      notify('Entire conversation copied to clipboard!');
+    } catch {
+      notify('Copy was blocked by the browser.');
+    }
+  };
 
   const openSts = async () => {
     let targetId = id;
@@ -483,7 +513,7 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
                     onClick={() => void setConversationMode(mode.id)}
                     title={`${mode.label} Mode: ${mode.desc}`}
                     data-testid={`mode-tab-${mode.id.toLowerCase()}`}
-                    className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 text-xs font-medium rounded-md whitespace-nowrap transition-all ${
+                    className={`shrink-0 whitespace-nowrap min-w-max flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 text-xs font-medium rounded-md transition-all ${
                       isSelected
                         ? mode.id === 'Savage'
                           ? 'bg-rose-500/20 text-rose-300 shadow-sm border border-rose-500/30'
@@ -494,7 +524,7 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
                     }`}
                   >
                     <Icon size={12} className={isSelected ? 'animate-pulse' : ''} />
-                    <span>{mode.label}</span>
+                    <span className="shrink-0 whitespace-nowrap">{mode.label}</span>
                   </button>
                 );
               })}
@@ -512,13 +542,25 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
               className="whitespace-nowrap text-xs h-7 px-2"
             >
               <Code2 size={13} className="text-teal-300" />
-              <span>Canvas IDE</span>
+              <span className="hidden sm:inline">Canvas IDE</span>
               <ExternalLink size={10} className="text-slate-400 ml-0.5 hidden sm:inline" />
             </Button>
             <Button variant="quiet" onClick={openSts} data-testid="button-header-sts" title="Start real-time Voice Conversation" className="whitespace-nowrap text-xs h-7 px-2">
               <Radio size={13} className="text-teal-300 animate-pulse" />
               <span className="hidden sm:inline">Voice</span>
             </Button>
+            {list.length > 0 && (
+              <Button
+                variant="quiet"
+                onClick={copyEntireConversation}
+                data-testid="button-copy-conversation"
+                title="Copy entire conversation formatted to clipboard"
+                className="whitespace-nowrap text-xs h-7 px-2"
+              >
+                <Copy size={13} className="text-slate-300" />
+                <span className="hidden sm:inline">Copy chat</span>
+              </Button>
+            )}
             {id && !guest && <>
               <Button variant="quiet" onClick={() => setRenaming(conv.data?.title ?? '')} className="whitespace-nowrap text-xs h-7 px-2">
                 <Pencil size={13} />
@@ -550,11 +592,39 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
               <div className="chat-message-inner">
               <div className={`chat-avatar chat-avatar-${m.role}`} aria-hidden>{m.role === 'user' ? 'You' : <Sparkles size={15} />}</div>
               <div className="chat-message-body">
-              <div className="chat-message-label">{m.role === 'user' ? 'You' : 'Ayatrisya'}</div>
+              <div className="chat-message-label flex items-center gap-2">
+                <span>{m.role === 'user' ? 'You' : 'Ayatrisya'}</span>
+                <span className="text-[10px] font-normal text-slate-500" data-testid={`message-timestamp-${m.id}`}>
+                  {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              </div>
               {editing?.id === m.id ? <div className="w-full"><label className="sr-only" htmlFor="edit-msg">Edit message</label><textarea id="edit-msg" data-testid="input-edit-message" data-autofocus value={editing.text} onChange={(e) => setEditing({ id: m.id, text: e.target.value })} className="chat-edit-area" />
                 <div className="mt-2 flex flex-wrap justify-end gap-2"><Button variant="outline" onClick={() => setEditing(null)} data-testid="button-cancel-edit">Cancel</Button><Button onClick={async () => { try { await repository.editMessage(m.id, editing.text); setEditing(null); } catch (e) { notify(errMsg(e)); } }} data-testid="button-save-edit">Save edit</Button><Button disabled={!available || busy || !editing.text.trim()} title={available ? undefined : 'Resubmitting needs a connected model'} onClick={() => setResubmit({ m, text: editing.text })} data-testid="button-resubmit-edit">{available ? 'Save and resubmit' : 'Resubmit unavailable'}</Button></div></div>
                 : <div className={m.role === 'user' ? 'chat-user-content' : 'chat-prose prose prose-invert prose-sm max-w-none'}>
-                  <MarkdownRenderer content={m.content} messageId={m.id} />
+                  <div className={m.content.length > 900 && !expandedMsgs[m.id] ? 'max-h-56 overflow-hidden relative' : ''}>
+                    <MarkdownRenderer content={m.content} messageId={m.id} />
+                    {m.content.length > 900 && !expandedMsgs[m.id] && (
+                      <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-[#101116] to-transparent pointer-events-none" />
+                    )}
+                  </div>
+                  {m.content.length > 900 && (
+                    <button
+                      type="button"
+                      onClick={() => setExpandedMsgs((prev) => ({ ...prev, [m.id]: !prev[m.id] }))}
+                      data-testid={`button-toggle-expand-${m.id}`}
+                      className="mt-2 flex items-center gap-1 rounded bg-white/[0.04] px-2.5 py-1 text-[11px] font-medium text-teal-300 transition-colors hover:bg-white/[0.08]"
+                    >
+                      {expandedMsgs[m.id] ? (
+                        <>
+                          <ChevronUp size={12} /> Collapse response
+                        </>
+                      ) : (
+                        <>
+                          <ChevronDown size={12} /> Expand full response ({m.content.length} characters)
+                        </>
+                      )}
+                    </button>
+                  )}
 
                   {/* Render generated images and attachments */}
                   {m.attachmentIds.length > 0 && <div className="mt-3 flex flex-col gap-2">
@@ -627,6 +697,30 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
 
                 <IconButton label={copied === m.id ? 'Copied' : 'Copy message'} onClick={() => navigator.clipboard.writeText(m.content).then(() => { setCopied(m.id); window.setTimeout(() => setCopied(null), 1600); }, () => notify('Copy was blocked by the browser.'))} className="chat-action" data-testid={`button-copy-message-${m.id}`}>{copied === m.id ? <Check size={13} className="text-teal-300" /> : <Copy size={13} />}</IconButton>
                 {m.role === 'user' && <IconButton label="Edit message" onClick={() => setEditing({ id: m.id, text: m.content })} className="chat-action" data-testid={`button-edit-message-${m.id}`}><Pencil size={13} /></IconButton>}
+                {m.role === 'assistant' && i === list.length - 1 && (
+                  <button
+                    type="button"
+                    disabled={!available || busy}
+                    title="Continue generation from where it stopped"
+                    aria-label="Continue generation"
+                    data-testid={`button-continue-generation`}
+                    onClick={() => {
+                      const history: Turn = [
+                        ...list.map((x) => ({ role: x.role, content: x.content })),
+                        { role: 'user', content: 'Please continue from where you left off.' }
+                      ];
+                      const go = async () => {
+                        void run(id!, history);
+                      };
+                      if (hasModelConsent() || consent) void go();
+                      else setAsk({ cid: id!, history, after: go });
+                    }}
+                    className="chat-action flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] text-teal-300 hover:bg-white/[.07] disabled:opacity-40"
+                  >
+                    <Play size={12} />
+                    <span>Continue</span>
+                  </button>
+                )}
                 {m.role === 'assistant' && i === list.length - 1 && <button type="button" disabled={!available || busy} title={available ? 'Regenerate this reply' : 'Regeneration needs a connected model'} aria-label={available ? 'Regenerate reply' : 'Regenerate unavailable: no model connected'} data-testid={`button-regenerate-${m.id}`} onClick={() => { const history: Turn = list.slice(0, i).map((x) => ({ role: x.role, content: x.content })); const go = async () => { try { await repository.deleteMessage(m.id); void run(id!, history); } catch (e) { notify(errMsg(e)); } }; if (hasModelConsent() || consent) void go(); else setAsk({ cid: id!, history, after: go }); }} className="chat-action grid size-9 place-items-center rounded-lg text-slate-400 hover:bg-white/[.07] hover:text-slate-100 disabled:opacity-40"><RefreshCw size={13} /></button>}
                 <IconButton label="Delete message" onClick={() => setDelMsg(m)} className="chat-action" data-testid={`button-delete-message-${m.id}`}>{copied === m.id ? <Check size={13} className="text-teal-300" /> : <Trash2 size={13} />}</IconButton>
               </div>
@@ -669,7 +763,7 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.nativeEvent.isComposing && (prefs.enterToSend ? !e.shiftKey : (e.ctrlKey || e.metaKey))) {
                       e.preventDefault();
-                      void send();
+                      if (!busy && !saving) void send();
                     }
                   }}
                   placeholder={
@@ -714,7 +808,7 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
                         { label: 'Open Image Studio', onSelect: () => goto('/workspace/images') },
                         { label: 'Open voice studio', onSelect: () => goto('/workspace/voice') },
                         { label: 'Open coding workspace', onSelect: () => goto('/workspace/coding') },
-                      ]} className="!flex !h-9 !w-auto gap-1 px-1.5"><MoreHorizontal size={15} /><span className="hidden sm:inline text-[11px]">Other</span></ActionMenu>
+                      ]} className="!flex !h-9 !w-auto gap-1 px-1.5 shrink-0 whitespace-nowrap min-w-max"><MoreHorizontal size={15} /><span className="hidden sm:inline text-[11px] shrink-0 whitespace-nowrap">Other</span></ActionMenu>
                     </>
                   )}
                 </div>
@@ -745,7 +839,7 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
                       <span className="hidden sm:inline">Stop</span>
                     </button>
                   ) : (
-                    <button type="button" onClick={() => void send()} disabled={saving || !!ask || (!text.trim() && !files.length)} aria-label="Send message" className="chat-send-button" data-testid="button-send">
+                    <button type="button" onClick={() => void send()} disabled={saving || busy || !!ask || (!text.trim() && !files.length)} aria-label="Send message" className="chat-send-button" data-testid="button-send">
                       <Send size={15} />
                       <span className="hidden sm:inline">Send</span>
                     </button>

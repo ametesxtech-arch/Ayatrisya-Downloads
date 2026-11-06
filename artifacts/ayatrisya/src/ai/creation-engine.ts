@@ -70,8 +70,9 @@ export const CREATION_CAPABILITIES: Record<CreationDomain, CreationCapability> =
     requiresAuth: false,
     isFree: true,
     provider: 'api-server',
-    description: 'Procedural 16-bit 44.1kHz WAV PCM synthesis without paid generation credits or external servers.',
+    description: 'Procedural 16-bit 44.1kHz WAV PCM synthesis without paid generation credits or external servers. Disclosed as deterministic wave audio synthesis rather than deep neural weights.',
     supportedFormats: ['wav', 'audio/wav'],
+    notes: 'Mathematical audio wave synthesis running deterministically with zero compute subscription costs.',
   },
   model3d: {
     domain: 'model3d',
@@ -86,13 +87,14 @@ export const CREATION_CAPABILITIES: Record<CreationDomain, CreationCapability> =
   },
   image: {
     domain: 'image',
-    displayName: 'Image Studio',
+    displayName: 'Image Studio (Ayatrisya 4-Stage Fallback)',
     isAvailable: true,
     requiresAuth: true,
     isFree: true,
     provider: 'api-server',
-    description: 'Cloudflare Workers AI FLUX-1-Schnell free tier image synthesis with local guest quota.',
-    supportedFormats: ['png', 'webp'],
+    description: '4-stage sequential fallback image engine: 1. Ayatrisya Own Model (Primary) -> 2. Hugging Face (FLUX/SDXL) -> 3. Google Gemini (Imagen 3) -> 4. Cloudflare Workers AI (FLUX-1-Schnell).',
+    supportedFormats: ['png', 'webp', 'jpeg'],
+    notes: 'Prioritizes Ayatrisya own model and open-weight Hugging Face/Gemini providers before falling back to Cloudflare Workers AI free tier.',
   },
   video: {
     domain: 'video',

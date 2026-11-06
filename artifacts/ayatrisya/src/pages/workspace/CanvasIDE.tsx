@@ -36,6 +36,7 @@ import { usePrefs } from '@/hooks/use-prefs';
 import { useDesktopRuntime } from '@/desktop/use-runtime';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { generateProjectFromPrompt, type ProjectGenerationProgress } from '@/ai/project-generator';
+import { generateGameProjectFromPrompt, createPlayable2DGame, createPlayable3DGame } from '@/ai/game-generator';
 import { modelClient } from '@/ai/client';
 
 function CanvasIDEInternal() {
@@ -369,7 +370,42 @@ function CanvasIDEInternal() {
     setIsCreatingFile(false);
   };
 
-  // Generate Multi-File Project via Model
+  // Quick Game Launch Helpers
+  const load2DGameTemplate = () => {
+    const game = createPlayable2DGame('Cyber Runner 2088');
+    canvas.loadProjectFiles(
+      game.files.map((f) => ({
+        name: f.path,
+        content: f.content,
+        language: f.language,
+      }))
+    );
+    setShowAiModal(false);
+    setPreviewKey((k) => k + 1);
+    setTerminalLogs((prev) => [
+      ...prev,
+      { text: `✓ Loaded 2D Cyber Arcade Platformer with physics, audio synth & touch controls.`, type: 'info' },
+    ]);
+  };
+
+  const load3DGameTemplate = () => {
+    const game = createPlayable3DGame('Orbital Voyager 3D');
+    canvas.loadProjectFiles(
+      game.files.map((f) => ({
+        name: f.path,
+        content: f.content,
+        language: f.language,
+      }))
+    );
+    setShowAiModal(false);
+    setPreviewKey((k) => k + 1);
+    setTerminalLogs((prev) => [
+      ...prev,
+      { text: `✓ Loaded 3D WebGL Space Flight with Three.js camera, procedural asteroids & particle stars.`, type: 'info' },
+    ]);
+  };
+
+  // Generate Multi-File Project or Game via Model
   const handleGenerateProject = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!aiPrompt.trim() || aiBusy) return;
@@ -377,6 +413,31 @@ function CanvasIDEInternal() {
     setAiBusy(true);
     setAiStatus('Planning project architecture…');
     try {
+      const isGame = /game|arcade|platformer|rpg|shooter|puzzle/i.test(aiPrompt);
+      if (isGame) {
+        setAiStatus('Assembling game engine loop, physics, sound synth & HUD…');
+        const gameRes = await generateGameProjectFromPrompt(aiPrompt.trim(), {
+          model: prefs.model,
+          onProgress: (p) => setAiStatus(p.message),
+        });
+        canvas.loadProjectFiles(
+          gameRes.files.map((f) => ({
+            name: f.path,
+            content: f.content,
+            language: f.language,
+          }))
+        );
+        setShowAiModal(false);
+        setAiPrompt('');
+        setAiStatus('');
+        setPreviewKey((k) => k + 1);
+        setTerminalLogs((prev) => [
+          ...prev,
+          { text: `✓ Generated ${gameRes.title} (${gameRes.metadata.genre}) with real-time loop, audio, and controls.`, type: 'info' },
+        ]);
+        return;
+      }
+
       const res = await generateProjectFromPrompt(aiPrompt.trim(), {
         model: prefs.model,
         mode: prefs.mode,
@@ -495,42 +556,42 @@ Return ONLY the complete updated file content without markdown code fences or co
 
         {/* Center: Mobile Navigation Switcher vs Desktop Mode Selector */}
         {isMobile ? (
-          <div className="flex items-center gap-0.5 bg-black/50 p-0.5 rounded-lg border border-white/10">
+          <div className="flex items-center gap-0.5 bg-black/50 p-0.5 rounded-lg border border-white/10 shrink-0">
             <button
               type="button"
               onClick={() => setMobileTab('files')}
-              className={`px-2 py-1 text-[11px] rounded font-medium transition ${mobileTab === 'files' ? 'bg-teal-500/25 text-teal-300 font-semibold shadow-sm' : 'text-slate-400 hover:text-white'}`}
+              className={`shrink-0 whitespace-nowrap min-w-max px-2 py-1 text-[11px] rounded font-medium transition ${mobileTab === 'files' ? 'bg-teal-500/25 text-teal-300 font-semibold shadow-sm' : 'text-slate-400 hover:text-white'}`}
             >
               Files
             </button>
             <button
               type="button"
               onClick={() => setMobileTab('code')}
-              className={`px-2 py-1 text-[11px] rounded font-medium transition ${mobileTab === 'code' ? 'bg-teal-500/25 text-teal-300 font-semibold shadow-sm' : 'text-slate-400 hover:text-white'}`}
+              className={`shrink-0 whitespace-nowrap min-w-max px-2 py-1 text-[11px] rounded font-medium transition ${mobileTab === 'code' ? 'bg-teal-500/25 text-teal-300 font-semibold shadow-sm' : 'text-slate-400 hover:text-white'}`}
             >
               Code
             </button>
             <button
               type="button"
               onClick={() => setMobileTab('preview')}
-              className={`px-2 py-1 text-[11px] rounded font-medium transition ${mobileTab === 'preview' ? 'bg-teal-500/25 text-teal-300 font-semibold shadow-sm' : 'text-slate-400 hover:text-white'}`}
+              className={`shrink-0 whitespace-nowrap min-w-max px-2 py-1 text-[11px] rounded font-medium transition ${mobileTab === 'preview' ? 'bg-teal-500/25 text-teal-300 font-semibold shadow-sm' : 'text-slate-400 hover:text-white'}`}
             >
               Preview
             </button>
             <button
               type="button"
               onClick={() => setMobileTab('terminal')}
-              className={`px-2 py-1 text-[11px] rounded font-medium transition ${mobileTab === 'terminal' ? 'bg-teal-500/25 text-teal-300 font-semibold shadow-sm' : 'text-slate-400 hover:text-white'}`}
+              className={`shrink-0 whitespace-nowrap min-w-max px-2 py-1 text-[11px] rounded font-medium transition ${mobileTab === 'terminal' ? 'bg-teal-500/25 text-teal-300 font-semibold shadow-sm' : 'text-slate-400 hover:text-white'}`}
             >
               Terminal
             </button>
           </div>
         ) : (
-          <div className="flex items-center gap-1 bg-black/40 p-0.5 rounded-lg border border-white/10">
+          <div className="flex items-center gap-1 bg-black/40 p-0.5 rounded-lg border border-white/10 shrink-0">
             <button
               type="button"
               onClick={() => setViewMode('editor-only')}
-              className={`px-2.5 py-1 text-xs rounded font-medium transition ${viewMode === 'editor-only' ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30' : 'text-slate-400 hover:text-white'}`}
+              className={`shrink-0 whitespace-nowrap min-w-max px-2.5 py-1 text-xs rounded font-medium transition ${viewMode === 'editor-only' ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30' : 'text-slate-400 hover:text-white'}`}
               title="Editor Only"
             >
               Editor
@@ -538,7 +599,7 @@ Return ONLY the complete updated file content without markdown code fences or co
             <button
               type="button"
               onClick={() => setViewMode('split')}
-              className={`px-2.5 py-1 text-xs rounded font-medium transition ${viewMode === 'split' ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30' : 'text-slate-400 hover:text-white'}`}
+              className={`shrink-0 whitespace-nowrap min-w-max px-2.5 py-1 text-xs rounded font-medium transition ${viewMode === 'split' ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30' : 'text-slate-400 hover:text-white'}`}
               title="Editor + Preview Split"
             >
               Split
@@ -546,7 +607,7 @@ Return ONLY the complete updated file content without markdown code fences or co
             <button
               type="button"
               onClick={() => setViewMode('preview-only')}
-              className={`px-2.5 py-1 text-xs rounded font-medium transition ${viewMode === 'preview-only' ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30' : 'text-slate-400 hover:text-white'}`}
+              className={`shrink-0 whitespace-nowrap min-w-max px-2.5 py-1 text-xs rounded font-medium transition ${viewMode === 'preview-only' ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30' : 'text-slate-400 hover:text-white'}`}
               title="Full-screen Preview"
             >
               Preview
@@ -554,7 +615,7 @@ Return ONLY the complete updated file content without markdown code fences or co
             <button
               type="button"
               onClick={() => setViewMode('terminal-only')}
-              className={`px-2.5 py-1 text-xs rounded font-medium transition ${viewMode === 'terminal-only' ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30' : 'text-slate-400 hover:text-white'}`}
+              className={`shrink-0 whitespace-nowrap min-w-max px-2.5 py-1 text-xs rounded font-medium transition ${viewMode === 'terminal-only' ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30' : 'text-slate-400 hover:text-white'}`}
               title="Terminal Focused"
             >
               Terminal
@@ -572,7 +633,7 @@ Return ONLY the complete updated file content without markdown code fences or co
               setPreviewKey((k) => k + 1);
               setTerminalLogs((prev) => [...prev, { text: 'Running preview server update…', type: 'info' }]);
             }}
-            className="flex items-center gap-1 sm:gap-1.5 rounded-md bg-emerald-500 px-2 sm:px-3 py-1 text-xs font-semibold text-slate-950 hover:bg-emerald-400 shadow-md transition"
+            className="shrink-0 whitespace-nowrap min-w-max flex items-center gap-1 sm:gap-1.5 rounded-md bg-emerald-500 px-2 sm:px-3 py-1 text-xs font-semibold text-slate-950 hover:bg-emerald-400 shadow-md transition"
             title="Compile & Run Project (Ctrl+Enter)"
           >
             <Play size={12} fill="currentColor" />
@@ -583,7 +644,7 @@ Return ONLY the complete updated file content without markdown code fences or co
           <button
             type="button"
             onClick={() => setShowAiModal(true)}
-            className="flex items-center gap-1 sm:gap-1.5 rounded-md border border-teal-500/40 bg-teal-500/10 px-2 sm:px-2.5 py-1 text-xs font-medium text-teal-300 hover:bg-teal-500/20 transition"
+            className="shrink-0 whitespace-nowrap min-w-max flex items-center gap-1 sm:gap-1.5 rounded-md border border-teal-500/40 bg-teal-500/10 px-2 sm:px-2.5 py-1 text-xs font-medium text-teal-300 hover:bg-teal-500/20 transition"
           >
             <Sparkles size={12} />
             <span className="hidden sm:inline">AI Generate</span>
@@ -593,7 +654,7 @@ Return ONLY the complete updated file content without markdown code fences or co
           <button
             type="button"
             onClick={handleDownloadAll}
-            className="hidden sm:flex items-center gap-1.5 rounded-md border border-white/10 px-2 py-1 text-xs text-slate-300 hover:bg-white/[.06] transition"
+            className="shrink-0 whitespace-nowrap min-w-max hidden sm:flex items-center gap-1.5 rounded-md border border-white/10 px-2 py-1 text-xs text-slate-300 hover:bg-white/[.06] transition"
             title="Export files to local drive"
           >
             <Download size={13} />
@@ -707,7 +768,7 @@ Return ONLY the complete updated file content without markdown code fences or co
         <div className={`flex flex-1 flex-col min-w-0 overflow-hidden ${isMobile && mobileTab === 'files' ? 'hidden' : 'flex'}`}>
           {/* TABS & ACTIONS */}
           <div className="flex h-9 shrink-0 items-center justify-between border-b border-white/[.08] bg-[#11131c] px-2 overflow-x-auto">
-            <div className="flex items-center gap-1 overflow-x-auto">
+            <div className="flex items-center gap-1 overflow-x-auto scrollbar-none shrink-0">
               {canvas.files.map((file) => {
                 const isActive = file.id === canvas.activeFileId;
                 return (
@@ -717,14 +778,14 @@ Return ONLY the complete updated file content without markdown code fences or co
                       canvas.setActiveFile(file.id);
                       if (isMobile) setMobileTab('code');
                     }}
-                    className={`flex items-center gap-1.5 rounded-t-md px-3 py-1.5 text-xs font-mono cursor-pointer border-t-2 transition ${
+                    className={`shrink-0 whitespace-nowrap min-w-max flex items-center gap-1.5 rounded-t-md px-3 py-1.5 text-xs font-mono cursor-pointer border-t-2 select-none transition ${
                       isActive
                         ? 'border-teal-400 bg-[#0d0f17] text-teal-200 font-medium'
                         : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-white/[.03]'
                     }`}
                   >
                     <span>{file.name}</span>
-                    {file.modified && <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />}
+                    {file.modified && <span className="h-1.5 w-1.5 rounded-full bg-amber-400 shrink-0" />}
                   </div>
                 );
               })}
@@ -837,7 +898,7 @@ Return ONLY the complete updated file content without markdown code fences or co
                   <button
                     type="submit"
                     disabled={editorAiBusy || !editorAiPrompt.trim()}
-                    className="rounded bg-teal-500 px-3 py-1 text-xs font-semibold text-slate-950 hover:bg-teal-400 disabled:opacity-40"
+                    className="shrink-0 whitespace-nowrap min-w-max rounded bg-teal-500 px-3 py-1 text-xs font-semibold text-slate-950 hover:bg-teal-400 disabled:opacity-40 transition"
                   >
                     {editorAiBusy ? 'Refactoring…' : 'Refactor'}
                   </button>
@@ -920,11 +981,11 @@ Return ONLY the complete updated file content without markdown code fences or co
             <div className={`border-t border-white/[.08] bg-[#0d0f17] flex flex-col ${isMobile || viewMode === 'terminal-only' ? 'flex-1' : 'h-44'}`}>
               {/* Dock Header */}
               <div className="flex h-8 shrink-0 items-center justify-between border-b border-white/[.06] bg-[#11131c] px-3">
-                <div className="flex items-center gap-4 text-xs">
+                <div className="flex items-center gap-2 sm:gap-4 text-xs overflow-x-auto scrollbar-none shrink-0">
                   <button
                     type="button"
                     onClick={() => setBottomTab('terminal')}
-                    className={`flex items-center gap-1.5 font-medium py-1 transition ${bottomTab === 'terminal' ? 'text-teal-300 border-b-2 border-teal-400' : 'text-slate-400 hover:text-slate-200'}`}
+                    className={`shrink-0 whitespace-nowrap min-w-max flex items-center gap-1.5 font-medium py-1 transition ${bottomTab === 'terminal' ? 'text-teal-300 border-b-2 border-teal-400' : 'text-slate-400 hover:text-slate-200'}`}
                   >
                     <TerminalIcon size={12} />
                     <span>Terminal</span>
@@ -932,7 +993,7 @@ Return ONLY the complete updated file content without markdown code fences or co
                   <button
                     type="button"
                     onClick={() => setBottomTab('output')}
-                    className={`flex items-center gap-1.5 font-medium py-1 transition ${bottomTab === 'output' ? 'text-teal-300 border-b-2 border-teal-400' : 'text-slate-400 hover:text-slate-200'}`}
+                    className={`shrink-0 whitespace-nowrap min-w-max flex items-center gap-1.5 font-medium py-1 transition ${bottomTab === 'output' ? 'text-teal-300 border-b-2 border-teal-400' : 'text-slate-400 hover:text-slate-200'}`}
                   >
                     <Layers size={12} />
                     <span>Console Output</span>
@@ -940,7 +1001,7 @@ Return ONLY the complete updated file content without markdown code fences or co
                   <button
                     type="button"
                     onClick={() => setBottomTab('problems')}
-                    className={`flex items-center gap-1.5 font-medium py-1 transition ${bottomTab === 'problems' ? 'text-teal-300 border-b-2 border-teal-400' : 'text-slate-400 hover:text-slate-200'}`}
+                    className={`shrink-0 whitespace-nowrap min-w-max flex items-center gap-1.5 font-medium py-1 transition ${bottomTab === 'problems' ? 'text-teal-300 border-b-2 border-teal-400' : 'text-slate-400 hover:text-slate-200'}`}
                   >
                     <AlertCircle size={12} />
                     <span>Problems (0)</span>
@@ -948,7 +1009,7 @@ Return ONLY the complete updated file content without markdown code fences or co
                   <button
                     type="button"
                     onClick={() => setBottomTab('packages')}
-                    className={`flex items-center gap-1.5 font-medium py-1 transition ${bottomTab === 'packages' ? 'text-teal-300 border-b-2 border-teal-400' : 'text-slate-400 hover:text-slate-200'}`}
+                    className={`shrink-0 whitespace-nowrap min-w-max flex items-center gap-1.5 font-medium py-1 transition ${bottomTab === 'packages' ? 'text-teal-300 border-b-2 border-teal-400' : 'text-slate-400 hover:text-slate-200'}`}
                   >
                     <span>Packages</span>
                   </button>
@@ -1067,7 +1128,27 @@ Return ONLY the complete updated file content without markdown code fences or co
                 <X size={15} />
               </button>
             </div>
-            <form onSubmit={handleGenerateProject} className="mt-4">
+            {/* Instant Templates / Game Scaffolding */}
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={aiBusy}
+                onClick={load2DGameTemplate}
+                className="flex items-center gap-1.5 rounded-lg border border-teal-500/30 bg-teal-500/10 px-2.5 py-1 text-xs text-teal-300 hover:bg-teal-500/20 transition"
+              >
+                <span>🎮 2D Cyber Arcade</span>
+              </button>
+              <button
+                type="button"
+                disabled={aiBusy}
+                onClick={load3DGameTemplate}
+                className="flex items-center gap-1.5 rounded-lg border border-indigo-500/30 bg-indigo-500/10 px-2.5 py-1 text-xs text-indigo-300 hover:bg-indigo-500/20 transition"
+              >
+                <span>🚀 3D Space Flight (Three.js)</span>
+              </button>
+            </div>
+
+            <form onSubmit={handleGenerateProject} className="mt-3">
               <label className="block text-xs font-medium text-slate-400">
                 Project Prompt & Requirements
                 <textarea
@@ -1075,8 +1156,8 @@ Return ONLY the complete updated file content without markdown code fences or co
                   disabled={aiBusy}
                   value={aiPrompt}
                   onChange={(e) => setAiPrompt(e.target.value)}
-                  placeholder="e.g. Build an interactive Kanban task board with drag-and-drop, persistent local storage, and dark aesthetic..."
-                  className="mt-1.5 min-h-28 w-full rounded-lg border border-white/10 bg-black/50 p-2.5 font-mono text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-teal-400"
+                  placeholder="e.g. Build a 2D dungeon crawler with collision, inventory, and enemies, or an interactive task dashboard..."
+                  className="mt-1.5 min-h-24 w-full rounded-lg border border-white/10 bg-black/50 p-2.5 font-mono text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-teal-400"
                 />
               </label>
               {aiStatus && (

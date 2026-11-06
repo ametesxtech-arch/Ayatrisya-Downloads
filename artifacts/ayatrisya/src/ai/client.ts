@@ -112,7 +112,16 @@ async function decodeGeneratedAsset(
   kind: AssetGenerationKind,
   format: AssetGenerationOptions["format"],
   raw: unknown,
-): Promise<{ blob: Blob; fileName: string }> {
+): Promise<{
+  blob: Blob;
+  fileName: string;
+  provider?: string;
+  model?: string;
+  stage?: number;
+  fallbackUsed?: boolean;
+  version?: string;
+  stageAudit?: any[];
+}> {
   const asset = generatedAssetSchema.parse(raw);
   const spec = assetSpecs[kind].types[format as keyof typeof assetSpecs[typeof kind]["types"]];
   if (!spec) {
