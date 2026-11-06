@@ -340,7 +340,7 @@ export function generatePptx(
     const isTitleSlide = slide.layout === 'title' || idx === 0;
     const isQuoteSlide = slide.layout === 'quote';
 
-    let shapesXml = '';
+    let shapesXml: string;
 
     if (isTitleSlide) {
       // Gamma / Keynote Style Title Deck
@@ -467,7 +467,7 @@ export function generatePptx(
       // SmartArt Multi-Card Layout
       const rawPoints = slide.body
         .split('\n')
-        .map((p) => p.replace(/^[•\-\*]\s*/, '').trim())
+        .map((p) => p.replace(/^[•\-*]\s*/, '').trim())
         .filter(Boolean);
 
       const points = rawPoints.length > 0 ? rawPoints : ['Key insight and structured analysis.'];

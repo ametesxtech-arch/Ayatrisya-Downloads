@@ -92,12 +92,12 @@ export async function requestMicrophoneAccess(): Promise<MediaStream> {
     return await navigator.mediaDevices.getUserMedia({ audio: true });
   } catch (err: any) {
     if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-      throw new Error('Microphone permission was denied. Please allow microphone access in your browser or system settings.');
+      throw new Error('Microphone permission was denied. Please allow microphone access in your browser or system settings.', { cause: err });
     }
     if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
-      throw new Error('No microphone device was detected on your system.');
+      throw new Error('No microphone device was detected on your system.', { cause: err });
     }
-    throw new Error(err.message || 'Failed to access microphone.');
+    throw new Error(err.message || 'Failed to access microphone.', { cause: err });
   }
 }
 

@@ -43,14 +43,13 @@ export function CitationBlockRenderer({ citations, title = 'Sources & Citations'
         {citations.map((c, i) => {
           const indexNum = c.index ?? i + 1;
           let domainName = c.domain;
-          let isSafe = true;
+          let isSafe = false;
 
           try {
             const parsed = new URL(c.url);
             domainName = domainName || parsed.hostname;
             isSafe = ['http:', 'https:'].includes(parsed.protocol);
           } catch {
-            isSafe = false;
             domainName = domainName || 'unknown source';
           }
 

@@ -193,7 +193,7 @@ export function SlideEditor({ item, onClose, onDeleted }: { item: ProjectItem; o
                     'bg-[#161F30] border-slate-700/50 text-slate-300'
                   }`}>
                     <span className={`block font-mono text-[10px] font-bold mb-1.5 opacity-60 uppercase`}>Point 0{i + 1}</span>
-                    <p className="leading-relaxed font-medium">{l.replace(/^[•\-\*]\s*/, '')}</p>
+                    <p className="leading-relaxed font-medium">{l.replace(/^[•\-*]\s*/, '')}</p>
                   </div>
                 ))}
               </div>

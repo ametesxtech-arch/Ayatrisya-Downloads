@@ -123,6 +123,7 @@ describe("Ayatrisya Part 3 — Canvas IDE, Game Generation & Autonomous Research
 
     it("Test 10: Reviews proposed diff and accepts changes into file content", () => {
       let fileContent = "const x = 1;";
+      expect(fileContent).toBe("const x = 1;");
       const pendingDiff = {
         path: "index.ts",
         original: "const x = 1;",

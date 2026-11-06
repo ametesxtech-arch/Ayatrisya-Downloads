@@ -516,7 +516,18 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
 }: MarkdownRendererProps) {
   const trimmed = (content || '').trim();
 
-  // 1. If content is a standalone JSON interactive block
+  // 1. Unconditionally compute protocol response & citation blocks at top of hook
+  const protocolResponse = useMemo(() => {
+    if (!trimmed || isStreaming) return null;
+    return parseModelResponseToProtocol(trimmed, messageId);
+  }, [trimmed, messageId, isStreaming]);
+
+  const citationBlocks = useMemo(() => {
+    if (!protocolResponse) return [];
+    return protocolResponse.blocks.filter((b): b is CitationBlock => b.type === 'citation');
+  }, [protocolResponse]);
+
+  // 2. If content is a standalone JSON interactive block
   if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
     const directParse = parseInteractiveBlock(trimmed, { isStreaming });
     if (directParse.status === 'valid') {
@@ -534,17 +545,6 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
       );
     }
   }
-
-  // 2. Parse protocol to extract any structured citation blocks or tool events
-  const protocolResponse = useMemo(() => {
-    if (!trimmed || isStreaming) return null;
-    return parseModelResponseToProtocol(trimmed, messageId);
-  }, [trimmed, messageId, isStreaming]);
-
-  const citationBlocks = useMemo(() => {
-    if (!protocolResponse) return [];
-    return protocolResponse.blocks.filter((b): b is CitationBlock => b.type === 'citation');
-  }, [protocolResponse]);
 
   // 3. Detect structured interactive content (quizzes, MCQs, or interactive comparison tables)
   const detected = !isStreaming ? detectUniversalInteractiveContent(trimmed) : null;

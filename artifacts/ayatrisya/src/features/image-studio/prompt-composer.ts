@@ -111,7 +111,7 @@ function blendRefinementWithReference(
   instruction: string,
 ): { blendedPrompt: string; summary: string; overridesOutfit: boolean } {
   let cleanedRef = previousPrompt;
-  let summary = 'Refined prompt based on reference image.';
+  let summary: string;
   let overridesOutfit = false;
 
   const lower = instruction.toLowerCase();

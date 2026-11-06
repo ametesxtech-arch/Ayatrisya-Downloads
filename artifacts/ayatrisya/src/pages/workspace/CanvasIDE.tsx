@@ -230,10 +230,11 @@ function CanvasIDEInternal() {
         setTerminalLogs([]);
         break;
 
-      case 'ls':
+      case 'ls': {
         const fileList = canvas.files.map((f) => `${f.name.padEnd(20)} ${f.content.length} B`).join('\n');
         setTerminalLogs((prev) => [...prev, { text: fileList, type: 'stdout' }]);
         break;
+      }
 
       case 'cat':
         if (!args[0]) {
@@ -302,7 +303,7 @@ function CanvasIDEInternal() {
         }
         break;
 
-      case 'node':
+      case 'node': {
         const jsTarget = canvas.files.find((f) => f.name === (args[0] || 'app.js') || f.name === 'index.js');
         if (jsTarget) {
           try {
@@ -322,6 +323,7 @@ function CanvasIDEInternal() {
           setTerminalLogs((prev) => [...prev, { text: `node: ${args[0] || 'file'}: not found`, type: 'stderr' }]);
         }
         break;
+      }
 
       case 'python':
         setTerminalLogs((prev) => [

@@ -275,7 +275,7 @@ Respond with ONLY valid JSON adhering strictly to this schema:
 
       if (isCorrection) {
         // Find existing memories across system that contain superseded items
-        const switchMatch = sentence.match(/(?:switch(?:ed)? from|instead of|no longer use|stop using)\s+([a-zA-Z0-9_\-]+)/i);
+        const switchMatch = sentence.match(/(?:switch(?:ed)? from|instead of|no longer use|stop using)\s+([a-zA-Z0-9_-]+)/i);
         const supersededTarget = switchMatch ? switchMatch[1].toLowerCase() : null;
         const allExisting = await this.memoryEngine.listMemories();
 

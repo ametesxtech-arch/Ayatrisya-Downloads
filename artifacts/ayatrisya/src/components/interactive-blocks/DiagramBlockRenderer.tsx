@@ -21,9 +21,9 @@ export function DiagramBlockRenderer({ block }: { block: DiagramBlock }) {
     const match = line.match(/(.+?)\s*-->\s*(?:\|(.+?)\|)?\s*(.+)/);
     if (match) {
       nodeConnections.push({
-        from: match[1].replace(/[\[\(\]\)]/g, '').trim(),
+        from: match[1].replace(/[[()\]]/g, '').trim(),
         label: match[2]?.trim(),
-        to: match[3].replace(/[\[\(\]\)]/g, '').trim(),
+        to: match[3].replace(/[[()\]]/g, '').trim(),
       });
     }
   }

@@ -231,7 +231,7 @@ async function decodeGeneratedAsset(
         throw new Error("The 3D model is missing glTF asset metadata.");
       }
     } catch (cause: any) {
-      throw new Error(cause?.message || "The 3D model JSON chunk is malformed.");
+      throw new Error(cause?.message || "The 3D model JSON chunk is malformed.", { cause });
     }
   }
 

@@ -31,8 +31,8 @@ export function evaluateHardwareProfile(specs: SystemHardwareSpecs): HardwareRec
   }
 
   // 5. Tier assignment
-  let recommendedTier: HardwareProfileTier = "LITE";
-  let maxContextTokens = 4096;
+  let recommendedTier: HardwareProfileTier;
+  let maxContextTokens: number;
 
   const hasWorkstationGpu = (specs.hasCuda || specs.hasMetal) && specs.vramGb >= 8;
   const hasWorkstationRam = specs.totalRamGb >= 24;
@@ -82,7 +82,7 @@ export function evaluateHardwareProfile(specs: SystemHardwareSpecs): HardwareRec
   // 2. Qwen 2.5 3B (if maxModelRamGb >= 4.5 GB)
   // 3. Qwen 2.5 1.5B (if maxModelRamGb >= 2.2 GB)
   const fallbackHierarchy: string[] = [];
-  let recommendedChatModelId = "qwen2.5-1.5b-instruct-q4_k_m";
+  let recommendedChatModelId: string;
   let canSafelyRunLocalModel = true;
   let remediationAdvice: string | undefined = undefined;
 

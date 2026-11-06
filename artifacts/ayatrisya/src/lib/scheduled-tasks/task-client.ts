@@ -297,7 +297,7 @@ class TaskClient {
     triggeredAt: string
   ): Promise<ScheduledTaskExecution> {
     let status: ScheduledTaskExecution['status'] = 'success';
-    let output = '';
+    let output: string;
     let error: string | undefined;
 
     // Check desktop runner requirement

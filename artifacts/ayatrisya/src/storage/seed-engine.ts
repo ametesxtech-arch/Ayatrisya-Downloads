@@ -177,9 +177,9 @@ export class SeedEngine {
 
       // Sanitize paths and names to prevent path traversal or script injection
       for (const doc of pkg.documents || []) {
-        if (!doc.fileName || /[\/\\]|\.\./.test(doc.fileName)) {
+        if (!doc.fileName || /[/\\]|\.\./.test(doc.fileName)) {
           // Normalize file name safely removing directory paths
-          doc.fileName = (doc.fileName || "document.txt").replace(/.*[\/\\]/, "").replace(/\.\./g, "");
+          doc.fileName = (doc.fileName || "document.txt").replace(/.*[/\\]/, "").replace(/\.\./g, "");
         }
       }
 

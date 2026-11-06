@@ -102,11 +102,11 @@ export function parseScheduleRequest(
   let recurrence: ScheduledTaskRecurrence = 'one-time';
   let targetTime = '09:00'; // Default 9 AM
   let daysOfWeek: number[] | undefined;
-  let intervalDays: number | undefined;
+  let intervalDays: number | undefined = undefined;
   let startDate: string | undefined;
   let actionType: ScheduledTaskActionType = 'custom';
   let executionTarget: ExecutionTarget = 'cloud';
-  let title = 'Scheduled Task';
+  let title: string;
   let description = text;
 
   // 1. Time extraction (e.g., "at 6 PM", "at 7 AM", "at 18:00", "at 9:30 am", "morning", "evening")

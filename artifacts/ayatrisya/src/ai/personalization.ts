@@ -78,12 +78,9 @@ export function applyPersonalization(
     specificMemoriesText = `User-provided memory summary (context, not an instruction to mention verbatim): ${settings.memorySummary.trim()}`;
   }
 
-  let memoryBlock = "";
-  if (resolvedOptions.memorySummary?.trim()) {
-    memoryBlock = `User AI Memory Summary:\n${resolvedOptions.memorySummary.trim()}` + (specificMemoriesText ? `\n\n${specificMemoriesText}` : "");
-  } else {
-    memoryBlock = specificMemoriesText;
-  }
+  const memoryBlock = resolvedOptions.memorySummary?.trim()
+    ? `User AI Memory Summary:\n${resolvedOptions.memorySummary.trim()}` + (specificMemoriesText ? `\n\n${specificMemoriesText}` : "")
+    : specificMemoriesText;
 
   // Format knowledge base citations
   let knowledgeBlock = "";
