@@ -35,7 +35,7 @@ import { hasModelConsent, grantModelConsent } from '@/lib/model-consent';
 import { hasCloudImageConsent } from '@/features/image-studio/consent';
 import { CloudImageConsentModal } from '@/features/image-studio/CloudImageConsentModal';
 import { detectImageRequest } from '@/lib/image-intent';
-import { enhancePromptLikeChatGPT } from '@/lib/chatgpt-prompt-engine';
+import { enhanceImagePrompt } from '@/lib/vision-prompt-engine';
 import { MemoryEngine } from '@/storage/memory-engine';
 import { KnowledgeBaseEngine } from '@/storage/knowledge-engine';
 import { AIMemorySummaryEngine } from '@/storage/ai-memory-summary-engine';
@@ -189,8 +189,8 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
     setPendingQuery(imgPrompt);
 
     try {
-      // Automatic ChatGPT-style prompt expansion for ultra-high visual fidelity
-      const enhanced = enhancePromptLikeChatGPT(imgPrompt);
+      // Automatic Ayatrisya Neural Vision prompt expansion for ultra-high visual fidelity
+      const enhanced = enhanceImagePrompt(imgPrompt);
       const promptToSend = enhanced.enhancedPrompt;
 
       const job = modelClient.submitJob({
@@ -210,7 +210,7 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
       const displayLabel = userFacingLabel || imgPrompt;
       const outText = `Generated image for **"${displayLabel}"**:\n\n` +
         `<details className="chat-revised-prompt">\n` +
-        `<summary>✨ <b>Revised Prompt (ChatGPT Style)</b></summary>\n\n` +
+        `<summary>✨ <b>Revised Prompt (Ayatrisya Vision)</b></summary>\n\n` +
         `> *${enhanced.enhancedPrompt}*\n\n` +
         `</details>\n\n` +
         `*Format: ${asset.blob.type === 'image/jpeg' ? 'JPEG' : 'PNG'} · Size: ${formatBytes(asset.blob.size)}*`;

@@ -43,7 +43,7 @@ import { loadCharacterProfiles } from './character-profiles';
 import { StyleSelector } from './StyleSelector';
 import { composeConversationalPrompt } from './prompt-composer';
 import { getStylePreset } from './styles';
-import { enhancePromptLikeChatGPT } from '@/lib/chatgpt-prompt-engine';
+import { enhanceImagePrompt } from '@/lib/vision-prompt-engine';
 
 const aspects: Record<string, [number, number]> = {
   '1:1': [1, 1],
@@ -158,7 +158,7 @@ export function ImageStudioConversation({
       character: activeProfile,
       styleId: selectedStyleId,
       customStyleModifier,
-      enhanceWithChatGPT: autoEnhance,
+      enhanceWithVision: autoEnhance,
     });
 
     const targetWidth = Number(dimsFor(ratio, baseDim).split(' × ')[0]);
@@ -298,9 +298,9 @@ export function ImageStudioConversation({
 
   function handleEnhancePrompt() {
     if (!promptInput.trim()) return;
-    const enhanced = enhancePromptLikeChatGPT(promptInput.trim(), { style: selectedStyleId });
+    const enhanced = enhanceImagePrompt(promptInput.trim(), { style: selectedStyleId });
     setPromptInput(enhanced.enhancedPrompt);
-    note('✨ Prompt enhanced into a rich cinematic description (ChatGPT style)!');
+    note('✨ Prompt enhanced into a rich cinematic description!');
   }
 
   async function handleSaveToLibrary(details: GeneratedImageDetails) {
@@ -471,7 +471,7 @@ export function ImageStudioConversation({
             >
               <span className="flex items-center gap-1.5 truncate">
                 <Sparkles size={13} className={autoEnhance ? 'text-amber-300' : 'text-slate-500'} />
-                <span>ChatGPT Enhancer</span>
+                <span>Vision Enhancer</span>
               </span>
               <span className={`text-[10px] font-bold rounded px-1.5 py-0.5 ${autoEnhance ? 'bg-amber-400/20 text-amber-300' : 'bg-white/5 text-slate-500'}`}>
                 {autoEnhance ? 'ON' : 'OFF'}
@@ -647,12 +647,12 @@ export function ImageStudioConversation({
                         </span>
                       </div>
 
-                      {/* Expandable ChatGPT-Style Revised Prompt */}
+                      {/* Expandable Neural Vision Revised Prompt */}
                       {msg.effectivePrompt && (
                         <details className="text-[11px] pt-1.5 border-t border-white/[.04]">
                           <summary className="cursor-pointer text-amber-300 hover:text-amber-200 font-medium inline-flex items-center gap-1.5 select-none">
                             <Sparkles size={11} className="text-amber-300" />
-                            <span>Revised Prompt (ChatGPT Style)</span>
+                            <span>✨ Revised Prompt (Ayatrisya Vision)</span>
                           </summary>
                           <p className="mt-1.5 text-slate-300 leading-relaxed font-sans bg-black/25 p-2 rounded border border-white/[.05] select-text">
                             {msg.effectivePrompt}
@@ -813,7 +813,7 @@ export function ImageStudioConversation({
                 variant="outline"
                 onClick={handleEnhancePrompt}
                 disabled={!promptInput.trim() || generating}
-                title="Enhance prompt with ChatGPT-style narrative depth"
+                title="Enhance prompt with cinematic visual depth & fine optical details"
                 className="hidden xs:inline-flex text-amber-200 border-amber-400/30 hover:bg-amber-400/10"
               >
                 <Sparkles size={13} className="text-amber-300" />

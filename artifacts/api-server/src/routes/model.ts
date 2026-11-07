@@ -205,7 +205,7 @@ async function fallbackWithGeminiChat(
       ? "Savage Mode Active: Be razor-sharp, brilliantly sarcastic, roast-level witty, and brutally honest without sugarcoating, while delivering genius solutions."
       : mode === "Joke"
         ? "Joke Mode Active: Be hilarious, witty, upbeat, full of great humor, playful punchlines, and clever analogies while answering accurately."
-        : "Normal Mode Active: Be natural, engaging, highly intelligent, articulate, and conversational like ChatGPT or Gemini at their best.";
+        : "Normal Mode Active: Be natural, engaging, highly intelligent, articulate, deeply insightful, and conversational at your best.";
 
   const modelStyle =
     chatData.model === "v2-best"

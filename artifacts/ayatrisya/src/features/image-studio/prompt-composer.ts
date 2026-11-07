@@ -1,7 +1,7 @@
 import type { CharacterProfile, ImageStyleId } from './types';
 import { applyStylePreset, IMAGE_STYLE_PRESETS } from './styles';
 import { formatCharacterPromptSegment } from './character-profiles';
-import { enhancePromptLikeChatGPT } from '@/lib/chatgpt-prompt-engine';
+import { enhanceImagePrompt } from '@/lib/vision-prompt-engine';
 
 export interface PromptCompositionInput {
   userInput: string;
@@ -9,6 +9,7 @@ export interface PromptCompositionInput {
   character?: CharacterProfile;
   styleId?: ImageStyleId;
   customStyleModifier?: string;
+  enhanceWithVision?: boolean;
   enhanceWithChatGPT?: boolean;
 }
 
@@ -81,8 +82,8 @@ export function composeConversationalPrompt(input: PromptCompositionInput): Prom
   );
 
   let effectivePrompt = finalPrompt;
-  if (input.enhanceWithChatGPT) {
-    const enhanced = enhancePromptLikeChatGPT(finalPrompt, { style: effectiveStyleId });
+  if (input.enhanceWithVision || input.enhanceWithChatGPT) {
+    const enhanced = enhanceImagePrompt(finalPrompt, { style: effectiveStyleId });
     effectivePrompt = enhanced.enhancedPrompt;
     refinementSummary = refinementSummary || enhanced.enhancementSummary;
   }

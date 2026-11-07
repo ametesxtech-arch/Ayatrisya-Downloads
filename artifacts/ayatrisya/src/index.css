@@ -200,7 +200,7 @@ button,input,textarea,select{ min-width:0; }
   .workspace-sidebar{ box-shadow: 10px 0 35px rgba(0,0,0,0.65); }
 }
 
-/* ChatGPT-style revised prompt accordion in chat */
+/* Ayatrisya Vision revised prompt accordion in chat */
 .chat-revised-prompt {
   margin: 0.75rem 0;
   border-radius: 0.625rem;

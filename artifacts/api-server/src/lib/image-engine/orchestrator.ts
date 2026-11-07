@@ -49,8 +49,30 @@ export class ImageProviderOrchestrator {
       throw new Error("Image generation requires a non-empty prompt.");
     }
 
-    const prompt = enrichImagePrompt(rawPrompt);
+    const prompt = enrichImagePrompt(rawPrompt, { aspectRatio: config.aspectRatio });
     const negativePrompt = config.negativePrompt || DEFAULT_NEGATIVE_PROMPT;
+
+    // Determine optimal dimensions from aspectRatio if width/height not provided
+    let width = config.width;
+    let height = config.height;
+    if ((!width || !height) && config.aspectRatio) {
+      if (config.aspectRatio === "16:9") {
+        width = 1024;
+        height = 576;
+      } else if (config.aspectRatio === "9:16") {
+        width = 576;
+        height = 1024;
+      } else if (config.aspectRatio === "4:3") {
+        width = 1024;
+        height = 768;
+      } else if (config.aspectRatio === "3:4") {
+        width = 768;
+        height = 1024;
+      } else if (config.aspectRatio === "1:1") {
+        width = 1024;
+        height = 1024;
+      }
+    }
 
     // ==========================================
     // STAGE 1: AYATRISYA PROPRIETARY IMAGE MODEL
@@ -188,8 +210,8 @@ export class ImageProviderOrchestrator {
         const result = await this.cfProvider.generate({
           prompt,
           aspectRatio: config.aspectRatio,
-          width: config.width,
-          height: config.height,
+          width: width || config.width,
+          height: height || config.height,
           format: config.format,
         });
         stageAudit.push({
