@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import { isCloudflareConfigured } from "./cloudflare-image";
 import { streamCloudflareChat, type CloudflareChatMessage } from "./cloudflare-chat";
 import { searchInternet, shouldSearchInternet, formatSourcesSection, type SearchResult } from "./web-search";
+import { orchestrator, type OrchestratedContext } from "./orchestrator/orchestrator";
 
 export async function handleCloudflareChatFallback(
   req: Request,
@@ -14,27 +15,25 @@ export async function handleCloudflareChatFallback(
     model: "v1-fast" | "v2-best";
     mode: "Normal" | "Savage" | "Joke";
     stream: boolean;
-  }
+  },
+  precomputedContext?: OrchestratedContext
 ): Promise<boolean> {
   if (!isCloudflareConfigured()) return false;
 
   const { messages: history, mode, stream } = chatData;
-  const lastUserMsg = [...history].reverse().find((m) => m.role === "user")?.content ?? "";
-  let webSearchContext = "";
-  let gatheredSources: SearchResult[] = [];
 
-  if (shouldSearchInternet(lastUserMsg)) {
-    try {
-      const searchResults = await searchInternet(lastUserMsg, 5);
-      if (searchResults.length > 0) {
-        gatheredSources = searchResults;
-        webSearchContext = "\n\nLive Internet Search Results:\n" +
-          searchResults.map((r, i) => `[${i + 1}] "${r.title}": ${r.snippet} (Source: ${r.link})`).join("\n") +
-          "\n\nCRITICAL INSTRUCTION FOR SOURCES CITATION:\n" +
-          "Use the live web search results above to provide accurate, up-to-date facts. At the very end of your response, you MUST ALWAYS provide a dedicated '### 🌐 Sources & References' section with numbered markdown links to all consulted sources.";
-      }
-    } catch {}
-  }
+  // Use pre-computed context if provided from shared orchestration pipeline
+  const orchestratedContext = precomputedContext || (await orchestrator.prepareContext({
+    messages: history,
+    model: chatData.model,
+    mode: chatData.mode,
+    stream: chatData.stream,
+    conversationId: (req.body as any)?.conversationId,
+    personalization: (req.body as any)?.personalization,
+  }));
+
+  const gatheredSources = orchestratedContext.webSearchResults;
+  const webSearchContext = orchestratedContext.webSearchContext;
 
   const toneInstruction =
     mode === "Savage"
@@ -43,15 +42,17 @@ export async function handleCloudflareChatFallback(
         ? "Joke Mode: Be humorous, playful, witty, and high-energy."
         : "Normal Mode: Be articulate, deeply helpful, clear, and direct.";
 
-  const systemInstruction = `You are Ayatrisya AI, a powerful, lightning-fast intelligent reasoning, coding, and creative assistant built by Ametesx.
+  const systemInstruction = `You are Ayatrisya AI, a premier intelligent reasoning, coding, and creative multimodal AI platform created by Ametesx.
 Tone: ${toneInstruction}${webSearchContext}
+${orchestratedContext.augmentedSystemPrompt}
 
 Guidelines:
 1. Provide direct answers immediately without filler boilerplate ("Certainly!", "Sure!").
 2. When asked to create games, scripts, or apps in Python, JavaScript, HTML, etc., write complete, working, runnable code.
 3. Always wrap code in appropriate markdown fences (e.g. \`\`\`python, \`\`\`html, \`\`\`javascript).
 4. For math and complexity, format with LaTeX dollar signs: $O(n)$, $O(1)$.
-5. Never output fabricated external markdown image links (such as unsplash, wikimedia, or random web URLs). Image creation is handled directly by the native Ayatrisya Vision Engine.`;
+5. Interactive Blocks: When asked for quizzes, MCQs, comparisons, or tools, output valid \`\`\`interactive JSON or markdown components.
+6. Never output fabricated external markdown image links (such as unsplash, wikimedia, or random web URLs). Image creation is handled directly by the native Ayatrisya Vision Engine.`;
 
   const cfMessages: CloudflareChatMessage[] = [
     { role: "system", content: systemInstruction },
@@ -82,6 +83,7 @@ Guidelines:
         "X-Content-Type-Options": "nosniff",
         "x-model-source": "ayatrisya-cloudflare-ai",
         "x-fallback-model": "@cf/meta/llama-3.1-8b-instruct",
+        "x-conversation-intent": orchestratedContext.classification.intent,
       });
 
       const reader = cfRes.body.getReader();
@@ -153,12 +155,25 @@ Guidelines:
         }
       }
 
+      const conversationId = (req.body as any)?.conversationId || `conv_${Date.now()}`;
+      const messageId = `msg_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+      const universal = orchestrator.finalizeResponse({
+        rawOutput: text,
+        conversationId,
+        messageId,
+        classification: orchestratedContext.classification,
+        webSearchResults: gatheredSources,
+      });
+
       res.status(200).set({
         "Cache-Control": "no-store",
         "x-model-source": "ayatrisya-cloudflare-ai",
         "x-fallback-model": "@cf/meta/llama-3.1-8b-instruct",
+        "x-conversation-intent": orchestratedContext.classification.intent,
       }).json({
         text,
+        universalResponse: universal,
+        intent: orchestratedContext.classification.intent,
         provider: "cloudflare-workers-ai",
         fallbackModel: "@cf/meta/llama-3.1-8b-instruct",
       });
@@ -168,4 +183,3 @@ Guidelines:
     return false;
   }
 }
-

@@ -25,7 +25,7 @@ import { generateHfImage, isHfImageConfigured } from "../lib/hf-image";
 import { generateProceduralWav } from "../lib/music-generator";
 import { callHfGradioApi, isHuggingFaceSpaceUrl, normalizeHfSpaceBaseUrl } from "../lib/hf-space-client";
 import { imageOrchestrator } from "../lib/image-engine/orchestrator";
-import { orchestrator } from "../lib/orchestrator/orchestrator";
+import { orchestrator, type OrchestratedContext } from "../lib/orchestrator/orchestrator";
 import { UniversalResponseSchema, type UniversalResponse } from "../lib/response-protocol/schema";
 
 const router: IRouter = Router();
@@ -179,21 +179,22 @@ async function fallbackWithGeminiChat(
       size?: number;
     }>;
   },
+  precomputedContext?: OrchestratedContext,
 ): Promise<boolean> {
   const geminiApiKey = process.env.GEMINI_API_KEY?.trim();
   if (!geminiApiKey) return false;
 
   const { messages: history, mode, stream } = chatData;
 
-  // Prepare context and intent through Conversational Orchestrator 2.0
-  const orchestratedContext = await orchestrator.prepareContext({
+  // Prepare context and intent through Conversational Orchestrator 2.0 (reusing precomputed context if provided)
+  const orchestratedContext = precomputedContext || (await orchestrator.prepareContext({
     messages: history,
     model: chatData.model,
     mode: chatData.mode,
     stream: chatData.stream,
     conversationId: (req.body as any)?.conversationId,
     personalization: (req.body as any)?.personalization,
-  });
+  }));
 
   const gatheredSources = orchestratedContext.webSearchResults;
   const webSearchContext = orchestratedContext.webSearchContext;
@@ -554,21 +555,40 @@ async function proxyModelRequest(
     }
   }
 
+  // Unified Request-Scoped Orchestration (runs ONCE for all chat providers)
+  let sharedOrchestratedContext: OrchestratedContext | undefined;
+  let parsedChatData: any;
+  if (route.upstreamPath === "/chat" && method === "POST") {
+    const parsed = route.schema?.safeParse(req.body);
+    if (!parsed?.success) {
+      sendError(res, 400, "The model request is invalid.");
+      return;
+    }
+    parsedChatData = parsed.data;
+    if (Buffer.byteLength(JSON.stringify(parsedChatData)) > 25 * 1024 * 1024) {
+      sendError(res, 413, "Chat requests must be 25 MB or smaller.");
+      return;
+    }
+    sharedOrchestratedContext = await orchestrator.prepareContext({
+      messages: parsedChatData.messages,
+      model: parsedChatData.model,
+      mode: parsedChatData.mode,
+      stream: parsedChatData.stream,
+      conversationId: (req.body as any)?.conversationId,
+      personalization: (req.body as any)?.personalization,
+    });
+  }
+
   const config = getModelConfig();
   if (!config.ok) {
     // If chat request, try Cloudflare Workers AI high-speed LLM first, then Gemini
     if (route.upstreamPath === "/chat" && method === "POST") {
-      const parsed = route.schema?.safeParse(req.body);
-      if (!parsed?.success) {
-        sendError(res, 400, "The model request is invalid.");
-        return;
-      }
       if (isCloudflareConfigured()) {
-        const handledCf = await handleCloudflareChatFallback(req, res, parsed.data as any);
+        const handledCf = await handleCloudflareChatFallback(req, res, parsedChatData, sharedOrchestratedContext);
         if (handledCf) return;
       }
       if (process.env.GEMINI_API_KEY?.trim()) {
-        const handled = await fallbackWithGeminiChat(req, res, parsed.data as any);
+        const handled = await fallbackWithGeminiChat(req, res, parsedChatData, sharedOrchestratedContext);
         if (handled) return;
       }
     }
@@ -648,41 +668,51 @@ async function proxyModelRequest(
         sendError(res, 500, "The model request validator is unavailable.");
         return;
       }
-      const parsed = route.schema.safeParse(req.body);
-      if (!parsed.success) {
-        sendError(res, 400, "The model request is invalid.");
-        return;
+
+      if (route.upstreamPath === "/chat") {
+        const messagesForUpstream = [...parsedChatData.messages];
+        if (sharedOrchestratedContext?.augmentedSystemPrompt && messagesForUpstream.length > 0) {
+          const first = messagesForUpstream[0];
+          messagesForUpstream[0] = {
+            ...first,
+            content: `[System Directives & Memory Context:\n${sharedOrchestratedContext.augmentedSystemPrompt}]\n\n${first.content}`,
+          };
+        }
+        body = JSON.stringify({
+          ...parsedChatData,
+          messages: messagesForUpstream,
+        });
+        contentType = "application/json";
+      } else {
+        const parsed = route.schema.safeParse(req.body);
+        if (!parsed.success) {
+          sendError(res, 400, "The model request is invalid.");
+          return;
+        }
+        if (
+          route.upstreamPath === "/generate/image" &&
+          !["PNG", "JPEG"].includes(String((parsed.data as { format?: unknown }).format))
+        ) {
+          sendError(res, 400, "Image generation supports PNG or JPEG output.");
+          return;
+        }
+        if (
+          route.upstreamPath === "/generate/3d" &&
+          (parsed.data as { format?: unknown }).format !== "GLB"
+        ) {
+          sendError(res, 400, "3D generation supports GLB output.");
+          return;
+        }
+        if (
+          route.upstreamPath === "/generate/music" &&
+          !["WAV", "MP3"].includes(String((parsed.data as { format?: unknown }).format))
+        ) {
+          sendError(res, 400, "Music generation supports WAV or MP3 output.");
+          return;
+        }
+        body = JSON.stringify(parsed.data);
+        contentType = "application/json";
       }
-      if (
-        route.upstreamPath === "/chat" &&
-        Buffer.byteLength(JSON.stringify(parsed.data)) > 25 * 1024 * 1024
-      ) {
-        sendError(res, 413, "Chat requests must be 25 MB or smaller.");
-        return;
-      }
-      if (
-        route.upstreamPath === "/generate/image" &&
-        !["PNG", "JPEG"].includes(String((parsed.data as { format?: unknown }).format))
-      ) {
-        sendError(res, 400, "Image generation supports PNG or JPEG output.");
-        return;
-      }
-      if (
-        route.upstreamPath === "/generate/3d" &&
-        (parsed.data as { format?: unknown }).format !== "GLB"
-      ) {
-        sendError(res, 400, "3D generation supports GLB output.");
-        return;
-      }
-      if (
-        route.upstreamPath === "/generate/music" &&
-        !["WAV", "MP3"].includes(String((parsed.data as { format?: unknown }).format))
-      ) {
-        sendError(res, 400, "Music generation supports WAV or MP3 output.");
-        return;
-      }
-      body = JSON.stringify(parsed.data);
-      contentType = "application/json";
     }
   }
 
@@ -701,14 +731,40 @@ async function proxyModelRequest(
         const payload = typeof body === "string" ? body : JSON.stringify(req.body);
         const result = (await callHfGradioApi(hfConfig, "predict", [payload])) as { text?: string; error?: string };
         if (result && typeof result.text === "string") {
+          let responseText = result.text;
+          if (sharedOrchestratedContext && sharedOrchestratedContext.webSearchResults.length > 0) {
+            const hasSources = /###\s*(🌐\s*)?(sources|references)/i.test(responseText) ||
+              sharedOrchestratedContext.webSearchResults.some((s) => responseText.includes(s.link));
+            if (!hasSources) {
+              responseText += formatSourcesSection(sharedOrchestratedContext.webSearchResults);
+            }
+          }
+          const conversationId = (req.body as any)?.conversationId || `conv_${Date.now()}`;
+          const messageId = `msg_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+          const universal = sharedOrchestratedContext
+            ? orchestrator.finalizeResponse({
+                rawOutput: responseText,
+                conversationId,
+                messageId,
+                classification: sharedOrchestratedContext.classification,
+                webSearchResults: sharedOrchestratedContext.webSearchResults,
+              })
+            : undefined;
+
           res
             .status(200)
             .set({
               "Cache-Control": "no-store",
               "Content-Type": "application/json",
               "x-model-source": "ayatrisya-hosted-zerogpu",
+              "x-conversation-intent": sharedOrchestratedContext?.classification.intent || "general_conversation",
             })
-            .json({ text: result.text });
+            .json({
+              text: responseText,
+              universalResponse: universal,
+              intent: sharedOrchestratedContext?.classification.intent,
+              provider: "ayatrisya-hosted-zerogpu",
+            });
           return;
         }
         throw new Error(result?.error || "Invalid response format from HF Space.");
@@ -749,11 +805,8 @@ async function proxyModelRequest(
       req.log.warn({ error: hfErr instanceof Error ? hfErr.message : String(hfErr) }, "HF Space inference failed");
       // Fallback to Gemini if configured
       if (route.upstreamPath === "/chat" && method === "POST" && process.env.GEMINI_API_KEY?.trim()) {
-        const parsed = route.schema?.safeParse(req.body);
-        if (parsed?.success) {
-          const fallbackOk = await fallbackWithGeminiChat(req, res, parsed.data as any);
-          if (fallbackOk) return;
-        }
+        const fallbackOk = await fallbackWithGeminiChat(req, res, parsedChatData, sharedOrchestratedContext);
+        if (fallbackOk) return;
       }
       sendError(res, 503, "The Ayatrisya chat model service is unavailable or returned an error.");
       return;
@@ -777,6 +830,7 @@ async function proxyModelRequest(
         Authorization: `Bearer ${config.apiKey}`,
         Accept: req.get("accept") ?? "application/json",
         ...(method === "POST" ? { "Content-Type": contentType } : {}),
+        ...(sharedOrchestratedContext ? { "x-conversation-intent": sharedOrchestratedContext.classification.intent } : {}),
       },
       body: Buffer.isBuffer(body)
         ? new Uint8Array(body.buffer, body.byteOffset, body.byteLength)
@@ -791,11 +845,8 @@ async function proxyModelRequest(
 
       // On /chat, if primary model fails and Gemini fallback is configured, engage fallback
       if (route.upstreamPath === "/chat" && method === "POST" && process.env.GEMINI_API_KEY?.trim()) {
-        const parsed = route.schema?.safeParse(req.body);
-        if (parsed?.success) {
-          const fallbackOk = await fallbackWithGeminiChat(req, res, parsed.data as any);
-          if (fallbackOk) return;
-        }
+        const fallbackOk = await fallbackWithGeminiChat(req, res, parsedChatData, sharedOrchestratedContext);
+        if (fallbackOk) return;
       }
 
       // If image generation fails upstream, return 503 (never route images to Gemini)
@@ -1021,6 +1072,34 @@ async function proxyModelRequest(
           }
         }
 
+        // If chat endpoint, normalize into Universal Response Protocol and attach sources
+        if (route.upstreamPath === "/chat") {
+          let responseText = typeof rawJson.text === "string" ? rawJson.text : "Ayatrisya AI generated response.";
+          if (sharedOrchestratedContext && sharedOrchestratedContext.webSearchResults.length > 0) {
+            const hasSources = /###\s*(🌐\s*)?(sources|references)/i.test(responseText) ||
+              sharedOrchestratedContext.webSearchResults.some((s) => responseText.includes(s.link));
+            if (!hasSources) {
+              responseText += formatSourcesSection(sharedOrchestratedContext.webSearchResults);
+            }
+          }
+          const conversationId = (req.body as any)?.conversationId || `conv_${Date.now()}`;
+          const messageId = `msg_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+          const universal = sharedOrchestratedContext
+            ? orchestrator.finalizeResponse({
+                rawOutput: responseText,
+                conversationId,
+                messageId,
+                classification: sharedOrchestratedContext.classification,
+                webSearchResults: sharedOrchestratedContext.webSearchResults,
+              })
+            : undefined;
+
+          rawJson.text = responseText;
+          rawJson.universalResponse = universal;
+          rawJson.intent = sharedOrchestratedContext?.classification.intent || "general_conversation";
+          rawJson.provider = rawJson.provider || "ayatrisya-native";
+        }
+
         const parsedResponse = route.responseSchema.parse(rawJson);
         const serialized = JSON.stringify(parsedResponse);
         if (Buffer.byteLength(serialized) > maxBytes) {
@@ -1031,6 +1110,7 @@ async function proxyModelRequest(
           "Content-Type": "application/json",
           "Cache-Control": "no-store",
           "X-Content-Type-Options": "nosniff",
+          ...(sharedOrchestratedContext ? { "x-conversation-intent": sharedOrchestratedContext.classification.intent } : {}),
         }).send(serialized);
       } catch {
         req.log.warn({ path: route.upstreamPath }, "Ayatrisya model endpoint returned invalid JSON");
@@ -1044,6 +1124,7 @@ async function proxyModelRequest(
       "Content-Type": responseType,
       "Cache-Control": "no-store",
       "X-Content-Type-Options": "nosniff",
+      ...(sharedOrchestratedContext ? { "x-conversation-intent": sharedOrchestratedContext.classification.intent } : {}),
     });
     const reader = upstream.body.getReader();
     let totalBytes = 0;
@@ -1065,16 +1146,25 @@ async function proxyModelRequest(
         }
       }
     }
+
+    if (route.upstreamPath === "/chat" && sharedOrchestratedContext && sharedOrchestratedContext.webSearchResults.length > 0) {
+      const acceptHeader = req.get("accept") ?? "";
+      const isNdjson = acceptHeader.includes("ndjson");
+      const sourcesBlock = formatSourcesSection(sharedOrchestratedContext.webSearchResults);
+      if (isNdjson) {
+        res.write(`${JSON.stringify({ token: sourcesBlock })}\n`);
+      } else {
+        res.write(`data: ${JSON.stringify({ token: sourcesBlock })}\n\n`);
+      }
+    }
+
     res.end();
   } catch (error) {
     if (!res.headersSent && !res.destroyed) {
       // On /chat, try fallback if connection failed
       if (route.upstreamPath === "/chat" && method === "POST" && process.env.GEMINI_API_KEY?.trim()) {
-        const parsed = route.schema?.safeParse(req.body);
-        if (parsed?.success) {
-          const fallbackOk = await fallbackWithGeminiChat(req, res, parsed.data as any);
-          if (fallbackOk) return;
-        }
+        const fallbackOk = await fallbackWithGeminiChat(req, res, parsedChatData, sharedOrchestratedContext);
+        if (fallbackOk) return;
       }
 
       // If image generation connection failed, return 503

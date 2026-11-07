@@ -1666,5 +1666,874 @@
     "createdBy": "guest_user",
     "createdAt": "2026-11-07T17:27:00.974Z",
     "updatedAt": "2026-11-07T17:27:00.974Z"
+  },
+  {
+    "id": "exam_1794073511268_u54jf",
+    "title": "CBSE Class 12 Physics & Math Challenge",
+    "description": "Assessment on Electromagnetism and Calculus",
+    "mode": "examination",
+    "timeLimitMinutes": 45,
+    "passingScore": 75,
+    "examType": "CBSE",
+    "questions": [
+      {
+        "id": "q1",
+        "type": "single_choice",
+        "question": "What is the SI unit of magnetic flux?",
+        "options": [
+          {
+            "id": "a",
+            "label": "Tesla"
+          },
+          {
+            "id": "b",
+            "label": "Weber"
+          },
+          {
+            "id": "c",
+            "label": "Henry"
+          },
+          {
+            "id": "d",
+            "label": "Farad"
+          }
+        ],
+        "correctAnswer": "b",
+        "explanation": "The SI unit of magnetic flux is the weber (Wb). Tesla is the unit of magnetic flux density.",
+        "topic": "Electromagnetism",
+        "difficulty": "easy",
+        "isPyq": true,
+        "examTag": "[CBSE 2023]",
+        "marks": 1
+      },
+      {
+        "id": "q2",
+        "type": "assertion_reason",
+        "question": "Evaluate the Assertion and Reason regarding transformers.",
+        "assertion": "A transformer cannot work on direct current (DC).",
+        "reason": "DC does not produce a varying magnetic flux required for mutual induction.",
+        "options": [
+          {
+            "id": "a",
+            "label": "Both A and R are true and R is the correct explanation of A"
+          },
+          {
+            "id": "b",
+            "label": "Both A and R are true but R is NOT the correct explanation of A"
+          },
+          {
+            "id": "c",
+            "label": "A is true but R is false"
+          },
+          {
+            "id": "d",
+            "label": "A is false but R is true"
+          }
+        ],
+        "correctAnswer": "a",
+        "explanation": "Transformers operate on Faraday's law of induction, which requires a time-varying magnetic flux. Direct current creates a steady magnetic field, resulting in zero induced EMF.",
+        "topic": "Electromagnetism",
+        "difficulty": "medium",
+        "isPyq": true,
+        "examTag": "[CBSE 2022]",
+        "marks": 1
+      },
+      {
+        "id": "q3",
+        "type": "multiple_choice",
+        "question": "Which of the following functions are continuous at x = 0?",
+        "options": [
+          {
+            "id": "a",
+            "label": "f(x) = sin(x)"
+          },
+          {
+            "id": "b",
+            "label": "f(x) = |x|"
+          },
+          {
+            "id": "c",
+            "label": "f(x) = 1/x"
+          },
+          {
+            "id": "d",
+            "label": "f(x) = cos(x)"
+          }
+        ],
+        "correctAnswer": [
+          "a",
+          "b",
+          "d"
+        ],
+        "explanation": "sin(x), |x|, and cos(x) are defined and continuous everywhere, including at x=0. 1/x has an essential discontinuity at x=0.",
+        "topic": "Calculus",
+        "difficulty": "medium",
+        "isPyq": false,
+        "marks": 2
+      },
+      {
+        "id": "q4",
+        "type": "match_following",
+        "question": "Match the physical quantities in Column A with their formulas in Column B.",
+        "matchPairs": [
+          {
+            "id": "p1",
+            "left": "Magnetic Force",
+            "right": "q(v x B)"
+          },
+          {
+            "id": "p2",
+            "left": "Electric Flux",
+            "right": "E . A"
+          }
+        ],
+        "correctAnswer": {
+          "p1": "q(v x B)",
+          "p2": "E . A"
+        },
+        "explanation": "Lorentz magnetic force is F = q(v x B) and electric flux is Phi = E . A.",
+        "topic": "Electromagnetism",
+        "difficulty": "medium",
+        "isPyq": false,
+        "marks": 2
+      }
+    ],
+    "topicSummary": [
+      "Electromagnetism",
+      "Calculus"
+    ],
+    "createdBy": "guest_user",
+    "createdAt": "2026-11-07T17:45:11.269Z",
+    "updatedAt": "2026-11-07T17:45:11.283Z"
+  },
+  {
+    "id": "exam_1794073511327_jxqxu",
+    "title": "CBSE Class 12 Physics & Math Challenge",
+    "description": "Assessment on Electromagnetism and Calculus",
+    "mode": "examination",
+    "timeLimitMinutes": 45,
+    "passingScore": 75,
+    "examType": "CBSE",
+    "questions": [
+      {
+        "id": "q1",
+        "type": "single_choice",
+        "question": "What is the SI unit of magnetic flux?",
+        "options": [
+          {
+            "id": "a",
+            "label": "Tesla"
+          },
+          {
+            "id": "b",
+            "label": "Weber"
+          },
+          {
+            "id": "c",
+            "label": "Henry"
+          },
+          {
+            "id": "d",
+            "label": "Farad"
+          }
+        ],
+        "correctAnswer": "b",
+        "explanation": "The SI unit of magnetic flux is the weber (Wb). Tesla is the unit of magnetic flux density.",
+        "topic": "Electromagnetism",
+        "difficulty": "easy",
+        "isPyq": true,
+        "examTag": "[CBSE 2023]",
+        "marks": 1
+      },
+      {
+        "id": "q2",
+        "type": "assertion_reason",
+        "question": "Evaluate the Assertion and Reason regarding transformers.",
+        "assertion": "A transformer cannot work on direct current (DC).",
+        "reason": "DC does not produce a varying magnetic flux required for mutual induction.",
+        "options": [
+          {
+            "id": "a",
+            "label": "Both A and R are true and R is the correct explanation of A"
+          },
+          {
+            "id": "b",
+            "label": "Both A and R are true but R is NOT the correct explanation of A"
+          },
+          {
+            "id": "c",
+            "label": "A is true but R is false"
+          },
+          {
+            "id": "d",
+            "label": "A is false but R is true"
+          }
+        ],
+        "correctAnswer": "a",
+        "explanation": "Transformers operate on Faraday's law of induction, which requires a time-varying magnetic flux. Direct current creates a steady magnetic field, resulting in zero induced EMF.",
+        "topic": "Electromagnetism",
+        "difficulty": "medium",
+        "isPyq": true,
+        "examTag": "[CBSE 2022]",
+        "marks": 1
+      },
+      {
+        "id": "q3",
+        "type": "multiple_choice",
+        "question": "Which of the following functions are continuous at x = 0?",
+        "options": [
+          {
+            "id": "a",
+            "label": "f(x) = sin(x)"
+          },
+          {
+            "id": "b",
+            "label": "f(x) = |x|"
+          },
+          {
+            "id": "c",
+            "label": "f(x) = 1/x"
+          },
+          {
+            "id": "d",
+            "label": "f(x) = cos(x)"
+          }
+        ],
+        "correctAnswer": [
+          "a",
+          "b",
+          "d"
+        ],
+        "explanation": "sin(x), |x|, and cos(x) are defined and continuous everywhere, including at x=0. 1/x has an essential discontinuity at x=0.",
+        "topic": "Calculus",
+        "difficulty": "medium",
+        "isPyq": false,
+        "marks": 2
+      },
+      {
+        "id": "q4",
+        "type": "match_following",
+        "question": "Match the physical quantities in Column A with their formulas in Column B.",
+        "matchPairs": [
+          {
+            "id": "p1",
+            "left": "Magnetic Force",
+            "right": "q(v x B)"
+          },
+          {
+            "id": "p2",
+            "left": "Electric Flux",
+            "right": "E . A"
+          }
+        ],
+        "correctAnswer": {
+          "p1": "q(v x B)",
+          "p2": "E . A"
+        },
+        "explanation": "Lorentz magnetic force is F = q(v x B) and electric flux is Phi = E . A.",
+        "topic": "Electromagnetism",
+        "difficulty": "medium",
+        "isPyq": false,
+        "marks": 2
+      }
+    ],
+    "topicSummary": [
+      "Electromagnetism",
+      "Calculus"
+    ],
+    "createdBy": "guest_user",
+    "createdAt": "2026-11-07T17:45:11.327Z",
+    "updatedAt": "2026-11-07T17:45:11.327Z"
+  },
+  {
+    "id": "exam_1794073511428_gquzz",
+    "title": "CBSE Class 12 Physics & Math Challenge",
+    "description": "Assessment on Electromagnetism and Calculus",
+    "mode": "examination",
+    "timeLimitMinutes": 45,
+    "passingScore": 75,
+    "examType": "CBSE",
+    "questions": [
+      {
+        "id": "q1",
+        "type": "single_choice",
+        "question": "What is the SI unit of magnetic flux?",
+        "options": [
+          {
+            "id": "a",
+            "label": "Tesla"
+          },
+          {
+            "id": "b",
+            "label": "Weber"
+          },
+          {
+            "id": "c",
+            "label": "Henry"
+          },
+          {
+            "id": "d",
+            "label": "Farad"
+          }
+        ],
+        "correctAnswer": "b",
+        "explanation": "The SI unit of magnetic flux is the weber (Wb). Tesla is the unit of magnetic flux density.",
+        "topic": "Electromagnetism",
+        "difficulty": "easy",
+        "isPyq": true,
+        "examTag": "[CBSE 2023]",
+        "marks": 1
+      },
+      {
+        "id": "q2",
+        "type": "assertion_reason",
+        "question": "Evaluate the Assertion and Reason regarding transformers.",
+        "assertion": "A transformer cannot work on direct current (DC).",
+        "reason": "DC does not produce a varying magnetic flux required for mutual induction.",
+        "options": [
+          {
+            "id": "a",
+            "label": "Both A and R are true and R is the correct explanation of A"
+          },
+          {
+            "id": "b",
+            "label": "Both A and R are true but R is NOT the correct explanation of A"
+          },
+          {
+            "id": "c",
+            "label": "A is true but R is false"
+          },
+          {
+            "id": "d",
+            "label": "A is false but R is true"
+          }
+        ],
+        "correctAnswer": "a",
+        "explanation": "Transformers operate on Faraday's law of induction, which requires a time-varying magnetic flux. Direct current creates a steady magnetic field, resulting in zero induced EMF.",
+        "topic": "Electromagnetism",
+        "difficulty": "medium",
+        "isPyq": true,
+        "examTag": "[CBSE 2022]",
+        "marks": 1
+      },
+      {
+        "id": "q3",
+        "type": "multiple_choice",
+        "question": "Which of the following functions are continuous at x = 0?",
+        "options": [
+          {
+            "id": "a",
+            "label": "f(x) = sin(x)"
+          },
+          {
+            "id": "b",
+            "label": "f(x) = |x|"
+          },
+          {
+            "id": "c",
+            "label": "f(x) = 1/x"
+          },
+          {
+            "id": "d",
+            "label": "f(x) = cos(x)"
+          }
+        ],
+        "correctAnswer": [
+          "a",
+          "b",
+          "d"
+        ],
+        "explanation": "sin(x), |x|, and cos(x) are defined and continuous everywhere, including at x=0. 1/x has an essential discontinuity at x=0.",
+        "topic": "Calculus",
+        "difficulty": "medium",
+        "isPyq": false,
+        "marks": 2
+      },
+      {
+        "id": "q4",
+        "type": "match_following",
+        "question": "Match the physical quantities in Column A with their formulas in Column B.",
+        "matchPairs": [
+          {
+            "id": "p1",
+            "left": "Magnetic Force",
+            "right": "q(v x B)"
+          },
+          {
+            "id": "p2",
+            "left": "Electric Flux",
+            "right": "E . A"
+          }
+        ],
+        "correctAnswer": {
+          "p1": "q(v x B)",
+          "p2": "E . A"
+        },
+        "explanation": "Lorentz magnetic force is F = q(v x B) and electric flux is Phi = E . A.",
+        "topic": "Electromagnetism",
+        "difficulty": "medium",
+        "isPyq": false,
+        "marks": 2
+      }
+    ],
+    "topicSummary": [
+      "Electromagnetism",
+      "Calculus"
+    ],
+    "createdBy": "guest_user",
+    "createdAt": "2026-11-07T17:45:11.429Z",
+    "updatedAt": "2026-11-07T17:45:11.429Z"
+  },
+  {
+    "id": "exam_1794073600872_fsbhu",
+    "title": "CBSE Class 12 Physics & Math Challenge",
+    "description": "Assessment on Electromagnetism and Calculus",
+    "mode": "examination",
+    "timeLimitMinutes": 45,
+    "passingScore": 75,
+    "examType": "CBSE",
+    "questions": [
+      {
+        "id": "q1",
+        "type": "single_choice",
+        "question": "What is the SI unit of magnetic flux?",
+        "options": [
+          {
+            "id": "a",
+            "label": "Tesla"
+          },
+          {
+            "id": "b",
+            "label": "Weber"
+          },
+          {
+            "id": "c",
+            "label": "Henry"
+          },
+          {
+            "id": "d",
+            "label": "Farad"
+          }
+        ],
+        "correctAnswer": "b",
+        "explanation": "The SI unit of magnetic flux is the weber (Wb). Tesla is the unit of magnetic flux density.",
+        "topic": "Electromagnetism",
+        "difficulty": "easy",
+        "isPyq": true,
+        "examTag": "[CBSE 2023]",
+        "marks": 1
+      },
+      {
+        "id": "q2",
+        "type": "assertion_reason",
+        "question": "Evaluate the Assertion and Reason regarding transformers.",
+        "assertion": "A transformer cannot work on direct current (DC).",
+        "reason": "DC does not produce a varying magnetic flux required for mutual induction.",
+        "options": [
+          {
+            "id": "a",
+            "label": "Both A and R are true and R is the correct explanation of A"
+          },
+          {
+            "id": "b",
+            "label": "Both A and R are true but R is NOT the correct explanation of A"
+          },
+          {
+            "id": "c",
+            "label": "A is true but R is false"
+          },
+          {
+            "id": "d",
+            "label": "A is false but R is true"
+          }
+        ],
+        "correctAnswer": "a",
+        "explanation": "Transformers operate on Faraday's law of induction, which requires a time-varying magnetic flux. Direct current creates a steady magnetic field, resulting in zero induced EMF.",
+        "topic": "Electromagnetism",
+        "difficulty": "medium",
+        "isPyq": true,
+        "examTag": "[CBSE 2022]",
+        "marks": 1
+      },
+      {
+        "id": "q3",
+        "type": "multiple_choice",
+        "question": "Which of the following functions are continuous at x = 0?",
+        "options": [
+          {
+            "id": "a",
+            "label": "f(x) = sin(x)"
+          },
+          {
+            "id": "b",
+            "label": "f(x) = |x|"
+          },
+          {
+            "id": "c",
+            "label": "f(x) = 1/x"
+          },
+          {
+            "id": "d",
+            "label": "f(x) = cos(x)"
+          }
+        ],
+        "correctAnswer": [
+          "a",
+          "b",
+          "d"
+        ],
+        "explanation": "sin(x), |x|, and cos(x) are defined and continuous everywhere, including at x=0. 1/x has an essential discontinuity at x=0.",
+        "topic": "Calculus",
+        "difficulty": "medium",
+        "isPyq": false,
+        "marks": 2
+      },
+      {
+        "id": "q4",
+        "type": "match_following",
+        "question": "Match the physical quantities in Column A with their formulas in Column B.",
+        "matchPairs": [
+          {
+            "id": "p1",
+            "left": "Magnetic Force",
+            "right": "q(v x B)"
+          },
+          {
+            "id": "p2",
+            "left": "Electric Flux",
+            "right": "E . A"
+          }
+        ],
+        "correctAnswer": {
+          "p1": "q(v x B)",
+          "p2": "E . A"
+        },
+        "explanation": "Lorentz magnetic force is F = q(v x B) and electric flux is Phi = E . A.",
+        "topic": "Electromagnetism",
+        "difficulty": "medium",
+        "isPyq": false,
+        "marks": 2
+      }
+    ],
+    "topicSummary": [
+      "Electromagnetism",
+      "Calculus"
+    ],
+    "createdBy": "guest_user",
+    "createdAt": "2026-11-07T17:46:40.874Z",
+    "updatedAt": "2026-11-07T17:46:40.875Z"
+  },
+  {
+    "id": "exam_1794073600938_e0m0v",
+    "title": "CBSE Class 12 Physics & Math Challenge",
+    "description": "Assessment on Electromagnetism and Calculus",
+    "mode": "examination",
+    "timeLimitMinutes": 45,
+    "passingScore": 75,
+    "examType": "CBSE",
+    "questions": [
+      {
+        "id": "q1",
+        "type": "single_choice",
+        "question": "What is the SI unit of magnetic flux?",
+        "options": [
+          {
+            "id": "a",
+            "label": "Tesla"
+          },
+          {
+            "id": "b",
+            "label": "Weber"
+          },
+          {
+            "id": "c",
+            "label": "Henry"
+          },
+          {
+            "id": "d",
+            "label": "Farad"
+          }
+        ],
+        "correctAnswer": "b",
+        "explanation": "The SI unit of magnetic flux is the weber (Wb). Tesla is the unit of magnetic flux density.",
+        "topic": "Electromagnetism",
+        "difficulty": "easy",
+        "isPyq": true,
+        "examTag": "[CBSE 2023]",
+        "marks": 1
+      },
+      {
+        "id": "q2",
+        "type": "assertion_reason",
+        "question": "Evaluate the Assertion and Reason regarding transformers.",
+        "assertion": "A transformer cannot work on direct current (DC).",
+        "reason": "DC does not produce a varying magnetic flux required for mutual induction.",
+        "options": [
+          {
+            "id": "a",
+            "label": "Both A and R are true and R is the correct explanation of A"
+          },
+          {
+            "id": "b",
+            "label": "Both A and R are true but R is NOT the correct explanation of A"
+          },
+          {
+            "id": "c",
+            "label": "A is true but R is false"
+          },
+          {
+            "id": "d",
+            "label": "A is false but R is true"
+          }
+        ],
+        "correctAnswer": "a",
+        "explanation": "Transformers operate on Faraday's law of induction, which requires a time-varying magnetic flux. Direct current creates a steady magnetic field, resulting in zero induced EMF.",
+        "topic": "Electromagnetism",
+        "difficulty": "medium",
+        "isPyq": true,
+        "examTag": "[CBSE 2022]",
+        "marks": 1
+      },
+      {
+        "id": "q3",
+        "type": "multiple_choice",
+        "question": "Which of the following functions are continuous at x = 0?",
+        "options": [
+          {
+            "id": "a",
+            "label": "f(x) = sin(x)"
+          },
+          {
+            "id": "b",
+            "label": "f(x) = |x|"
+          },
+          {
+            "id": "c",
+            "label": "f(x) = 1/x"
+          },
+          {
+            "id": "d",
+            "label": "f(x) = cos(x)"
+          }
+        ],
+        "correctAnswer": [
+          "a",
+          "b",
+          "d"
+        ],
+        "explanation": "sin(x), |x|, and cos(x) are defined and continuous everywhere, including at x=0. 1/x has an essential discontinuity at x=0.",
+        "topic": "Calculus",
+        "difficulty": "medium",
+        "isPyq": false,
+        "marks": 2
+      },
+      {
+        "id": "q4",
+        "type": "match_following",
+        "question": "Match the physical quantities in Column A with their formulas in Column B.",
+        "matchPairs": [
+          {
+            "id": "p1",
+            "left": "Magnetic Force",
+            "right": "q(v x B)"
+          },
+          {
+            "id": "p2",
+            "left": "Electric Flux",
+            "right": "E . A"
+          }
+        ],
+        "correctAnswer": {
+          "p1": "q(v x B)",
+          "p2": "E . A"
+        },
+        "explanation": "Lorentz magnetic force is F = q(v x B) and electric flux is Phi = E . A.",
+        "topic": "Electromagnetism",
+        "difficulty": "medium",
+        "isPyq": false,
+        "marks": 2
+      }
+    ],
+    "topicSummary": [
+      "Electromagnetism",
+      "Calculus"
+    ],
+    "createdBy": "guest_user",
+    "createdAt": "2026-11-07T17:46:40.938Z",
+    "updatedAt": "2026-11-07T17:46:40.938Z"
+  },
+  {
+    "id": "exam_1794073601014_hv38i",
+    "title": "CBSE Class 12 Physics & Math Challenge",
+    "description": "Assessment on Electromagnetism and Calculus",
+    "mode": "examination",
+    "timeLimitMinutes": 45,
+    "passingScore": 75,
+    "examType": "CBSE",
+    "questions": [
+      {
+        "id": "q1",
+        "type": "single_choice",
+        "question": "What is the SI unit of magnetic flux?",
+        "options": [
+          {
+            "id": "a",
+            "label": "Tesla"
+          },
+          {
+            "id": "b",
+            "label": "Weber"
+          },
+          {
+            "id": "c",
+            "label": "Henry"
+          },
+          {
+            "id": "d",
+            "label": "Farad"
+          }
+        ],
+        "correctAnswer": "b",
+        "explanation": "The SI unit of magnetic flux is the weber (Wb). Tesla is the unit of magnetic flux density.",
+        "topic": "Electromagnetism",
+        "difficulty": "easy",
+        "isPyq": true,
+        "examTag": "[CBSE 2023]",
+        "marks": 1
+      },
+      {
+        "id": "q2",
+        "type": "assertion_reason",
+        "question": "Evaluate the Assertion and Reason regarding transformers.",
+        "assertion": "A transformer cannot work on direct current (DC).",
+        "reason": "DC does not produce a varying magnetic flux required for mutual induction.",
+        "options": [
+          {
+            "id": "a",
+            "label": "Both A and R are true and R is the correct explanation of A"
+          },
+          {
+            "id": "b",
+            "label": "Both A and R are true but R is NOT the correct explanation of A"
+          },
+          {
+            "id": "c",
+            "label": "A is true but R is false"
+          },
+          {
+            "id": "d",
+            "label": "A is false but R is true"
+          }
+        ],
+        "correctAnswer": "a",
+        "explanation": "Transformers operate on Faraday's law of induction, which requires a time-varying magnetic flux. Direct current creates a steady magnetic field, resulting in zero induced EMF.",
+        "topic": "Electromagnetism",
+        "difficulty": "medium",
+        "isPyq": true,
+        "examTag": "[CBSE 2022]",
+        "marks": 1
+      },
+      {
+        "id": "q3",
+        "type": "multiple_choice",
+        "question": "Which of the following functions are continuous at x = 0?",
+        "options": [
+          {
+            "id": "a",
+            "label": "f(x) = sin(x)"
+          },
+          {
+            "id": "b",
+            "label": "f(x) = |x|"
+          },
+          {
+            "id": "c",
+            "label": "f(x) = 1/x"
+          },
+          {
+            "id": "d",
+            "label": "f(x) = cos(x)"
+          }
+        ],
+        "correctAnswer": [
+          "a",
+          "b",
+          "d"
+        ],
+        "explanation": "sin(x), |x|, and cos(x) are defined and continuous everywhere, including at x=0. 1/x has an essential discontinuity at x=0.",
+        "topic": "Calculus",
+        "difficulty": "medium",
+        "isPyq": false,
+        "marks": 2
+      },
+      {
+        "id": "q4",
+        "type": "match_following",
+        "question": "Match the physical quantities in Column A with their formulas in Column B.",
+        "matchPairs": [
+          {
+            "id": "p1",
+            "left": "Magnetic Force",
+            "right": "q(v x B)"
+          },
+          {
+            "id": "p2",
+            "left": "Electric Flux",
+            "right": "E . A"
+          }
+        ],
+        "correctAnswer": {
+          "p1": "q(v x B)",
+          "p2": "E . A"
+        },
+        "explanation": "Lorentz magnetic force is F = q(v x B) and electric flux is Phi = E . A.",
+        "topic": "Electromagnetism",
+        "difficulty": "medium",
+        "isPyq": false,
+        "marks": 2
+      }
+    ],
+    "topicSummary": [
+      "Electromagnetism",
+      "Calculus"
+    ],
+    "createdBy": "guest_user",
+    "createdAt": "2026-11-07T17:46:41.014Z",
+    "updatedAt": "2026-11-07T17:46:41.014Z"
+  },
+  {
+    "id": "msg_123-assessment-2",
+    "title": "Quantum Mechanics Intro",
+    "mode": "practice",
+    "timeLimitMinutes": 5,
+    "passingScore": 70,
+    "questions": [
+      {
+        "id": "q1",
+        "type": "single_choice",
+        "question": "Who formulated the uncertainty principle?",
+        "options": [
+          {
+            "id": "a",
+            "label": "Werner Heisenberg"
+          },
+          {
+            "id": "b",
+            "label": "Albert Einstein"
+          }
+        ],
+        "correctAnswer": "a",
+        "explanation": "Heisenberg formulated the principle in 1927.",
+        "topic": "General",
+        "difficulty": "medium",
+        "isPyq": false,
+        "marks": 1
+      }
+    ],
+    "topicSummary": [
+      "General"
+    ],
+    "createdAt": "2026-11-07T17:46:42.038Z",
+    "updatedAt": "2026-11-07T17:46:42.039Z"
   }
 ]

@@ -2,6 +2,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { z } from "zod";
 import { assessmentStore } from "../lib/assessment-engine/assessment-store";
 import { gradeAssessment } from "../lib/assessment-engine/assessment-grader";
+import { validateAndSanitizeQuestions } from "../lib/assessment-engine/assessment-validator";
 import type { StoredAssessment } from "../lib/assessment-engine/assessment-types";
 
 const router: IRouter = Router();
@@ -78,25 +79,13 @@ router.post("/assessments/generate", (req: Request, res: Response): void => {
   const data = parsed.data;
   const assessmentId = data.id || `exam_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 
-  const questions = data.questions.map((q: any, idx: number) => ({
-    id: q.id || `q_${idx + 1}`,
-    type: q.type,
-    question: q.question,
-    assertion: q.assertion,
-    reason: q.reason,
-    passage: q.passage,
-    imageUrl: q.imageUrl,
-    options: q.options,
-    matchPairs: q.matchPairs,
-    correctAnswer: q.correctAnswer,
-    explanation: q.explanation || "Explanation verified.",
-    hint: q.hint,
-    topic: q.topic || "General",
-    difficulty: q.difficulty || "medium",
-    isPyq: Boolean(q.isPyq),
-    examTag: q.examTag,
-    marks: q.marks || 1,
-  }));
+  const validation = validateAndSanitizeQuestions(data.questions);
+  if (!validation.valid || validation.sanitizedQuestions.length === 0) {
+    res.status(400).json({ error: "Questions failed validation.", errors: validation.errors });
+    return;
+  }
+
+  const questions = validation.sanitizedQuestions;
 
   const stored: StoredAssessment = {
     id: assessmentId,

@@ -810,4 +810,42 @@ describe("authenticated Ayatrisya model gateway", () => {
     const data = (await response.json()) as { error: string };
     expect(data.error).toContain("PNG");
   });
+
+  it("orchestrates /chat and returns Universal Response Protocol 2.0 with intent classification", async () => {
+    vi.stubEnv("AYATRISYA_MODEL_API_KEY", "test-model-api-key");
+    vi.stubGlobal("fetch", vi.fn(async (input: any) => {
+      const url = String(input);
+      if (url.includes("/chat")) {
+        return new Response(JSON.stringify({
+          text: "Here is your solution:\n```python\nprint('hello world')\n```",
+          provider: "ayatrisya-native",
+        }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      return realFetch(input as any);
+    }));
+
+    const call = await startApi();
+    const response = await call("/api/model/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messages: [{ role: "user", content: "Write a python function to print hello world" }],
+        model: "v1-fast",
+        mode: "Normal",
+        stream: false,
+      }),
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("x-conversation-intent")).toBe("code_generation");
+    const data: any = await response.json();
+    expect(data.text).toContain("hello world");
+    expect(data.universalResponse).toBeDefined();
+    expect(data.universalResponse.version).toBe("2.0");
+    expect(data.universalResponse.intent).toBe("code_generation");
+    expect(data.universalResponse.blocks.length).toBeGreaterThan(0);
+  });
 });

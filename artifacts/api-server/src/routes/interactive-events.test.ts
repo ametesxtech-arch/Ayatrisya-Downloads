@@ -113,4 +113,72 @@ describe("Interactive Component Events API", () => {
     expect(body.status).toBe("submitted");
     expect(body.submittedFields.rating).toBe(5);
   });
+
+  it("handles table sorting and filtering events", async () => {
+    const tableRows = [
+      ["React", 100],
+      ["Vue", 50],
+      ["Angular", 75],
+    ];
+    const columns = ["Framework", "Stars"];
+
+    // Sort descending by Stars
+    const sortRes = await fetch(`${baseUrl}/api/interactive/event`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        blockId: "table-1",
+        blockType: "table",
+        action: "sort",
+        payload: {
+          column: "Stars",
+          direction: "desc",
+          columns,
+          rows: tableRows,
+        },
+      }),
+    });
+    expect(sortRes.status).toBe(200);
+    const sortBody: any = await sortRes.json();
+    expect(sortBody.status).toBe("sorted");
+    expect(sortBody.sortedRows[0][0]).toBe("React");
+    expect(sortBody.sortedRows[2][0]).toBe("Vue");
+
+    // Filter table rows
+    const filterRes = await fetch(`${baseUrl}/api/interactive/event`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        blockId: "table-1",
+        blockType: "table",
+        action: "filter",
+        payload: {
+          query: "ang",
+          rows: tableRows,
+        },
+      }),
+    });
+    expect(filterRes.status).toBe(200);
+    const filterBody: any = await filterRes.json();
+    expect(filterBody.status).toBe("filtered");
+    expect(filterBody.filteredRows.length).toBe(1);
+    expect(filterBody.filteredRows[0][0]).toBe("Angular");
+  });
+
+  it("handles chart series filtering", async () => {
+    const res = await fetch(`${baseUrl}/api/interactive/event`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        blockId: "chart-1",
+        blockType: "chart",
+        action: "filter_series",
+        payload: { activeSeries: ["revenue"] },
+      }),
+    });
+    expect(res.status).toBe(200);
+    const body: any = await res.json();
+    expect(body.status).toBe("series_filtered");
+    expect(body.activeSeries).toEqual(["revenue"]);
+  });
 });

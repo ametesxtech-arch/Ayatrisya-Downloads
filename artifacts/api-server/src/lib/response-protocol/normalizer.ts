@@ -5,6 +5,8 @@ import {
   type CitationBlockSchema,
   type AssessmentQuestion,
 } from "./schema";
+import { validateAndSanitizeQuestions } from "../assessment-engine/assessment-validator";
+import { assessmentStore } from "../assessment-engine/assessment-store";
 
 /**
  * Normalizes raw LLM output and detected structured blocks into the Universal Response Protocol 2.0.
@@ -57,29 +59,54 @@ export function normalizeUniversalResponse(params: {
         const parsed = JSON.parse(content);
         if (parsed.type === "quiz" || parsed.type === "assessment" || parsed.type === "mcq" || parsed.questions) {
           detectedIntent = "assessment_request";
-          const questions: AssessmentQuestion[] = (parsed.questions || []).map((q: any, idx: number) => ({
-            id: q.id || `q_${idx + 1}`,
-            type: q.type || (q.multiSelect ? "multiple_choice" : "single_choice"),
-            question: q.question || "Question",
-            options: q.options || [],
-            correctAnswer: q.correctAnswer,
-            explanation: q.explanation || "",
-            hint: q.hint,
-            topic: q.topic || "General",
-            difficulty: q.difficulty || "medium",
-            isPyq: Boolean(q.isPyq || (q.examTag && /CBSE|JEE|NEET/i.test(q.examTag))),
-            examTag: q.examTag,
-          }));
+          const rawQuestions = Array.isArray(parsed.questions)
+            ? parsed.questions
+            : parsed.question
+              ? [parsed]
+              : [];
+
+          const validated = validateAndSanitizeQuestions(rawQuestions);
+          const questions: AssessmentQuestion[] = validated.sanitizedQuestions;
+
+          const assessmentId = parsed.id || `${messageId}-assessment-${blocks.length + 1}`;
+          const assessmentMode: "practice" | "examination" = parsed.mode === "examination" ? "examination" : "practice";
+
+          // Auto-persist valid assessment to trusted store for progress & server-side grading
+          if (questions.length > 0) {
+            try {
+              assessmentStore.saveAssessment({
+                id: assessmentId,
+                title: parsed.title || "Interactive Assessment",
+                description: parsed.description,
+                mode: assessmentMode,
+                timeLimitMinutes: parsed.timeLimitMinutes || Math.max(5, questions.length * 2),
+                passingScore: parsed.passingScore || 70,
+                examType: parsed.examType,
+                questions: questions as any,
+                topicSummary: Array.from(new Set(questions.map((q) => q.topic).filter(Boolean))) as string[],
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              });
+            } catch {}
+          }
+
+          // If examination mode, strip correctAnswer from client payload so it is not prematurely disclosed
+          const clientQuestions = assessmentMode === "examination"
+            ? questions.map((q) => {
+                const { correctAnswer, explanation, ...sanitized } = q;
+                return sanitized as AssessmentQuestion;
+              })
+            : questions;
 
           blocks.push({
-            id: `${messageId}-assessment-${blocks.length + 1}`,
+            id: assessmentId,
             type: "assessment",
             title: parsed.title || "Interactive Assessment",
             description: parsed.description,
-            mode: parsed.mode || "practice",
+            mode: assessmentMode,
             timeLimitMinutes: parsed.timeLimitMinutes || Math.max(5, questions.length * 2),
             passingScore: parsed.passingScore || 70,
-            questions,
+            questions: clientQuestions,
             topicSummary: parsed.topicSummary || Array.from(new Set(questions.map((q) => q.topic).filter(Boolean))) as string[],
           });
         } else if (parsed.type === "table" && Array.isArray(parsed.columns) && Array.isArray(parsed.rows)) {
