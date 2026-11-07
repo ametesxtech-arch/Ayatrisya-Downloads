@@ -85,7 +85,7 @@ export const sendModelChatResponseTextMax = 2000000;
 
 export const SendModelChatResponse = zod.object({
   "text": zod.string().max(sendModelChatResponseTextMax)
-})
+}).passthrough()
 
 
 /**

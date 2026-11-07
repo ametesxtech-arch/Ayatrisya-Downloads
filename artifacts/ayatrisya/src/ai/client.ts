@@ -665,7 +665,7 @@ export class AyatrisyaModelClient implements ModelTransport {
         const type = response.headers.get("content-type") ?? "";
         let finalText = "";
         if(type.includes("application/json")) {
-          const body=z.object({text:z.string().max(2000000)}).parse(await response.json());
+          const body = z.object({ text: z.string().max(2000000) }).passthrough().parse(await response.json());
           finalText = body.text;
         } else {
           if(!response.body || (!type.includes("ndjson")&&!type.includes("event-stream")))throw new Error("Unsupported model response format.");

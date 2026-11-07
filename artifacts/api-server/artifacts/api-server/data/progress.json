@@ -1,0 +1,44 @@
+{
+  "student_101:exam_1794070635731_t1fft": {
+    "assessmentId": "exam_1794070635731_t1fft",
+    "userId": "student_101",
+    "currentQuestionIndex": 1,
+    "answers": {
+      "q1": "b"
+    },
+    "markedForReview": {
+      "q2": true
+    },
+    "timeRemainingSeconds": 2400,
+    "totalTimeSpentSeconds": 300,
+    "updatedAt": "2026-11-07T16:57:15.784Z"
+  },
+  "student_101:exam_1794070656413_xc37w": {
+    "assessmentId": "exam_1794070656413_xc37w",
+    "userId": "student_101",
+    "currentQuestionIndex": 1,
+    "answers": {
+      "q1": "b"
+    },
+    "markedForReview": {
+      "q2": true
+    },
+    "timeRemainingSeconds": 2400,
+    "totalTimeSpentSeconds": 300,
+    "updatedAt": "2026-11-07T16:57:36.423Z"
+  },
+  "student_101:exam_1794071240723_zqwgc": {
+    "assessmentId": "exam_1794071240723_zqwgc",
+    "userId": "student_101",
+    "currentQuestionIndex": 1,
+    "answers": {
+      "q1": "b"
+    },
+    "markedForReview": {
+      "q2": true
+    },
+    "timeRemainingSeconds": 2400,
+    "totalTimeSpentSeconds": 300,
+    "updatedAt": "2026-11-07T17:07:20.778Z"
+  }
+}

@@ -25,6 +25,8 @@ import { generateHfImage, isHfImageConfigured } from "../lib/hf-image";
 import { generateProceduralWav } from "../lib/music-generator";
 import { callHfGradioApi, isHuggingFaceSpaceUrl, normalizeHfSpaceBaseUrl } from "../lib/hf-space-client";
 import { imageOrchestrator } from "../lib/image-engine/orchestrator";
+import { orchestrator } from "../lib/orchestrator/orchestrator";
+import { UniversalResponseSchema, type UniversalResponse } from "../lib/response-protocol/schema";
 
 const router: IRouter = Router();
 const MAX_JSON_RESPONSE_BYTES = 25 * 1024 * 1024;
@@ -183,22 +185,18 @@ async function fallbackWithGeminiChat(
 
   const { messages: history, mode, stream } = chatData;
 
-  const lastUserMsg = [...history].reverse().find((m) => m.role === "user")?.content ?? "";
-  let webSearchContext = "";
-  let gatheredSources: SearchResult[] = [];
+  // Prepare context and intent through Conversational Orchestrator 2.0
+  const orchestratedContext = await orchestrator.prepareContext({
+    messages: history,
+    model: chatData.model,
+    mode: chatData.mode,
+    stream: chatData.stream,
+    conversationId: (req.body as any)?.conversationId,
+    personalization: (req.body as any)?.personalization,
+  });
 
-  if (shouldSearchInternet(lastUserMsg)) {
-    try {
-      const searchResults = await searchInternet(lastUserMsg, 5);
-      if (searchResults.length > 0) {
-        gatheredSources = searchResults;
-        webSearchContext = "\n\nLive Internet Search Results:\n" +
-          searchResults.map((r, i) => `[${i + 1}] "${r.title}": ${r.snippet} (Source: ${r.link})`).join("\n") +
-          "\n\nCRITICAL INSTRUCTION FOR SOURCES CITATION:\n" +
-          "Use the live web search results above to provide accurate, up-to-date facts. At the very end of your response, you MUST ALWAYS provide a dedicated '### 🌐 Sources & References' section with numbered markdown links to all consulted sources.";
-      }
-    } catch {}
-  }
+  const gatheredSources = orchestratedContext.webSearchResults;
+  const webSearchContext = orchestratedContext.webSearchContext;
 
   const toneInstruction =
     mode === "Savage"
@@ -212,7 +210,7 @@ async function fallbackWithGeminiChat(
       ? "Deep Reasoning Profile (V2 Reasoning): Think through complex problems with thorough, rigorous, step-by-step logic. Provide comprehensive, deeply insightful explanations, consider edge cases, and ensure technical and mathematical precision."
       : "Fast Direct Profile (V1 Fast): Provide fast, snappy, high-precision answers that get straight to the point with maximum clarity.";
 
-  const systemInstruction = `You are Ayatrisya AI, a premier intelligent reasoning, coding, and creative multimodal AI platform created by Ametesx (Ametesx Architecture / Ametesx Technologies).
+  const systemInstruction = `You are Ayatrisya AI, a premier intelligent reasoning, coding, and creative multimodal AI platform created by Ametesx (Ametesx Technologies).
 
 Core Principles for Response Excellence:
 1. Direct Answer First: Begin directly with the answer to the user's specific question or request. Never start with conversational filler or boilerplate ("Certainly! Here is...", "Sure, I would be happy to...", "As an AI...").
@@ -260,7 +258,8 @@ Core Principles for Response Excellence:
 
 ${modelStyle}
 Parent Company & Creator: Ametesx
-Style & Tone: ${toneInstruction}${webSearchContext}`;
+Style & Tone: ${toneInstruction}${webSearchContext}
+${orchestratedContext.augmentedSystemPrompt}`;
 
   const contents = history.map((m, index) => {
     const isAssistant = m.role === "assistant";
@@ -320,7 +319,7 @@ Style & Tone: ${toneInstruction}${webSearchContext}`;
         try {
           const decoded = Buffer.from(att.dataBase64.replace(/^data:[^;]+;base64,/, ""), "base64").toString("utf8");
           attachedTextDocs += `\n\n--- Start of attached file: ${name} ---\n${decoded}\n--- End of attached file ---\n`;
-        } catch {}
+        } catch { }
       } else {
         attachedTextDocs += `\n[Attached file: ${name} (${mime || "binary"}) stored in local library.]`;
       }
@@ -358,15 +357,15 @@ Style & Tone: ${toneInstruction}${webSearchContext}`;
   // - "gemini-2.5-flash-lite"
   const candidateModels = chatData.model === "v2-best"
     ? [
-        "gemini-flash-lite-latest",
-        "gemini-flash-latest",
-        "gemini-2.5-flash-lite",
-      ]
+      "gemini-flash-lite-latest",
+      "gemini-flash-latest",
+      "gemini-2.5-flash-lite",
+    ]
     : [
-        "gemini-flash-lite-latest",
-        "gemini-flash-latest",
-        "gemini-2.5-flash-lite",
-      ];
+      "gemini-flash-lite-latest",
+      "gemini-flash-latest",
+      "gemini-2.5-flash-lite",
+    ];
   let geminiRes: globalThis.Response | null = null;
   let activeFallbackModelId = "";
 
@@ -388,7 +387,7 @@ Style & Tone: ${toneInstruction}${webSearchContext}`;
         activeFallbackModelId = modelId;
         break;
       }
-    } catch {}
+    } catch { }
   }
 
   if (!geminiRes || !geminiRes.ok) return false;
@@ -406,6 +405,7 @@ Style & Tone: ${toneInstruction}${webSearchContext}`;
         "X-Content-Type-Options": "nosniff",
         "x-model-source": "ayatrisya-gemini-fallback",
         "x-fallback-model": activeFallbackModelId || "gemini-flash-latest",
+        "x-conversation-intent": orchestratedContext.classification.intent,
       });
 
       const reader = geminiRes.body.getReader();
@@ -437,7 +437,7 @@ Style & Tone: ${toneInstruction}${webSearchContext}`;
                 }
               }
             }
-          } catch {}
+          } catch { }
         }
       }
 
@@ -478,12 +478,26 @@ Style & Tone: ${toneInstruction}${webSearchContext}`;
         }
       }
 
+      // Generate full Universal Response Protocol 2.0 object
+      const conversationId = (req.body as any)?.conversationId || `conv_${Date.now()}`;
+      const messageId = `msg_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+      const universal = orchestrator.finalizeResponse({
+        rawOutput: text,
+        conversationId,
+        messageId,
+        classification: orchestratedContext.classification,
+        webSearchResults: gatheredSources,
+      });
+
       res.status(200).set({
         "Cache-Control": "no-store",
         "x-model-source": "ayatrisya-gemini-fallback",
         "x-fallback-model": activeFallbackModelId || "gemini-flash-latest",
+        "x-conversation-intent": orchestratedContext.classification.intent,
       }).json({
         text: text || "Ayatrisya AI generated response.",
+        universalResponse: universal,
+        intent: orchestratedContext.classification.intent,
         provider: "gemini-fallback",
         fallbackModel: activeFallbackModelId || "gemini-flash-latest",
       });

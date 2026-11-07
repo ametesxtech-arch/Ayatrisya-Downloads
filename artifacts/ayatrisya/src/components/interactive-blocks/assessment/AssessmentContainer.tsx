@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { buildApiUrl } from '@/lib/api-config';
 import {
   GraduationCap,
   Sparkles,
@@ -127,10 +128,11 @@ export function AssessmentContainer({
   const handleAnswer = (answerValue: any) => {
     if (state.submitted && state.mode === 'exam') return;
 
-    setState((prev) => {
-      const nextAnswers = { ...prev.answers, [currentQuestion.id]: answerValue };
-      return { ...prev, answers: nextAnswers };
-    });
+    const nextAnswers = { ...state.answers, [currentQuestion.id]: answerValue };
+    setState((prev) => ({
+      ...prev,
+      answers: { ...prev.answers, [currentQuestion.id]: answerValue },
+    }));
 
     onAssessmentEvent?.({
       type: 'assessment_answer',
@@ -140,6 +142,24 @@ export function AssessmentContainer({
         answer: answerValue,
       },
     });
+
+    // Background server progress sync with graceful local fallback
+    void (async () => {
+      try {
+        const url = buildApiUrl(`/api/assessments/${encodeURIComponent(assessmentId)}/progress`);
+        await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            currentQuestionIndex: safeIndex,
+            answers: nextAnswers,
+            markedForReview: state.markedForReview,
+            timeRemainingSeconds: state.timeRemainingSeconds,
+            totalTimeSpentSeconds: state.totalTimeSpentSeconds,
+          }),
+        });
+      } catch {}
+    })();
   };
 
   // Timer Tick
@@ -173,6 +193,22 @@ export function AssessmentContainer({
         timeSpentSeconds: state.totalTimeSpentSeconds,
       },
     });
+
+    // Background server submission with trusted grading
+    void (async () => {
+      try {
+        const url = buildApiUrl(`/api/assessments/${encodeURIComponent(assessmentId)}/submit`);
+        await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userAnswers: state.answers,
+            answers: state.answers,
+            timeSpentSeconds: state.totalTimeSpentSeconds,
+          }),
+        });
+      } catch {}
+    })();
   };
 
   // Retake handler
