@@ -9,6 +9,7 @@ import {
   AlertCircle,
   RotateCcw,
   MessageSquare,
+  Search,
 } from 'lucide-react';
 import {
   createSpeechRecognizer,
@@ -20,6 +21,7 @@ import {
 } from './voice-utils';
 import { modelClient } from '@/ai/client';
 import { usePrefs } from '@/hooks/use-prefs';
+import { LiquidGlassOrb } from '../liquid-glass-orb';
 
 interface SpeechToSpeechModalProps {
   conversationId: string;
@@ -28,7 +30,7 @@ interface SpeechToSpeechModalProps {
   onClose: () => void;
 }
 
-type StsState = 'idle' | 'listening' | 'processing' | 'speaking' | 'error';
+type StsState = 'idle' | 'listening' | 'thinking' | 'searching' | 'speaking' | 'error';
 
 export function SpeechToSpeechModal({
   conversationId,
@@ -42,6 +44,7 @@ export function SpeechToSpeechModal({
   const [assistantReply, setAssistantReply] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [autoListenAfterSpeech, setAutoListenAfterSpeech] = useState(true);
+  const [audioLevel, setAudioLevel] = useState(0.55);
 
   const recognizerRef = useRef<SpeechRecognitionController | null>(null);
   const speechHandleRef = useRef<SpeechPlayHandle | null>(null);
@@ -61,6 +64,65 @@ export function SpeechToSpeechModal({
       cleanupAll();
     };
   }, []);
+
+  // Audio level tracking for listening & speaking envelopes
+  useEffect(() => {
+    if (state === 'listening' && streamRef.current) {
+      let rafId: number;
+      let audioCtx: AudioContext | null = null;
+      try {
+        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        if (AudioContextClass) {
+          audioCtx = new AudioContextClass();
+          const source = audioCtx.createMediaStreamSource(streamRef.current);
+          const analyser = audioCtx.createAnalyser();
+          analyser.fftSize = 64;
+          source.connect(analyser);
+          const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+          const tick = () => {
+            if (!isMountedRef.current) return;
+            analyser.getByteFrequencyData(dataArray);
+            let sum = 0;
+            for (let i = 0; i < dataArray.length; i++) {
+              sum += dataArray[i];
+            }
+            const avg = sum / (dataArray.length * 255);
+            const normalized = Math.min(1, Math.max(0.15, avg * 3.2));
+            setAudioLevel(normalized);
+            rafId = requestAnimationFrame(tick);
+          };
+          tick();
+        }
+      } catch {
+        setAudioLevel(0.55);
+      }
+      return () => {
+        if (rafId) cancelAnimationFrame(rafId);
+        if (audioCtx && audioCtx.state !== 'closed') {
+          try {
+            void audioCtx.close();
+          } catch {}
+        }
+      };
+    } else if (state === 'speaking') {
+      let rafId: number;
+      let t = 0;
+      const tick = () => {
+        if (!isMountedRef.current) return;
+        t += 0.08;
+        const speechEnvelope = 0.55 + Math.sin(t * 3.1) * 0.2 + Math.sin(t * 7.4) * 0.12;
+        setAudioLevel(Math.min(1, Math.max(0.2, speechEnvelope)));
+        rafId = requestAnimationFrame(tick);
+      };
+      tick();
+      return () => {
+        if (rafId) cancelAnimationFrame(rafId);
+      };
+    } else {
+      setAudioLevel(0.55);
+    }
+  }, [state]);
 
   const cleanupAll = () => {
     if (autoListenTimerRef.current !== null) {
@@ -108,7 +170,7 @@ export function SpeechToSpeechModal({
         onResult: (text, isFinal) => {
           setUserTranscript(text);
           if (isFinal && text.trim()) {
-            handleUserUtterance(text.trim());
+            void handleUserUtterance(text.trim());
           }
         },
         onError: (err) => {
@@ -116,7 +178,7 @@ export function SpeechToSpeechModal({
           setState('error');
         },
         onEnd: () => {
-          // If we stopped without final transcript and not processing
+          // If stopped without final transcript and not processing
           setState((curr) => (curr === 'listening' ? 'idle' : curr));
         },
       });
@@ -134,7 +196,7 @@ export function SpeechToSpeechModal({
       recognizerRef.current.stop();
     }
     if (userTranscript.trim() && state === 'listening') {
-      handleUserUtterance(userTranscript.trim());
+      void handleUserUtterance(userTranscript.trim());
     } else {
       setState('idle');
     }
@@ -146,7 +208,19 @@ export function SpeechToSpeechModal({
       return;
     }
 
-    setState('processing');
+    const isSearchIntent =
+      /\b(search|google|find|lookup|who is|what is|where is|latest|recent|news|current|web|browse|weather|stock)\b/i.test(
+        userPrompt,
+      ) || prefs.mode === 'research';
+
+    if (isSearchIntent) {
+      setState('searching');
+      // Natural search pause for visual feedback
+      await new Promise((r) => setTimeout(r, 700));
+      if (!isMountedRef.current) return;
+    }
+
+    setState('thinking');
     setAssistantReply('');
 
     // Append user message to history
@@ -253,89 +327,292 @@ export function SpeechToSpeechModal({
           <span>Pipeline: STT &rarr; {prefs.model === 'v1-fast' ? 'Ayatrisya V1 Fast' : 'Ayatrisya V2'} &rarr; TTS</span>
         </div>
 
-        {/* Central Dynamic Visualizer State */}
-        <div className="my-8 flex flex-col items-center justify-center">
-          {state === 'idle' && (
-            <div className="flex flex-col items-center">
+        {/* Central Dynamic Visualizer State using LiquidGlassOrb */}
+        <div className="my-6 flex flex-col items-center justify-center">
+          <div
+            className="relative flex items-center justify-center cursor-pointer transition-transform active:scale-95"
+            onClick={() => {
+              if (state === 'idle') void startListening();
+              else if (state === 'listening') stopListening();
+              else if (state === 'speaking') handleInterrupt();
+            }}
+            data-testid={
+              state === 'idle'
+                ? 'button-sts-start-speaking'
+                : state === 'speaking'
+                ? 'button-sts-interrupt'
+                : undefined
+            }
+          >
+            {state === 'idle' && (
+              <LiquidGlassOrb
+                baseColor={'#ffffff'}
+                colorA={'#000000'}
+                colorB={'#4d4d4d'}
+                colorC={'#a9a9a9'}
+                seed={145}
+                startTime={18}
+                speed={1.5}
+                distortion={0.8}
+                clusterCount={7.2}
+                clusterIntensity={3}
+                clusterSize={22.5}
+                scale={0.23}
+                spotSize={1.15}
+                rotation={0}
+                softness={0.31}
+                relief={2.94}
+                refraction={0.65}
+                roughness={0}
+                reflection={1.3}
+                caustics={0}
+                dispersion={1}
+                colorDistribution={0}
+                grain={0.3}
+                grainSize={1}
+                paused={false}
+                animateDistortion={true}
+                grainMode={'fine'}
+                flowType={'drift'}
+                state={'idle'}
+                thinkingAnimation={'ripples'}
+                searchingAnimation={'lens'}
+                preserveWhites={true}
+                animateEntrance={true}
+                size={250}
+                audioLevel={audioLevel}
+              />
+            )}
+
+            {state === 'thinking' && (
+              <LiquidGlassOrb
+                baseColor={'#ffffff'}
+                colorA={'#000000'}
+                colorB={'#4d4d4d'}
+                colorC={'#a9a9a9'}
+                seed={145}
+                startTime={18}
+                speed={1.5}
+                distortion={0.8}
+                clusterCount={7.2}
+                clusterIntensity={3}
+                clusterSize={22.5}
+                scale={0.23}
+                spotSize={1.15}
+                rotation={0}
+                softness={0.31}
+                relief={2.94}
+                refraction={0.65}
+                roughness={0}
+                reflection={1.3}
+                caustics={0}
+                dispersion={1}
+                colorDistribution={0}
+                grain={0.3}
+                grainSize={1}
+                paused={false}
+                animateDistortion={true}
+                grainMode={'fine'}
+                flowType={'drift'}
+                state={'thinking'}
+                thinkingAnimation={'ripples'}
+                searchingAnimation={'lens'}
+                preserveWhites={true}
+                animateEntrance={true}
+                size={250}
+                audioLevel={audioLevel}
+              />
+            )}
+
+            {state === 'listening' && (
+              <LiquidGlassOrb
+                baseColor={'#ffffff'}
+                colorA={'#000000'}
+                colorB={'#4d4d4d'}
+                colorC={'#a9a9a9'}
+                seed={145}
+                startTime={18}
+                speed={1.5}
+                distortion={0.8}
+                clusterCount={7.2}
+                clusterIntensity={3}
+                clusterSize={22.5}
+                scale={0.23}
+                spotSize={1.15}
+                rotation={0}
+                softness={0.31}
+                relief={2.94}
+                refraction={0.65}
+                roughness={0}
+                reflection={1.3}
+                caustics={0}
+                dispersion={1}
+                colorDistribution={0}
+                grain={0.3}
+                grainSize={1}
+                paused={false}
+                animateDistortion={true}
+                grainMode={'fine'}
+                flowType={'drift'}
+                state={'listening'}
+                thinkingAnimation={'ripples'}
+                searchingAnimation={'lens'}
+                intensity={1}
+                preserveWhites={true}
+                animateEntrance={true}
+                size={250}
+                audioLevel={audioLevel}
+              />
+            )}
+
+            {state === 'searching' && (
+              <LiquidGlassOrb
+                baseColor={'#ffffff'}
+                colorA={'#000000'}
+                colorB={'#4d4d4d'}
+                colorC={'#a9a9a9'}
+                seed={145}
+                startTime={18}
+                speed={1.5}
+                distortion={0.8}
+                clusterCount={7.2}
+                clusterIntensity={3}
+                clusterSize={22.5}
+                scale={0.23}
+                spotSize={1.15}
+                rotation={0}
+                softness={0.31}
+                relief={2.94}
+                refraction={0.65}
+                roughness={0}
+                reflection={1.3}
+                caustics={0}
+                dispersion={1}
+                colorDistribution={0}
+                grain={0.3}
+                grainSize={1}
+                paused={false}
+                animateDistortion={true}
+                grainMode={'fine'}
+                flowType={'drift'}
+                state={'searching'}
+                thinkingAnimation={'ripples'}
+                searchingAnimation={'lens'}
+                preserveWhites={true}
+                animateEntrance={true}
+                size={250}
+                audioLevel={audioLevel}
+              />
+            )}
+
+            {state === 'speaking' && (
+              <LiquidGlassOrb
+                baseColor={'#ffffff'}
+                colorA={'#000000'}
+                colorB={'#4d4d4d'}
+                colorC={'#a9a9a9'}
+                seed={145}
+                startTime={18}
+                speed={1.5}
+                distortion={0.8}
+                clusterCount={7.2}
+                clusterIntensity={3}
+                clusterSize={22.5}
+                scale={0.23}
+                spotSize={1.15}
+                rotation={0}
+                softness={0.31}
+                relief={2.94}
+                refraction={0.65}
+                roughness={0}
+                reflection={1.3}
+                caustics={0}
+                dispersion={1}
+                colorDistribution={0}
+                grain={0.3}
+                grainSize={1}
+                paused={false}
+                animateDistortion={true}
+                grainMode={'fine'}
+                flowType={'drift'}
+                state={'speaking'}
+                thinkingAnimation={'ripples'}
+                searchingAnimation={'lens'}
+                intensity={1}
+                preserveWhites={true}
+                animateEntrance={true}
+                size={250}
+                audioLevel={audioLevel}
+              />
+            )}
+
+            {state === 'error' && (
+              <div className="flex flex-col items-center justify-center size-[250px] rounded-full border border-amber-500/30 bg-amber-500/10">
+                <AlertCircle size={44} className="text-amber-400" />
+                <p className="mt-3 text-xs text-amber-300 max-w-[200px] text-center">
+                  {errorMessage || 'Voice error occurred'}
+                </p>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void startListening();
+                  }}
+                  className="mt-3 flex items-center gap-1.5 rounded-lg bg-amber-500/20 px-3 py-1.5 text-xs font-medium text-amber-300 hover:bg-amber-500/30"
+                >
+                  <RotateCcw size={13} />
+                  <span>Try again</span>
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Dynamic Status Indicator */}
+          <div className="mt-4 flex items-center justify-center">
+            {state === 'idle' && (
               <button
                 type="button"
-                onClick={startListening}
-                className="group relative flex size-28 items-center justify-center rounded-full bg-teal-500/10 text-teal-400 ring-4 ring-teal-500/20 transition-all hover:scale-105 hover:bg-teal-500/20 hover:ring-teal-500/40"
-                aria-label="Tap to speak"
-                data-testid="button-sts-start-speaking"
+                onClick={() => void startListening()}
+                className="flex items-center gap-2 rounded-full border border-teal-500/30 bg-teal-500/10 px-4 py-1.5 text-xs font-medium text-teal-300 hover:bg-teal-500/20 transition-all"
               >
-                <Mic size={40} className="transition-transform group-hover:scale-110" />
+                <Mic size={14} className="text-teal-400" />
+                <span>Tap orb to speak</span>
               </button>
-              <p className="mt-4 text-xs font-medium text-slate-400">
-                Tap the microphone to speak
-              </p>
-            </div>
-          )}
+            )}
 
-          {state === 'listening' && (
-            <div className="flex flex-col items-center">
-              <div
-                onClick={stopListening}
-                className="relative flex size-28 cursor-pointer items-center justify-center rounded-full bg-rose-500/20 text-rose-400 ring-4 ring-rose-500/40"
-                title="Tap to finish speaking"
-              >
-                <span className="absolute size-32 animate-ping rounded-full bg-rose-500/30" />
-                <Mic size={42} className="animate-pulse" />
+            {state === 'listening' && (
+              <div className="flex items-center gap-2 rounded-full border border-rose-500/30 bg-rose-500/10 px-4 py-1.5 text-xs font-medium text-rose-300 animate-pulse">
+                <span className="size-2 rounded-full bg-rose-400 animate-ping" />
+                <span>Listening to you... (tap orb to finish)</span>
               </div>
-              <p className="mt-4 text-xs font-medium text-rose-300 animate-pulse">
-                Listening to you... (Tap to finish)
-              </p>
-            </div>
-          )}
+            )}
 
-          {state === 'processing' && (
-            <div className="flex flex-col items-center">
-              <div className="flex size-28 items-center justify-center rounded-full bg-violet-500/10 text-violet-400 ring-4 ring-violet-500/20">
-                <Sparkles size={40} className="animate-spin text-violet-400 duration-1000" />
+            {state === 'thinking' && (
+              <div className="flex items-center gap-2 rounded-full border border-violet-500/30 bg-violet-500/10 px-4 py-1.5 text-xs font-medium text-violet-300">
+                <Sparkles size={14} className="animate-spin text-violet-400" />
+                <span>Ayatrisya is thinking...</span>
               </div>
-              <p className="mt-4 text-xs font-medium text-violet-300">
-                Ayatrisya is thinking...
-              </p>
-            </div>
-          )}
+            )}
 
-          {state === 'speaking' && (
-            <div className="flex flex-col items-center">
+            {state === 'searching' && (
+              <div className="flex items-center gap-2 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-4 py-1.5 text-xs font-medium text-cyan-300">
+                <Search size={14} className="animate-pulse text-cyan-400" />
+                <span>Ayatrisya is searching...</span>
+              </div>
+            )}
+
+            {state === 'speaking' && (
               <button
                 type="button"
                 onClick={handleInterrupt}
-                className="relative flex size-28 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-300 ring-4 ring-emerald-500/40 hover:scale-105"
-                title="Tap to interrupt and speak (Barge-in)"
-                aria-label="Interrupt assistant and start speaking"
-                data-testid="button-sts-interrupt"
+                className="flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-1.5 text-xs font-medium text-emerald-300 hover:bg-emerald-500/20 transition-all"
+                title="Tap to interrupt and speak"
               >
-                <span className="absolute size-32 animate-pulse rounded-full bg-emerald-500/20" />
-                <Volume2 size={42} />
+                <Volume2 size={14} className="animate-pulse text-emerald-400" />
+                <span>Speaking... (tap orb to interrupt)</span>
               </button>
-              <p className="mt-4 text-xs font-medium text-emerald-300">
-                Speaking... <span className="underline cursor-pointer hover:text-white" onClick={handleInterrupt}>(Tap to interrupt)</span>
-              </p>
-            </div>
-          )}
-
-          {state === 'error' && (
-            <div className="flex flex-col items-center">
-              <div className="flex size-24 items-center justify-center rounded-full bg-amber-500/10 text-amber-400 ring-4 ring-amber-500/20">
-                <AlertCircle size={36} />
-              </div>
-              <p className="mt-3 text-xs text-amber-300 max-w-xs text-center">
-                {errorMessage || 'Voice error occurred'}
-              </p>
-              <button
-                type="button"
-                onClick={startListening}
-                className="mt-3 flex items-center gap-1.5 rounded-lg bg-amber-500/20 px-3 py-1.5 text-xs font-medium text-amber-300 hover:bg-amber-500/30"
-              >
-                <RotateCcw size={13} />
-                <span>Try again</span>
-              </button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         {/* Live Conversation Subtitles */}

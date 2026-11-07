@@ -37,3 +37,4 @@ describe('Chromatic Button Component Suite', () => {
     expect(html).toContain('Get started');
   });
 });
+
