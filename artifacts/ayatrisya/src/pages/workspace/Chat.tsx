@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'wouter';
 import { MarkdownRenderer } from '@/components/MarkdownRenderer';
 import {
