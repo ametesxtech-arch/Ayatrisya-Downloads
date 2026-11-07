@@ -20,7 +20,10 @@ import {
   type SpeechPlayHandle,
 } from './voice-utils';
 import { modelClient } from '@/ai/client';
+import { applyPersonalization } from '@/ai/personalization';
 import { usePrefs } from '@/hooks/use-prefs';
+import { repository } from '@/storage/repository';
+import { IntelligentMemoryContextManager } from '@/storage/intelligent-memory-context-manager';
 import { LiquidGlassOrb } from '../liquid-glass-orb';
 
 interface SpeechToSpeechModalProps {
@@ -235,9 +238,25 @@ export function SpeechToSpeechModal({
     abortControllerRef.current = ac;
 
     try {
+      let personalizedMessages = localHistoryRef.current;
+      if (prefs.personalization.enabled && prefs.personalization.useMemory) {
+        try {
+          const memoryMgr = new IntelligentMemoryContextManager(repository);
+          const ctxPkg = await memoryMgr.buildContextPackage(userPrompt, { currentConversationId: conversationId });
+          personalizedMessages = applyPersonalization(localHistoryRef.current, prefs.personalization, {
+            memories: ctxPkg.rankedMemories,
+            memorySummary: ctxPkg.summaryContext,
+            knowledgePassages: ctxPkg.knowledgePassages,
+            pastConversationExcerpts: ctxPkg.pastConversationExcerpts,
+          });
+        } catch (memErr) {
+          console.warn('[Voice IntelligentMemory] Context build notice:', memErr);
+        }
+      }
+
       const job = modelClient.submitJob({
         kind: 'chat',
-        messages: localHistoryRef.current,
+        messages: personalizedMessages,
         options: {
           model: prefs.model,
           mode: prefs.mode,
@@ -247,6 +266,17 @@ export function SpeechToSpeechModal({
 
       const response = await job.result;
       if (ac.signal.aborted) return;
+
+      if (prefs.personalization.enabled && prefs.personalization.useMemory) {
+        void (async () => {
+          try {
+            const memoryMgr = new IntelligentMemoryContextManager(repository);
+            await memoryMgr.processTurnAndExtractMemories(userPrompt, response, { conversationId });
+          } catch (memErr) {
+            console.warn('[Voice IntelligentMemory] Extraction notice:', memErr);
+          }
+        })();
+      }
 
       setAssistantReply(response);
       localHistoryRef.current = [

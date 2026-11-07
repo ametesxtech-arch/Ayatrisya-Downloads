@@ -39,6 +39,7 @@ import { enhancePromptLikeChatGPT } from '@/lib/chatgpt-prompt-engine';
 import { MemoryEngine } from '@/storage/memory-engine';
 import { KnowledgeBaseEngine } from '@/storage/knowledge-engine';
 import { AIMemorySummaryEngine } from '@/storage/ai-memory-summary-engine';
+import { IntelligentMemoryContextManager, type MemoryContextPackage } from '@/storage/intelligent-memory-context-manager';
 import { ChromaticButton } from '@/components/chromatic-button';
 
 type Turn = Array<{ role: 'user' | 'assistant'; content: string; attachments?: MessageAttachment[] }>;
@@ -239,53 +240,37 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
     setPendingQuery(latestTurn?.content || '');
     setBusy(true); setStreamFor(cid); setStream(''); setError('');
     try {
-      // Retrieve relevant AI memories & structured memory summary (if memory is enabled)
-      let memorySummaryText = '';
-      let relevantMemories: Array<{ content: string; category?: string; pinned?: boolean }> = [];
+      // Intelligent Memory 2.0 Context Construction (multi-factor ranking, token budget, cross-conversation)
+      let contextPkg: MemoryContextPackage = {
+        summaryContext: '',
+        rankedMemories: [],
+        knowledgePassages: [],
+        pastConversationExcerpts: [],
+        projectContext: null,
+        totalEstimatedTokens: 0,
+      };
+
       if (prefs.personalization.enabled && prefs.personalization.useMemory && latestTurn?.content) {
         try {
-          const summaryEngine = new AIMemorySummaryEngine(repository);
-          const summaryRecord = await summaryEngine.getSummary();
-          if (summaryRecord) {
-            memorySummaryText = summaryEngine.formatSummaryForPrompt(summaryRecord, 1500);
-          }
-          const memEngine = new MemoryEngine(repository);
-          const retrieved = await memEngine.retrieveContext(latestTurn.content, { maxTokens: 400 });
-          relevantMemories = retrieved.map((m) => ({
-            content: m.content,
-            category: m.category,
-            pinned: m.pinned,
-          }));
-        } catch {
-          // Graceful fallback: continue without memory context if retrieval fails
-        }
-      }
-
-      // Retrieve relevant Knowledge Base documents if user query mentions or asks knowledge questions
-      let knowledgePassages: Array<{ text: string; citation: string }> = [];
-      if (latestTurn?.content && !latestTurn.content.startsWith('/')) {
-        try {
-          const kbEngine = new KnowledgeBaseEngine(repository);
-          const kbs = await kbEngine.listKnowledgeBases();
-          if (kbs.length > 0) {
-            // Check top active knowledge base for matching query terms
-            const matches = await kbEngine.searchKnowledgeBase(kbs[0].id, latestTurn.content, { maxMatches: 2 });
-            knowledgePassages = matches.map((m) => ({
-              text: m.chunk.text,
-              citation: m.citation,
-            }));
-          }
-        } catch {
-          // Graceful fallback
+          const memoryContextManager = new IntelligentMemoryContextManager(repository);
+          void memoryContextManager.flushRecoveryQueue(); // Drain pending write queue in background
+          contextPkg = await memoryContextManager.buildContextPackage(latestTurn.content, {
+            currentConversationId: cid,
+            activeArtifacts: canvas.isOpen && canvas.activeFile ? [canvas.activeFile.name] : [],
+          });
+        } catch (ctxErr) {
+          console.warn('[IntelligentMemory] Context building notice:', ctxErr);
         }
       }
 
       const job = modelClient.submitJob({
         kind: "chat",
         messages: applyPersonalization(history, prefs.personalization, {
-          memories: relevantMemories,
-          memorySummary: memorySummaryText,
-          knowledgePassages,
+          memories: contextPkg.rankedMemories,
+          memorySummary: contextPkg.summaryContext,
+          knowledgePassages: contextPkg.knowledgePassages,
+          pastConversationExcerpts: contextPkg.pastConversationExcerpts,
+          projectContext: contextPkg.projectContext,
         }),
         options: {
           model: prefs.model,
@@ -352,10 +337,12 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
         if (prefs.personalization.enabled && prefs.personalization.useMemory && latestTurn?.content) {
           void (async () => {
             try {
-              const summaryEngine = new AIMemorySummaryEngine(repository);
-              await summaryEngine.processNewTurn(latestTurn.content, finalOut, cid);
+              const memoryContextManager = new IntelligentMemoryContextManager(repository);
+              await memoryContextManager.processTurnAndExtractMemories(latestTurn.content, finalOut, {
+                conversationId: cid,
+              });
             } catch (err) {
-              console.warn('[AI Memory] Auto-summarization turn processing notice:', err);
+              console.warn('[AI Memory] Auto-memory extraction turn notice:', err);
             }
           })();
         }

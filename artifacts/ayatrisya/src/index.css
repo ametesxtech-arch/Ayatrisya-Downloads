@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=IBM+Plex+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=JetBrains+Mono:ital,wght@0,400..700;1,400..700&family=Manrope:wght@400..800&family=Space+Grotesk:wght@400..700&display=swap');
 @import 'katex/dist/katex.min.css';
 @import 'tailwindcss';
 @import 'tw-animate-css';
@@ -17,7 +17,8 @@
   --color-accent: hsl(var(--accent)); --color-accent-foreground: hsl(var(--accent-foreground));
   --color-destructive: hsl(var(--destructive)); --color-destructive-foreground: hsl(var(--destructive-foreground));
   --color-sidebar: hsl(var(--sidebar)); --color-sidebar-foreground: hsl(var(--sidebar-foreground));
-  --font-sans: var(--app-font-sans); --font-mono: var(--app-font-mono);
+  --font-sans: var(--app-font-ui); --font-mono: var(--app-font-mono);
+  --font-reading: var(--app-font-reading); --font-heading: var(--app-font-heading);
   --radius-sm: calc(var(--radius) - 4px); --radius-md: calc(var(--radius) - 2px); --radius-lg: var(--radius); --radius-xl: calc(var(--radius) + 4px);
 }
 :root,.dark {
@@ -31,7 +32,12 @@
   --muted: 224 13% 15%; --muted-foreground: 220 10% 59%; --accent: 190 72% 67%; --accent-foreground: 225 18% 9%;
   --destructive: 2 68% 58%; --destructive-foreground: 0 0% 100%; --input: 222 13% 23%; --ring: 190 72% 67%;
   --chart-1: 267 67% 72%; --chart-2: 190 72% 67%; --chart-3: 174 48% 55%; --chart-4: 37 73% 63%; --chart-5: 330 56% 65%;
-  --app-font-sans: 'DM Sans', sans-serif; --app-font-display: 'Instrument Serif', serif; --app-font-mono: 'IBM Plex Mono', monospace;
+  --app-font-reading: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --app-font-heading: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --app-font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, monospace;
+  --app-font-ui: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --app-font-sans: var(--app-font-ui);
+  --app-font-display: var(--app-font-heading);
   --radius: 0.7rem; --button-outline: rgba(255,255,255,.1); --badge-outline: rgba(255,255,255,.05); --elevate-1: rgba(255,255,255,.035); --elevate-2: rgba(255,255,255,.07);
   --shadow-2xs: 0 2px 0 rgba(0,0,0,.2); --shadow-xs: 0 2px 4px rgba(0,0,0,.18); --shadow-sm: 0 8px 24px rgba(0,0,0,.22); --shadow: 0 16px 44px rgba(0,0,0,.3); --shadow-md: 0 20px 50px rgba(0,0,0,.3); --shadow-lg: 0 24px 60px rgba(0,0,0,.34); --shadow-xl: 0 30px 80px rgba(0,0,0,.4); --shadow-2xl: 0 35px 100px rgba(0,0,0,.5);
 }
@@ -45,14 +51,18 @@
 }
 *{box-sizing:border-box}
 html{scroll-behavior:smooth;background:#101116}
-body{margin:0;background:hsl(var(--background));color:hsl(var(--foreground));font-family:var(--app-font-sans);font-size:14px;line-height:1.55;antialiased:true}
+body{margin:0;background:hsl(var(--background));color:hsl(var(--foreground));font-family:var(--app-font-ui);font-size:15px;line-height:1.6;antialiased:true}
 button,input,textarea,select{font:inherit}
 button{cursor:pointer}
 a{color:inherit;text-decoration:none}
 button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid #6eaaff;outline-offset:3px}
 ::selection{background:rgba(124,108,235,.38);color:#fff}
-.display{font-family:var(--app-font-display)}
+.display{font-family:var(--app-font-heading);letter-spacing:-.025em}
 .mono{font-family:var(--app-font-mono)}
+.font-reading{font-family:var(--app-font-reading)}
+.font-heading{font-family:var(--app-font-heading)}
+.font-mono{font-family:var(--app-font-mono)}
+.font-ui{font-family:var(--app-font-ui)}
 .app-noise:before{content:"";position:fixed;inset:0;pointer-events:none;z-index:40;opacity:.022;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E")}
 html[data-appearance="light"]{background:#e9e8ee}
 .safe-b{padding-bottom:max(env(safe-area-inset-bottom),.75rem)}
@@ -279,9 +289,10 @@ button,input,textarea,select{ min-width:0; }
   max-width:650px;
   margin:0;
   color:#f0edf4;
+  font-family:var(--app-font-heading);
   font-size:clamp(2.45rem,6vw,4.45rem);
-  font-weight:600;
-  letter-spacing:-.064em;
+  font-weight:700;
+  letter-spacing:-.035em;
   line-height:1.05;
   text-wrap:balance;
 }
@@ -289,8 +300,9 @@ button,input,textarea,select{ min-width:0; }
   max-width:560px;
   margin:21px 0 0;
   color:#a4a2ae;
-  font-size:14px;
-  line-height:1.85;
+  font-family:var(--app-font-reading);
+  font-size:15.5px;
+  line-height:1.75;
 }
 .chat-model-notice{
   display:flex;gap:12px;align-items:flex-start;
@@ -299,7 +311,8 @@ button,input,textarea,select{ min-width:0; }
   border-radius:12px;
   background:rgba(171,126,57,.075);
   color:#e4c796;
-  font-size:12px;line-height:1.7;
+  font-family:var(--app-font-ui);
+  font-size:12.5px;line-height:1.7;
 }
 .chat-model-notice b{font-weight:650;color:#eed8b1}
 .chat-model-notice p{margin:3px 0 0;color:#c3ae8c}
@@ -317,7 +330,8 @@ button,input,textarea,select{ min-width:0; }
   background:rgba(25,25,34,.72);
   color:#d1ced9;
   text-align:left;
-  font-size:12px;font-weight:550;
+  font-family:var(--app-font-ui);
+  font-size:12.5px;font-weight:550;
 }
 .chat-starter:hover{border-color:rgba(181,168,235,.35);background:rgba(181,168,235,.065);color:#f1edf9}
 .chat-starter:focus-visible{outline-color:#b5a8eb}
@@ -338,7 +352,8 @@ button,input,textarea,select{ min-width:0; }
   display:grid;width:29px;height:29px;place-items:center;margin-top:1px;
   border:1px solid rgba(181,168,235,.18);border-radius:10px;
   background:rgba(181,168,235,.09);color:#c3b8e8;
-  font-size:9px;font-weight:700;letter-spacing:.01em;
+  font-family:var(--app-font-ui);
+  font-size:9.5px;font-weight:700;letter-spacing:.02em;
 }
 .chat-avatar-user{
   border-color:rgba(155,201,184,.17);background:rgba(155,201,184,.085);color:#a8cdbd;
@@ -346,43 +361,62 @@ button,input,textarea,select{ min-width:0; }
 .chat-message-body{min-width:0}
 .chat-message-label{
   margin:1px 0 7px;color:#b8b5c2;
-  font-size:11px;font-weight:650;letter-spacing:.025em;
+  font-family:var(--app-font-ui);
+  font-size:11.5px;font-weight:650;letter-spacing:.025em;
 }
 .chat-user-content{
   width:fit-content;max-width:min(100%,680px);
-  padding:12px 15px;
+  padding:12px 16px;
   border:1px solid rgba(181,168,235,.14);
   border-radius:4px 14px 14px 14px;
   background:linear-gradient(130deg,rgba(112,96,157,.15),rgba(89,81,122,.095));
   color:#e6e2ed;
-  font-size:14px;line-height:1.75;
+  font-family:var(--app-font-reading);
+  font-size:16px;line-height:1.7;
   overflow-wrap:break-word;
   word-break:normal;
 }
 .chat-user-content p{margin:0;white-space:pre-wrap}
-.chat-prose{min-width:0;color:#d9d6e0;font-size:14px;line-height:1.8;overflow-wrap:break-word;word-break:normal}
-.chat-prose :where(p,ul,ol,blockquote,pre,table){margin-top:.65em;margin-bottom:.9em}
-.chat-prose :where(h1,h2,h3,h4){color:#efecf3;line-height:1.3;letter-spacing:-.025em}
-.chat-prose :where(h1){font-size:1.5rem}.chat-prose :where(h2){font-size:1.25rem}.chat-prose :where(h3){font-size:1.08rem}
+.chat-prose{
+  min-width:0;
+  color:#d9d6e0;
+  font-family:var(--app-font-reading);
+  font-size:16.5px;
+  line-height:1.72;
+  letter-spacing:-.005em;
+  overflow-wrap:break-word;
+  word-break:normal;
+}
+.chat-prose :where(p,ul,ol,blockquote,pre,table){margin-top:.7em;margin-bottom:.95em}
+.chat-prose :where(h1,h2,h3,h4){
+  color:#efecf3;
+  font-family:var(--app-font-heading);
+  font-weight:650;
+  line-height:1.28;
+  letter-spacing:-.025em;
+}
+.chat-prose :where(h1){font-size:1.65rem;margin-top:1.25em;margin-bottom:.5em}
+.chat-prose :where(h2){font-size:1.38rem;margin-top:1.15em;margin-bottom:.45em}
+.chat-prose :where(h3){font-size:1.18rem;margin-top:1.05em;margin-bottom:.4em}
 .chat-prose :where(li)::marker{color:#a99bd4}
-.chat-prose :where(blockquote){border-left:2px solid #8878b9;color:#b9b5c4;padding-left:1rem}
+.chat-prose :where(blockquote){border-left:2px solid #8878b9;color:#b9b5c4;padding-left:1.1rem;font-style:italic}
 .chat-prose :where(a){color:#c6b8f3;text-decoration:underline;text-decoration-color:rgba(198,184,243,.4);text-underline-offset:3px}
 .chat-prose :where(code:not(pre code)){
-  border:1px solid rgba(197,188,221,.12);border-radius:5px;
-  background:rgba(173,158,208,.09);padding:.12em .36em;
-  color:#d7c8ff;font-size:.89em;overflow-wrap:break-word;word-break:normal;
+  border:1px solid rgba(197,188,221,.14);border-radius:5px;
+  background:rgba(173,158,208,.09);padding:.14em .38em;
+  color:#d7c8ff;font-family:var(--app-font-mono);font-size:.88em;overflow-wrap:break-word;word-break:normal;
 }
 .chat-prose :where(hr){border-color:var(--chat-line)}
 .chat-table-wrap{max-width:100%;overflow-x:auto;border:1px solid var(--chat-line);border-radius:9px;overscroll-behavior-inline:contain}
-.chat-prose table{width:100%;min-width:440px;border-collapse:collapse;font-size:12px}
-.chat-prose :where(th,td){border-bottom:1px solid var(--chat-line);padding:8px 11px;text-align:left}
-.chat-prose th{background:rgba(255,255,255,.035);color:#ece9f1;font-weight:650}
+.chat-prose table{width:100%;min-width:440px;border-collapse:collapse;font-size:13px}
+.chat-prose :where(th,td){border-bottom:1px solid var(--chat-line);padding:9px 12px;text-align:left}
+.chat-prose th{background:rgba(255,255,255,.035);color:#ece9f1;font-family:var(--app-font-heading);font-weight:650}
 .chat-prose tr:last-child td{border-bottom:0}
 .chat-code{max-width:100%;overflow:hidden;border:1px solid rgba(219,213,232,.11);border-radius:11px;background:#101116}
-.chat-code-head{display:flex;min-height:37px;align-items:center;justify-content:space-between;gap:12px;padding:4px 9px 4px 13px;border-bottom:1px solid rgba(219,213,232,.08);background:rgba(255,255,255,.025);color:#898694;font-size:10px}
-.chat-code-head button{display:flex;min-height:28px;align-items:center;gap:6px;padding:0 8px;border:1px solid transparent;border-radius:6px;background:transparent;color:#aaa6b4;font-size:10px}
+.chat-code-head{display:flex;min-height:37px;align-items:center;justify-content:space-between;gap:12px;padding:4px 9px 4px 13px;border-bottom:1px solid rgba(219,213,232,.08);background:rgba(255,255,255,.025);color:#898694;font-family:var(--app-font-ui);font-size:11px}
+.chat-code-head button{display:flex;min-height:28px;align-items:center;gap:6px;padding:0 8px;border:1px solid transparent;border-radius:6px;background:transparent;color:#aaa6b4;font-family:var(--app-font-ui);font-size:11px}
 .chat-code-head button:hover{border-color:var(--chat-line);background:rgba(255,255,255,.05);color:#e8e4ef}
-.chat-code pre{max-width:100%;overflow:auto;margin:0;padding:15px 16px;color:#d8d5df;font-family:var(--app-font-mono);font-size:12px;line-height:1.7;overscroll-behavior-inline:contain}
+.chat-code pre{max-width:100%;overflow:auto;margin:0;padding:16px 18px;color:#d8d5df;font-family:var(--app-font-mono);font-size:13.5px;line-height:1.68;overscroll-behavior-inline:contain}
 .chat-code pre code{font:inherit}
 .chat-code .chat-token-keyword{color:#c7a9ff}
 .chat-code .chat-token-string{color:#a8c99f}
@@ -395,7 +429,7 @@ button,input,textarea,select{ min-width:0; }
 html[data-appearance="light"] .chat-prose .katex{color:#24222e}
 html[data-appearance="light"] .chat-prose .katex-display{background:rgba(0,0,0,.025);border-color:rgba(52,43,76,.1)}
 html[data-appearance="light"] .chat-prose .katex-display>.katex{color:#0d9488}
-.chat-message-actions{display:flex;flex-wrap:wrap;min-height:36px;align-items:center;gap:6px;margin:6px 0 0 -2px;color:#817e8c;font-size:11px}
+.chat-message-actions{display:flex;flex-wrap:wrap;min-height:36px;align-items:center;gap:6px;margin:6px 0 0 -2px;color:#817e8c;font-family:var(--app-font-ui);font-size:11.5px}
 .chat-message-actions>[data-testid="status-not-sent"]{margin-right:auto}
 .chat-action{min-width:32px;min-height:32px;width:auto;height:auto;opacity:.78}
 .chat-action:hover,.chat-action:focus-visible{opacity:1}
@@ -516,8 +550,8 @@ html[data-appearance="light"] .chat-thinking small,html[data-appearance="light"]
   .chat-message-list{gap:20px;padding-top:14px}
   .chat-message-inner{grid-template-columns:25px minmax(0,1fr);gap:9px}
   .chat-avatar{width:25px;height:25px;border-radius:8px}
-  .chat-prose{font-size:13px;line-height:1.7;overflow-wrap:break-word;word-break:break-word}
-  .chat-user-content{font-size:13px;padding:10px 12px;min-width:48px;overflow-wrap:break-word;word-break:break-word}
+  .chat-prose{font-size:15px;line-height:1.68;overflow-wrap:break-word;word-break:break-word}
+  .chat-user-content{font-size:15px;padding:10px 13px;min-width:48px;overflow-wrap:break-word;word-break:break-word}
   .chat-message-actions{margin-top:6px;gap:6px 8px;row-gap:8px}
   .chat-action{opacity:1}
   .chat-composer-dock{padding-top:6px;padding-bottom:max(env(safe-area-inset-bottom),8px)}

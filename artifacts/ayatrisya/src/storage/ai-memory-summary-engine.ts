@@ -121,13 +121,16 @@ export class AIMemorySummaryEngine {
       });
     }
 
-    // Try AI model synthesis if model client is available
+    // Try AI model synthesis if model client is available (bounded by 400ms timeout for instant offline fallback)
     let synthesizedSections: AIMemorySummary['sections'] | null = null;
     let overviewText = '';
 
     try {
-      const caps = await modelClient.getModelCapabilities();
-      const available = caps.some((c) => c.available);
+      const caps = await Promise.race([
+        modelClient.getModelCapabilities(),
+        new Promise<any[]>((_, reject) => setTimeout(() => reject(new Error('model-timeout')), 400)),
+      ]);
+      const available = Array.isArray(caps) && caps.some((c) => c.available);
 
       if (available || options.forceModel) {
         const memoryListing = allMemories

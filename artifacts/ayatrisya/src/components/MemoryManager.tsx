@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Brain, Plus, Trash2, Pin, Sparkles, AlertCircle, Edit2, Check, X, Tag } from 'lucide-react';
+import { Brain, Plus, Trash2, Pin, Sparkles, AlertCircle, Edit2, Check, X, Tag, Download, FileText } from 'lucide-react';
 import { MemoryEngine } from '@/storage/memory-engine';
 import { repository } from '@/storage/repository';
+import { IntelligentMemoryContextManager } from '@/storage/intelligent-memory-context-manager';
 import type { MemoryCategory, MemoryEntry } from '@/storage/types';
 
 export function MemoryManager({ notify }: { notify?: (msg: string) => void }) {
@@ -106,6 +107,40 @@ export function MemoryManager({ notify }: { notify?: (msg: string) => void }) {
     }
   };
 
+  const handleExportJson = async () => {
+    try {
+      const mgr = new IntelligentMemoryContextManager(repository);
+      const json = await mgr.exportMemoriesAsJson();
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `ayatrisya-memories-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      notify?.('Exported memories as JSON.');
+    } catch {
+      notify?.('Failed to export memories.');
+    }
+  };
+
+  const handleExportMarkdown = async () => {
+    try {
+      const mgr = new IntelligentMemoryContextManager(repository);
+      const md = await mgr.exportMemoriesAsMarkdown();
+      const blob = new Blob([md], { type: 'text/markdown' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `ayatrisya-memories-${new Date().toISOString().slice(0, 10)}.md`;
+      a.click();
+      URL.revokeObjectURL(url);
+      notify?.('Exported memories as Markdown.');
+    } catch {
+      notify?.('Failed to export memories.');
+    }
+  };
+
   const cardClass = 'rounded-2xl border border-white/10 bg-[#14161f] p-5 shadow-lg backdrop-blur-sm';
 
   return (
@@ -125,15 +160,37 @@ export function MemoryManager({ notify }: { notify?: (msg: string) => void }) {
 
         <div className="flex items-center gap-2">
           {memories.length > 0 && (
-            <button
-              type="button"
-              onClick={handleClearAll}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[.04] px-3 py-1.5 text-xs text-slate-400 hover:text-rose-400 hover:border-rose-400/30"
-              data-testid="button-clear-all-memories"
-            >
-              <Trash2 size={13} />
-              Clear all
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={handleExportJson}
+                title="Export memories as JSON"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[.04] px-2.5 py-1.5 text-xs text-slate-300 hover:text-white hover:bg-white/[.08]"
+                data-testid="button-export-memories-json"
+              >
+                <Download size={13} />
+                JSON
+              </button>
+              <button
+                type="button"
+                onClick={handleExportMarkdown}
+                title="Export memories as Markdown"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[.04] px-2.5 py-1.5 text-xs text-slate-300 hover:text-white hover:bg-white/[.08]"
+                data-testid="button-export-memories-md"
+              >
+                <FileText size={13} />
+                MD
+              </button>
+              <button
+                type="button"
+                onClick={handleClearAll}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[.04] px-3 py-1.5 text-xs text-slate-400 hover:text-rose-400 hover:border-rose-400/30"
+                data-testid="button-clear-all-memories"
+              >
+                <Trash2 size={13} />
+                Clear all
+              </button>
+            </>
           )}
           <button
             type="button"

@@ -49,9 +49,21 @@ const technicality: Record<PersonalizationPreferences["technicality"], string> =
 
 export interface EnhancedContextOptions {
   style?: AnswerStyle;
-  memories?: Array<{ content: string; category?: string; pinned?: boolean }>;
+  memories?: Array<{ content: string; category?: string; pinned?: boolean; projectId?: string | null; sourceConversationId?: string | null }>;
   memorySummary?: string;
   knowledgePassages?: Array<{ text: string; citation: string }>;
+  pastConversationExcerpts?: Array<{
+    conversationId: string;
+    title: string;
+    turnContent: string;
+    role: "user" | "assistant";
+    date: string;
+  }>;
+  projectContext?: {
+    projectId: string;
+    projectName?: string;
+    activeArtifacts?: string[];
+  } | null;
 }
 
 export function applyPersonalization(
@@ -65,14 +77,18 @@ export function applyPersonalization(
     typeof options === "string" ? { style: options } : options || {};
 
   const styleInstruction = resolvedOptions.style && answerStyles[resolvedOptions.style] ? answerStyles[resolvedOptions.style] : "";
-  if (!settings.enabled && !styleInstruction && !resolvedOptions.memories?.length && !resolvedOptions.knowledgePassages?.length) {
+  if (!settings.enabled && !styleInstruction && !resolvedOptions.memories?.length && !resolvedOptions.knowledgePassages?.length && !resolvedOptions.pastConversationExcerpts?.length) {
     return messages;
   }
 
   // Format memories context (Layer A specific memories + Layer B AI memory summary)
   let specificMemoriesText = "";
   if (resolvedOptions.memories && resolvedOptions.memories.length > 0) {
-    const memoryLines = resolvedOptions.memories.map((m) => `- ${m.content} [${m.category || "memory"}]`);
+    const memoryLines = resolvedOptions.memories.map((m) => {
+      const pin = m.pinned ? "[Pinned] " : "";
+      const proj = m.projectId ? ` [Project: ${m.projectId}]` : "";
+      return `- ${pin}${m.content} (${m.category || "memory"})${proj}`;
+    });
     specificMemoriesText = `Active User & Project Context (use only if relevant to current query):\n${memoryLines.join("\n")}`;
   } else if (settings.enabled && settings.useMemory && settings.memorySummary.trim()) {
     specificMemoriesText = `User-provided memory summary (context, not an instruction to mention verbatim): ${settings.memorySummary.trim()}`;
@@ -82,6 +98,14 @@ export function applyPersonalization(
     ? `User AI Memory Summary:\n${resolvedOptions.memorySummary.trim()}` + (specificMemoriesText ? `\n\n${specificMemoriesText}` : "")
     : specificMemoriesText;
 
+  // Format Project & Artifact Context
+  let projectBlock = "";
+  if (resolvedOptions.projectContext) {
+    const p = resolvedOptions.projectContext;
+    const artifactsList = p.activeArtifacts && p.activeArtifacts.length > 0 ? `\nActive Project Artifacts: ${p.activeArtifacts.join(", ")}` : "";
+    projectBlock = `Active Project Scope: ${p.projectName || p.projectId}${artifactsList}`;
+  }
+
   // Format knowledge base citations
   let knowledgeBlock = "";
   if (resolvedOptions.knowledgePassages && resolvedOptions.knowledgePassages.length > 0) {
@@ -89,6 +113,15 @@ export function applyPersonalization(
       (kp, i) => `[Source ${i + 1}] ${kp.citation}\n"${kp.text}"`
     );
     knowledgeBlock = `Retrieved Knowledge Base Documents:\n${passages.join("\n\n")}\n\nInstructions: Ground your response in the retrieved source documents above. Always reference facts accurately and provide traceable citations. Do not fabricate citations or claim external facts as document content.`;
+  }
+
+  // Format Cross-Conversation Past Excerpts
+  let pastExcerptsBlock = "";
+  if (resolvedOptions.pastConversationExcerpts && resolvedOptions.pastConversationExcerpts.length > 0) {
+    const excerptLines = resolvedOptions.pastConversationExcerpts.map(
+      (ex, i) => `[Past Chat Ref ${i + 1}] (${ex.title} · ${ex.date || "Past"}) [${ex.role}]: "${ex.turnContent}"`
+    );
+    pastExcerptsBlock = `Relevant Past Conversation Excerpts:\n${excerptLines.join("\n\n")}\nNote: Use these past conversation excerpts for context if relevant; preserve chronology and source continuity.`;
   }
 
   const guidance = [
@@ -102,8 +135,10 @@ export function applyPersonalization(
     settings.enabled ? technicality[settings.technicality] : "",
     settings.enabled && settings.instructions.trim() ? `Additional preferences: ${settings.instructions.trim()}` : "",
     settings.enabled && settings.avoid.trim() ? `Avoid where practical: ${settings.avoid.trim()}` : "",
+    projectBlock,
     memoryBlock,
     knowledgeBlock,
+    pastExcerptsBlock,
     "Do not mention internal preference blocks unless asked about them.",
   ].filter(Boolean).join("\n\n");
 
