@@ -77,6 +77,14 @@ function WorkspaceContent() {
   const asideRef = useRef<HTMLElement>(null), mainRef = useRef<HTMLDivElement>(null), wasOpen = useRef(false);
   const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 1023px)').matches);
   const [creating, setCreating] = useState(false);
+
+  // Prevent scroll drift / canvas going up on route change
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    if (mainRef.current) mainRef.current.scrollTop = 0;
+  }, [path]);
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 1023px)');
     const f = () => setIsMobile(mq.matches);
@@ -266,8 +274,8 @@ function WorkspaceContent() {
           <Link href="/workspace/settings" onClick={() => setMobileOpen(false)} className={cx('mt-1 flex items-center gap-2 rounded-md px-2 py-2 text-[11px] text-slate-400 hover:bg-white/[.05] hover:text-slate-100', collapsed && 'justify-center')} title="Settings"><Settings size={14} />{!collapsed && 'Settings'}</Link>
         </div>
       </aside>
-      <div ref={mainRef} className="flex min-w-0 flex-1 flex-col">
-        <header className="safe-t flex min-h-[66px] shrink-0 items-center justify-between gap-2 border-b border-white/[.06] px-3 sm:px-6">
+      <div ref={mainRef} className="flex min-w-0 flex-1 flex-col h-full min-h-0 overflow-hidden">
+        <header className="safe-t flex min-h-[56px] sm:min-h-[66px] shrink-0 items-center justify-between gap-2 border-b border-white/[.06] px-3 sm:px-6">
           <div className="flex min-w-0 items-center gap-2">
             <button ref={menuBtn} aria-label="Open navigation" className="grid size-9 place-items-center rounded-lg text-slate-400 hover:bg-white/[.07] lg:hidden" onClick={() => setMobileOpen(true)}><Menu size={17} /></button>
             <h1 className="truncate text-[13px] font-medium text-slate-200"><MotionText>{title}</MotionText></h1>
@@ -294,7 +302,7 @@ function WorkspaceContent() {
             <ActionMenu label="Profile menu" items={profileItems}><UserRound size={16} /></ActionMenu>
           </div>
         </header>
-        <main id="main" tabIndex={-1} className={cx('workspace-main-content min-h-0 flex-1 focus:outline-none', isFullViewport ? 'flex flex-col h-full overflow-hidden' : 'overflow-y-auto')}><div ref={pageRef} className={cx(isFullViewport ? 'flex-1 h-full min-h-0 flex flex-col' : 'min-h-full')}>
+        <main id="main" tabIndex={-1} className={cx('workspace-main-content min-h-0 flex-1 focus:outline-none overflow-hidden', isFullViewport ? 'flex flex-col h-full' : 'overflow-y-auto')}><div ref={pageRef} className={cx(isFullViewport ? 'flex-1 h-full min-h-0 flex flex-col overflow-hidden' : 'min-h-full')}>
           {path === '/workspace' ? <WorkspaceHome
             displayName={user?.displayName || prefs.displayName || ''}
             projects={homeProjects.data ?? []}

@@ -21,6 +21,9 @@ import {
   Redo2,
   Layers,
   Cpu,
+  Maximize2,
+  Minimize2,
+  ExternalLink,
 } from 'lucide-react';
 import { useCanvas, CanvasProvider, useOptionalCanvas } from '@/components/canvas/CanvasContext';
 import { usePrefs } from '@/hooks/use-prefs';
@@ -90,15 +93,37 @@ function CanvasIDEInternal() {
   ]);
   const [, setActiveProcess] = useState<string | null>(null);
   const terminalEndRef = useRef<HTMLDivElement>(null);
+  const terminalBodyRef = useRef<HTMLDivElement>(null);
 
   // Live Preview Key (increment to trigger clean iframe re-render)
   const [previewKey, setPreviewKey] = useState(0);
   const [previewLogs, setPreviewLogs] = useState<string[]>([]);
   const [copied, setCopied] = useState(false);
+  const [isFullscreenPreview, setIsFullscreenPreview] = useState(false);
 
-  // Scroll terminal to bottom
+  // Prevent parent page scroll drift on mount
   useEffect(() => {
-    terminalEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  }, []);
+
+  // Listen for Escape key to exit fullscreen preview
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isFullscreenPreview) {
+        setIsFullscreenPreview(false);
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [isFullscreenPreview]);
+
+  // Scroll terminal to bottom strictly within its own scrollable container
+  useEffect(() => {
+    if (terminalBodyRef.current) {
+      terminalBodyRef.current.scrollTop = terminalBodyRef.current.scrollHeight;
+    }
   }, [terminalLogs]);
 
   // Construct Virtual Sandboxed HTML from Canvas Files
@@ -472,6 +497,16 @@ Return ONLY the complete updated file content without markdown code fences or co
     });
   };
 
+  // Open Preview in a Standalone Browser Window/Tab
+  const openPreviewInNewWindow = () => {
+    const win = window.open('', '_blank');
+    if (win) {
+      win.document.open();
+      win.document.write(bundledPreviewHtml);
+      win.document.close();
+    }
+  };
+
   // Filtered file tree
   const filteredFiles = useMemo(() => {
     if (!filterQuery.trim()) return canvas.files;
@@ -501,73 +536,71 @@ Return ONLY the complete updated file content without markdown code fences or co
         </div>
 
         {/* Center: Mobile Navigation Switcher vs Desktop Mode Selector */}
-        {isMobile ? (
-          <div className="flex items-center gap-0.5 bg-black/40 p-0.5 rounded-lg border border-white/[.08] shrink-0">
-            <button
-              type="button"
-              onClick={() => setMobileTab('files')}
-              className={`shrink-0 whitespace-nowrap min-w-max px-2.5 py-1 text-[11px] rounded font-medium transition ${mobileTab === 'files' ? 'bg-violet-500/25 text-violet-200 font-semibold shadow-sm' : 'text-slate-400 hover:text-white'}`}
-            >
-              Files
-            </button>
-            <button
-              type="button"
-              onClick={() => setMobileTab('code')}
-              className={`shrink-0 whitespace-nowrap min-w-max px-2.5 py-1 text-[11px] rounded font-medium transition ${mobileTab === 'code' ? 'bg-violet-500/25 text-violet-200 font-semibold shadow-sm' : 'text-slate-400 hover:text-white'}`}
-            >
-              Code
-            </button>
-            <button
-              type="button"
-              onClick={() => setMobileTab('preview')}
-              className={`shrink-0 whitespace-nowrap min-w-max px-2.5 py-1 text-[11px] rounded font-medium transition ${mobileTab === 'preview' ? 'bg-violet-500/25 text-violet-200 font-semibold shadow-sm' : 'text-slate-400 hover:text-white'}`}
-            >
-              Preview
-            </button>
-            <button
-              type="button"
-              onClick={() => setMobileTab('terminal')}
-              className={`shrink-0 whitespace-nowrap min-w-max px-2.5 py-1 text-[11px] rounded font-medium transition ${mobileTab === 'terminal' ? 'bg-violet-500/25 text-violet-200 font-semibold shadow-sm' : 'text-slate-400 hover:text-white'}`}
-            >
-              Terminal
-            </button>
-          </div>
-        ) : (
-          <div className="flex items-center gap-1 bg-black/30 p-0.5 rounded-lg border border-white/[.08] shrink-0">
-            <button
-              type="button"
-              onClick={() => setViewMode('editor-only')}
-              className={`shrink-0 whitespace-nowrap min-w-max px-2.5 py-1 text-xs rounded-md font-medium transition ${viewMode === 'editor-only' ? 'bg-violet-500/20 text-violet-200 border border-violet-500/30 font-semibold shadow-sm' : 'text-slate-400 hover:text-white'}`}
-              title="Editor Only"
-            >
-              Editor
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('split')}
-              className={`shrink-0 whitespace-nowrap min-w-max px-2.5 py-1 text-xs rounded-md font-medium transition ${viewMode === 'split' ? 'bg-violet-500/20 text-violet-200 border border-violet-500/30 font-semibold shadow-sm' : 'text-slate-400 hover:text-white'}`}
-              title="Editor + Preview Split"
-            >
-              Split
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('preview-only')}
-              className={`shrink-0 whitespace-nowrap min-w-max px-2.5 py-1 text-xs rounded-md font-medium transition ${viewMode === 'preview-only' ? 'bg-violet-500/20 text-violet-200 border border-violet-500/30 font-semibold shadow-sm' : 'text-slate-400 hover:text-white'}`}
-              title="Full-screen Preview"
-            >
-              Preview
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('terminal-only')}
-              className={`shrink-0 whitespace-nowrap min-w-max px-2.5 py-1 text-xs rounded-md font-medium transition ${viewMode === 'terminal-only' ? 'bg-violet-500/20 text-violet-200 border border-violet-500/30 font-semibold shadow-sm' : 'text-slate-400 hover:text-white'}`}
-              title="Linux Terminal Focused"
-            >
-              Terminal
-            </button>
-          </div>
-        )}
+        <div className="flex md:hidden items-center gap-0.5 bg-black/40 p-0.5 rounded-lg border border-white/[.08] shrink-0">
+          <button
+            type="button"
+            onClick={() => setMobileTab('files')}
+            className={`shrink-0 whitespace-nowrap min-w-max px-2.5 py-1 text-[11px] rounded font-medium transition ${mobileTab === 'files' ? 'bg-violet-500/25 text-violet-200 font-semibold shadow-sm' : 'text-slate-400 hover:text-white'}`}
+          >
+            Files
+          </button>
+          <button
+            type="button"
+            onClick={() => setMobileTab('code')}
+            className={`shrink-0 whitespace-nowrap min-w-max px-2.5 py-1 text-[11px] rounded font-medium transition ${mobileTab === 'code' ? 'bg-violet-500/25 text-violet-200 font-semibold shadow-sm' : 'text-slate-400 hover:text-white'}`}
+          >
+            Code
+          </button>
+          <button
+            type="button"
+            onClick={() => setMobileTab('preview')}
+            className={`shrink-0 whitespace-nowrap min-w-max px-2.5 py-1 text-[11px] rounded font-medium transition ${mobileTab === 'preview' ? 'bg-violet-500/25 text-violet-200 font-semibold shadow-sm' : 'text-slate-400 hover:text-white'}`}
+          >
+            Preview
+          </button>
+          <button
+            type="button"
+            onClick={() => setMobileTab('terminal')}
+            className={`shrink-0 whitespace-nowrap min-w-max px-2.5 py-1 text-[11px] rounded font-medium transition ${mobileTab === 'terminal' ? 'bg-violet-500/25 text-violet-200 font-semibold shadow-sm' : 'text-slate-400 hover:text-white'}`}
+          >
+            Terminal
+          </button>
+        </div>
+
+        <div className="hidden md:flex items-center gap-1 bg-black/30 p-0.5 rounded-lg border border-white/[.08] shrink-0">
+          <button
+            type="button"
+            onClick={() => setViewMode('editor-only')}
+            className={`shrink-0 whitespace-nowrap min-w-max px-2.5 py-1 text-xs rounded-md font-medium transition ${viewMode === 'editor-only' ? 'bg-violet-500/20 text-violet-200 border border-violet-500/30 font-semibold shadow-sm' : 'text-slate-400 hover:text-white'}`}
+            title="Editor Only"
+          >
+            Editor
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode('split')}
+            className={`shrink-0 whitespace-nowrap min-w-max px-2.5 py-1 text-xs rounded-md font-medium transition ${viewMode === 'split' ? 'bg-violet-500/20 text-violet-200 border border-violet-500/30 font-semibold shadow-sm' : 'text-slate-400 hover:text-white'}`}
+            title="Editor + Preview Split"
+          >
+            Split
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode('preview-only')}
+            className={`shrink-0 whitespace-nowrap min-w-max px-2.5 py-1 text-xs rounded-md font-medium transition ${viewMode === 'preview-only' ? 'bg-violet-500/20 text-violet-200 border border-violet-500/30 font-semibold shadow-sm' : 'text-slate-400 hover:text-white'}`}
+            title="Full-screen Preview"
+          >
+            Preview
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode('terminal-only')}
+            className={`shrink-0 whitespace-nowrap min-w-max px-2.5 py-1 text-xs rounded-md font-medium transition ${viewMode === 'terminal-only' ? 'bg-violet-500/20 text-violet-200 border border-violet-500/30 font-semibold shadow-sm' : 'text-slate-400 hover:text-white'}`}
+            title="Linux Terminal Focused"
+          >
+            Terminal
+          </button>
+        </div>
 
         {/* Right: Actions */}
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
@@ -833,16 +866,16 @@ Return ONLY the complete updated file content without markdown code fences or co
                 {/* Bottom AI Refactor Bar */}
                 <form
                   onSubmit={handleEditorAiRefactor}
-                  className="flex items-center gap-2 border-t border-white/[.07] bg-[#13121b] p-2"
+                  className="flex items-center gap-1.5 sm:gap-2 border-t border-white/[.07] bg-[#13121b] p-2 shrink-0"
                 >
-                  <Sparkles size={14} className="text-violet-400 ml-1" />
+                  <Sparkles size={14} className="text-violet-400 ml-1 shrink-0" />
                   <input
                     type="text"
                     value={editorAiPrompt}
                     onChange={(e) => setEditorAiPrompt(e.target.value)}
                     disabled={editorAiBusy || !active}
-                    placeholder={active ? `Ask AI to modify ${active.name} (e.g. "Add responsive styling, error handling")...` : 'Select a file...'}
-                    className="flex-1 rounded-md bg-black/40 px-2.5 py-1 text-xs text-white border border-white/10 focus:outline-none focus:border-violet-400"
+                    placeholder={active ? `Ask AI to modify ${active.name}...` : 'Select a file...'}
+                    className="flex-1 min-w-0 rounded-md bg-black/40 px-2.5 py-1 text-xs text-white border border-white/10 focus:outline-none focus:border-violet-400"
                   />
                   <button
                     type="submit"
@@ -872,39 +905,62 @@ Return ONLY the complete updated file content without markdown code fences or co
                     </button>
                   </div>
 
-                  {/* Device Presets */}
-                  <div className="flex items-center gap-1 bg-black/40 p-0.5 rounded border border-white/10">
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                    {/* Device Presets */}
+                    <div className="flex items-center gap-1 bg-black/40 p-0.5 rounded border border-white/10">
+                      <button
+                        type="button"
+                        onClick={() => setDeviceViewport('desktop')}
+                        className={`p-1 rounded ${deviceViewport === 'desktop' ? 'bg-white/10 text-white' : 'text-slate-500 hover:text-slate-300'}`}
+                        title="Desktop (100%)"
+                      >
+                        <Monitor size={12} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDeviceViewport('tablet')}
+                        className={`p-1 rounded ${deviceViewport === 'tablet' ? 'bg-white/10 text-white' : 'text-slate-500 hover:text-slate-300'}`}
+                        title="Tablet (768px)"
+                      >
+                        <Tablet size={12} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDeviceViewport('mobile')}
+                        className={`p-1 rounded ${deviceViewport === 'mobile' ? 'bg-white/10 text-white' : 'text-slate-500 hover:text-slate-300'}`}
+                        title="Mobile (375px)"
+                      >
+                        <Smartphone size={12} />
+                      </button>
+                    </div>
+
+                    {/* Pop-out to standalone browser window */}
                     <button
                       type="button"
-                      onClick={() => setDeviceViewport('desktop')}
-                      className={`p-1 rounded ${deviceViewport === 'desktop' ? 'bg-white/10 text-white' : 'text-slate-500 hover:text-slate-300'}`}
-                      title="Desktop (100%)"
+                      onClick={openPreviewInNewWindow}
+                      className="p-1 text-slate-400 hover:text-violet-300 transition"
+                      title="Open preview in new browser tab"
                     >
-                      <Monitor size={12} />
+                      <ExternalLink size={13} />
                     </button>
+
+                    {/* Full Screen Preview Button */}
                     <button
                       type="button"
-                      onClick={() => setDeviceViewport('tablet')}
-                      className={`p-1 rounded ${deviceViewport === 'tablet' ? 'bg-white/10 text-white' : 'text-slate-500 hover:text-slate-300'}`}
-                      title="Tablet (768px)"
+                      onClick={() => setIsFullscreenPreview(true)}
+                      className="flex items-center gap-1 rounded bg-violet-500/15 border border-violet-500/30 px-2 py-0.5 text-xs font-medium text-violet-200 hover:bg-violet-500/25 transition shadow-sm"
+                      title="Full Screen Preview"
                     >
-                      <Tablet size={12} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDeviceViewport('mobile')}
-                      className={`p-1 rounded ${deviceViewport === 'mobile' ? 'bg-white/10 text-white' : 'text-slate-500 hover:text-slate-300'}`}
-                      title="Mobile (375px)"
-                    >
-                      <Smartphone size={12} />
+                      <Maximize2 size={12} />
+                      <span className="hidden sm:inline">Full Screen</span>
                     </button>
                   </div>
                 </div>
 
                 {/* Sandboxed iframe Container */}
-                <div className="flex-1 min-h-0 flex items-center justify-center p-2 overflow-auto bg-[#09090d]">
+                <div className="flex-1 min-h-0 flex items-center justify-center p-1 sm:p-2 overflow-auto bg-[#09090d]">
                   <div
-                    className={`h-full transition-all duration-200 bg-white shadow-2xl rounded-md overflow-hidden ${
+                    className={`h-full max-w-full transition-all duration-200 bg-white shadow-2xl rounded-md overflow-hidden ${
                       deviceViewport === 'mobile'
                         ? 'w-[375px]'
                         : deviceViewport === 'tablet'
@@ -929,47 +985,51 @@ Return ONLY the complete updated file content without markdown code fences or co
           {(!isMobile ? (isBottomDockOpen || viewMode === 'terminal-only') : (mobileTab === 'terminal')) && (
             <div className={`border-t border-white/[.07] bg-[#0f0e15] flex flex-col ${isMobile || viewMode === 'terminal-only' ? 'flex-1' : 'h-48'}`}>
               {/* Dock Header */}
-              <div className="flex h-8 shrink-0 items-center justify-between border-b border-white/[.06] bg-[#13121b] px-3">
-                <div className="flex items-center gap-2 sm:gap-4 text-xs overflow-x-auto scrollbar-none shrink-0">
+              <div className="flex h-8 shrink-0 items-center justify-between border-b border-white/[.06] bg-[#13121b] px-2 sm:px-3">
+                <div className="flex items-center gap-1.5 sm:gap-4 text-xs overflow-x-auto scrollbar-none shrink-0">
                   <button
                     type="button"
                     onClick={() => setBottomTab('terminal')}
-                    className={`shrink-0 whitespace-nowrap min-w-max flex items-center gap-1.5 font-medium py-1 transition ${bottomTab === 'terminal' ? 'text-violet-300 border-b-2 border-violet-400' : 'text-slate-400 hover:text-slate-200'}`}
+                    className={`shrink-0 whitespace-nowrap min-w-max flex items-center gap-1 sm:gap-1.5 font-medium py-1 transition ${bottomTab === 'terminal' ? 'text-violet-300 border-b-2 border-violet-400' : 'text-slate-400 hover:text-slate-200'}`}
                   >
                     <TerminalIcon size={12} />
-                    <span>Terminal (Linux bash)</span>
+                    <span>Terminal</span>
+                    <span className="hidden sm:inline"> (Linux bash)</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => setBottomTab('output')}
-                    className={`shrink-0 whitespace-nowrap min-w-max flex items-center gap-1.5 font-medium py-1 transition ${bottomTab === 'output' ? 'text-violet-300 border-b-2 border-violet-400' : 'text-slate-400 hover:text-slate-200'}`}
+                    className={`shrink-0 whitespace-nowrap min-w-max flex items-center gap-1 sm:gap-1.5 font-medium py-1 transition ${bottomTab === 'output' ? 'text-violet-300 border-b-2 border-violet-400' : 'text-slate-400 hover:text-slate-200'}`}
                   >
                     <Layers size={12} />
-                    <span>Console Output</span>
+                    <span>Output</span>
+                    <span className="hidden sm:inline"> Console</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => setBottomTab('problems')}
-                    className={`shrink-0 whitespace-nowrap min-w-max flex items-center gap-1.5 font-medium py-1 transition ${bottomTab === 'problems' ? 'text-violet-300 border-b-2 border-violet-400' : 'text-slate-400 hover:text-slate-200'}`}
+                    className={`shrink-0 whitespace-nowrap min-w-max flex items-center gap-1 sm:gap-1.5 font-medium py-1 transition ${bottomTab === 'problems' ? 'text-violet-300 border-b-2 border-violet-400' : 'text-slate-400 hover:text-slate-200'}`}
                   >
                     <AlertCircle size={12} />
-                    <span>Problems (0)</span>
+                    <span>Problems</span>
+                    <span className="hidden sm:inline"> (0)</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => setBottomTab('packages')}
-                    className={`shrink-0 whitespace-nowrap min-w-max flex items-center gap-1.5 font-medium py-1 transition ${bottomTab === 'packages' ? 'text-violet-300 border-b-2 border-violet-400' : 'text-slate-400 hover:text-slate-200'}`}
+                    className={`shrink-0 whitespace-nowrap min-w-max flex items-center gap-1 sm:gap-1.5 font-medium py-1 transition ${bottomTab === 'packages' ? 'text-violet-300 border-b-2 border-violet-400' : 'text-slate-400 hover:text-slate-200'}`}
                   >
                     <Cpu size={12} />
-                    <span>Environment</span>
+                    <span>Env</span>
+                    <span className="hidden sm:inline">ironment</span>
                   </button>
                 </div>
 
-                {viewMode !== 'terminal-only' && (
+                {!isMobile && viewMode !== 'terminal-only' && (
                   <button
                     type="button"
                     onClick={() => setIsBottomDockOpen(false)}
-                    className="text-slate-400 hover:text-white"
+                    className="text-slate-400 hover:text-white shrink-0 p-1"
                   >
                     <X size={13} />
                   </button>
@@ -977,7 +1037,7 @@ Return ONLY the complete updated file content without markdown code fences or co
               </div>
 
               {/* Dock Body */}
-              <div className="flex-1 min-h-0 overflow-y-auto p-2.5 font-mono text-xs">
+              <div ref={terminalBodyRef} className="flex-1 min-h-0 overflow-y-auto p-2.5 font-mono text-xs">
                 {bottomTab === 'terminal' && (
                   <div className="space-y-1">
                     {terminalLogs.map((log, index) => (
@@ -1005,14 +1065,17 @@ Return ONLY the complete updated file content without markdown code fences or co
                       }}
                       className="flex items-center gap-1 pt-1"
                     >
-                      <span className="text-violet-400 font-semibold shrink-0">ayatrisya@workspace</span>
-                      <span className="text-slate-500 shrink-0">:</span>
-                      <span className="text-violet-300 font-medium shrink-0">{currentVm.getDisplayPath()}</span>
+                      <span className="text-violet-400 font-semibold shrink-0 hidden sm:inline">ayatrisya@workspace</span>
+                      <span className="text-slate-500 shrink-0 hidden sm:inline">:</span>
+                      <span className="text-violet-300 font-medium shrink-0 hidden sm:inline">{currentVm.getDisplayPath()}</span>
+                      <span className="text-violet-400 font-semibold shrink-0 sm:hidden">bash</span>
                       <span className="text-slate-400 font-bold ml-0.5 mr-1 shrink-0">$</span>
                       <input
                         type="text"
                         value={commandInput}
                         onChange={(e) => setCommandInput(e.target.value)}
+                        placeholder="Type a Linux command (ls, cat, touch, node, python3, help)..."
+                        className="flex-1 bg-transparent min-w-0 text-slate-100 focus:outline-none font-mono text-xs"
                         onKeyDown={(e) => {
                           const hist = currentVm.getHistory();
                           if (e.key === 'ArrowUp') {
@@ -1034,8 +1097,6 @@ Return ONLY the complete updated file content without markdown code fences or co
                             }
                           }
                         }}
-                        placeholder="Type a Linux command (ls, cat, touch, node, python3, help)..."
-                        className="flex-1 bg-transparent text-white focus:outline-none"
                       />
                     </form>
                   </div>
@@ -1163,6 +1224,104 @@ Return ONLY the complete updated file content without markdown code fences or co
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* 5. FULL SCREEN LIVE PREVIEW OVERLAY */}
+      {isFullscreenPreview && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-[#0c0c10] select-auto animate-in fade-in duration-200">
+          {/* Top Fullscreen Header */}
+          <div className="flex h-11 shrink-0 items-center justify-between border-b border-white/[.08] bg-[#14131d]/95 px-4 backdrop-blur-md">
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-semibold tracking-wide text-white flex items-center gap-2">
+                <span className="inline-block h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                Live Preview (Full Screen)
+              </span>
+              <button
+                type="button"
+                onClick={() => setPreviewKey((k) => k + 1)}
+                className="flex items-center gap-1 rounded px-2 py-1 text-xs text-slate-400 hover:bg-white/[.06] hover:text-white transition"
+                title="Reload preview"
+              >
+                <RotateCcw size={12} />
+                <span>Reload</span>
+              </button>
+            </div>
+
+            {/* Center Device Viewport Switcher */}
+            <div className="flex items-center gap-1 bg-black/40 p-0.5 rounded border border-white/10">
+              <button
+                type="button"
+                onClick={() => setDeviceViewport('desktop')}
+                className={`p-1 rounded text-xs px-2 flex items-center gap-1 transition ${deviceViewport === 'desktop' ? 'bg-white/10 text-white font-medium' : 'text-slate-500 hover:text-slate-300'}`}
+                title="Desktop (100%)"
+              >
+                <Monitor size={12} />
+                <span className="hidden sm:inline">Desktop</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setDeviceViewport('tablet')}
+                className={`p-1 rounded text-xs px-2 flex items-center gap-1 transition ${deviceViewport === 'tablet' ? 'bg-white/10 text-white' : 'text-slate-500 hover:text-slate-300'}`}
+                title="Tablet (768px)"
+              >
+                <Tablet size={12} />
+                <span className="hidden sm:inline">Tablet</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setDeviceViewport('mobile')}
+                className={`p-1 rounded text-xs px-2 flex items-center gap-1 transition ${deviceViewport === 'mobile' ? 'bg-white/10 text-white' : 'text-slate-500 hover:text-slate-300'}`}
+                title="Mobile (375px)"
+              >
+                <Smartphone size={12} />
+                <span className="hidden sm:inline">Mobile</span>
+              </button>
+            </div>
+
+            {/* Right: Pop-out and Exit Fullscreen */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={openPreviewInNewWindow}
+                className="hidden sm:flex items-center gap-1.5 rounded-lg border border-white/10 px-2.5 py-1 text-xs text-slate-300 hover:bg-white/[.06] transition"
+                title="Open preview in new browser tab"
+              >
+                <ExternalLink size={12} />
+                <span>New Tab</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsFullscreenPreview(false)}
+                className="flex items-center gap-1.5 rounded-lg bg-violet-600 px-3 py-1 text-xs font-semibold text-white hover:bg-violet-500 shadow-sm transition"
+                title="Exit Full Screen (Esc)"
+              >
+                <Minimize2 size={13} />
+                <span>Exit Full Screen</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Fullscreen Iframe Canvas */}
+          <div className="flex-1 min-h-0 flex items-center justify-center p-0 md:p-3 overflow-hidden bg-[#050608]">
+            <div
+              className={`h-full transition-all duration-200 bg-white shadow-2xl rounded-none md:rounded-lg overflow-hidden ${
+                deviceViewport === 'mobile'
+                  ? 'w-[375px]'
+                  : deviceViewport === 'tablet'
+                  ? 'w-[768px]'
+                  : 'w-full'
+              }`}
+            >
+              <iframe
+                key={`fs-${previewKey}`}
+                title="Ayatrisya Canvas Full Screen Preview"
+                sandbox="allow-scripts allow-modals"
+                srcDoc={bundledPreviewHtml}
+                className="h-full w-full border-0"
+              />
+            </div>
           </div>
         </div>
       )}
