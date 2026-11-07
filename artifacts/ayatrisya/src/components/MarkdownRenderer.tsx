@@ -26,6 +26,7 @@ import {
   InteractiveBlockSkeleton,
   DiagramBlockRenderer,
   CitationBlockRenderer,
+  ArtifactBlockRenderer,
 } from './interactive-blocks';
 import { detectUniversalInteractiveContent } from './interactive-blocks/interactive-detector';
 import { useOptionalCanvas } from './canvas/CanvasContext';
@@ -126,6 +127,74 @@ export function CodeBlock({ children }: { children?: ReactNode }) {
           diagramType: langLower.includes('mermaid') ? 'mermaid' : 'flowchart',
           code: text,
           title: `${language} Diagram`,
+        }}
+      />
+    );
+  }
+
+  // Automatic Artifact Previews (Website, Spreadsheet, Presentation, Document)
+  if (/^(website|html-preview|web-preview)$/i.test(langLower)) {
+    return (
+      <ArtifactBlockRenderer
+        block={{
+          type: 'artifact',
+          artifactKind: 'website',
+          title: 'Interactive Website Preview',
+          content: text,
+        }}
+      />
+    );
+  }
+  if (/^(spreadsheet|csv-preview|table-preview)$/i.test(langLower)) {
+    return (
+      <ArtifactBlockRenderer
+        block={{
+          type: 'artifact',
+          artifactKind: 'spreadsheet',
+          title: 'Live Spreadsheet',
+          content: text,
+        }}
+      />
+    );
+  }
+  if (/^(presentation|slides|deck)$/i.test(langLower)) {
+    return (
+      <ArtifactBlockRenderer
+        block={{
+          type: 'artifact',
+          artifactKind: 'presentation',
+          title: 'Presentation Slides',
+          content: text,
+        }}
+      />
+    );
+  }
+  if (/^(document|doc-preview|report)$/i.test(langLower)) {
+    return (
+      <ArtifactBlockRenderer
+        block={{
+          type: 'artifact',
+          artifactKind: 'document',
+          title: 'Structured Document',
+          content: text,
+        }}
+      />
+    );
+  }
+  if (langLower === 'artifact') {
+    try {
+      const parsed = JSON.parse(text);
+      if (parsed && typeof parsed === 'object') {
+        return <ArtifactBlockRenderer block={{ type: 'artifact', ...parsed }} />;
+      }
+    } catch {}
+    return (
+      <ArtifactBlockRenderer
+        block={{
+          type: 'artifact',
+          artifactKind: text.includes('<html') ? 'website' : 'document',
+          title: 'Artifact',
+          content: text,
         }}
       />
     );

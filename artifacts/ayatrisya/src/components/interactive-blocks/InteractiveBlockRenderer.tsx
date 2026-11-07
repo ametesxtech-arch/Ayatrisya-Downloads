@@ -32,6 +32,7 @@ import {
 } from './CreativeMediaBlockRenderer';
 import { MediaBlockRenderer } from './MediaBlockRenderer';
 import { ScheduledTaskBlockRenderer } from './ScheduledTaskBlockRenderer';
+import { ArtifactBlockRenderer, type ArtifactBlockData } from './ArtifactBlockRenderer';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -154,6 +155,8 @@ export function InteractiveBlockRenderer({
         return <MediaBlockRenderer block={block} />;
       case 'scheduled_task':
         return <ScheduledTaskBlockRenderer block={block} blockId={resolvedId} />;
+      case 'artifact':
+        return <ArtifactBlockRenderer block={block as unknown as ArtifactBlockData} />;
       case 'code':
         return (
           <div className="my-3 overflow-hidden rounded-xl border border-white/10 bg-[#0d0e12] p-4 text-xs">

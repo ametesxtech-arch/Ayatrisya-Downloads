@@ -143,7 +143,11 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
   }, []);
 
   const atBottomRef = useRef(true); atBottomRef.current = atBottom;
-  useEffect(() => { if (atBottomRef.current) endRef.current?.scrollIntoView({ block: 'end' }); }, [list.length, stream]);
+  useEffect(() => {
+    if (atBottomRef.current) {
+      endRef.current?.scrollIntoView({ block: 'end', behavior: prefs.reducedMotion ? 'auto' : 'smooth' });
+    }
+  }, [list.length, stream, prefs.reducedMotion]);
 
   useEffect(() => {
     const t = taRef.current; if (!t) return;

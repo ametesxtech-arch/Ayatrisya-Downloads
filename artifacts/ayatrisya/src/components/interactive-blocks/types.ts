@@ -492,6 +492,18 @@ export interface ScheduledTaskBlock extends BaseInteractiveBlock {
   history?: ScheduledTaskExecution[];
 }
 
+// 32. Universal Artifact Preview Block
+export interface ArtifactBlock extends BaseInteractiveBlock {
+  type: 'artifact';
+  artifactKind: 'website' | 'document' | 'spreadsheet' | 'presentation' | 'code';
+  title?: string;
+  description?: string;
+  content: string;
+  fileName?: string;
+  language?: string;
+  url?: string;
+}
+
 // Discriminated union of all interactive blocks
 export type InteractiveBlock =
   | McqBlock
@@ -524,4 +536,5 @@ export type InteractiveBlock =
   | ImageVariationBlock
   | CodeInteractiveBlock
   | MediaBlock
-  | ScheduledTaskBlock;
+  | ScheduledTaskBlock
+  | ArtifactBlock;
