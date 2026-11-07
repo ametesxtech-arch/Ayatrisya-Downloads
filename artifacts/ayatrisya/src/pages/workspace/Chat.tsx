@@ -29,7 +29,7 @@ import type { MessageAttachment } from '@/ai/types';
 import { MotionText } from '@/components/MotionText';
 import { CanvasProvider, useCanvas } from '@/components/canvas/CanvasContext';
 import { CanvasPanel } from '@/components/canvas/CanvasPanel';
-import { VoiceInputButton, MessageTtsButton, SpeechToSpeechModal } from '@/components/voice';
+import { VoiceInputButton, MessageTtsButton, SpeechToSpeechModal, LiquidOrbAgent, type LiquidOrbState } from '@/components/voice';
 import { parseScheduleRequest } from '@/lib/scheduled-tasks/schedule-parser';
 import { hasModelConsent, grantModelConsent } from '@/lib/model-consent';
 import { hasCloudImageConsent } from '@/features/image-studio/consent';
@@ -89,6 +89,37 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
 
   // Per-conversation mode: initialize from conversation record if present, otherwise fallback to global prefs
   const activeMode: ChatMode = (conv.data?.mode as ChatMode | undefined) || prefs.mode || 'Normal';
+
+  // Live Agent State Tracking (idle | thinking | listening | searching | speaking) for LiquidGlassOrb
+  const [isTtsSpeaking, setIsTtsSpeaking] = useState(false);
+  const [isVoiceListening, setIsVoiceListening] = useState(false);
+
+  useEffect(() => {
+    const onTts = (e: any) => setIsTtsSpeaking(Boolean(e.detail?.isSpeaking));
+    const onVoice = (e: any) => setIsVoiceListening(Boolean(e.detail?.isListening));
+    window.addEventListener('ayatrisya-tts-state', onTts);
+    window.addEventListener('ayatrisya-voice-input-state', onVoice);
+    return () => {
+      window.removeEventListener('ayatrisya-tts-state', onTts);
+      window.removeEventListener('ayatrisya-voice-input-state', onVoice);
+    };
+  }, []);
+
+  const isSearchQuery = useMemo(() => {
+    return (
+      activeMode === 'Deep Research' ||
+      /\b(search|google|find|lookup|who is|what is|where is|latest|recent|news|current|web|browse|weather|stock)\b/i.test(
+        text || stream || '',
+      )
+    );
+  }, [activeMode, text, stream]);
+
+  const chatAgentState: LiquidOrbState = useMemo(() => {
+    if (isVoiceListening) return 'listening';
+    if (isTtsSpeaking) return 'speaking';
+    if (busy) return isSearchQuery ? 'searching' : 'thinking';
+    return 'idle';
+  }, [isVoiceListening, isTtsSpeaking, busy, isSearchQuery]);
 
   const acts = useConvActions({ notify, goto, onDeleted: () => goto('/workspace') });
   const abortRef = useRef<AbortController | null>(null), jobIdRef = useRef<string | null>(null), retryRef = useRef<{ cid: string; history: Turn } | null>(null), endRef = useRef<HTMLDivElement>(null), fileRef = useRef<HTMLInputElement>(null), taRef = useRef<HTMLTextAreaElement>(null);
@@ -546,6 +577,18 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
               <span className="hidden sm:inline">Canvas IDE</span>
               <ExternalLink size={10} className="text-slate-400 ml-0.5 hidden sm:inline" />
             </Button>
+            {/* Live Chat Orb Indicator */}
+            <div
+              onClick={openSts}
+              className="hidden sm:flex items-center gap-1.5 cursor-pointer rounded-full border border-white/10 bg-black/40 px-2 py-0.5 hover:border-violet-400/40 transition group"
+              title={`Ayatrisya state: ${chatAgentState}. Click to start Voice Conversation`}
+              data-testid="chat-header-orb"
+            >
+              <LiquidOrbAgent state={chatAgentState} size={24} interactive={false} />
+              <span className="text-[11px] font-medium text-slate-300 group-hover:text-white capitalize">
+                {chatAgentState}
+              </span>
+            </div>
             <Button variant="bubble" onClick={openSts} data-testid="button-header-sts" title="Start real-time Voice Conversation" className="whitespace-nowrap text-xs h-7 px-2.5">
               <Radio size={13} className="text-violet-300 animate-pulse" />
               <span className="hidden sm:inline">Voice</span>
@@ -581,7 +624,22 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
           {msgs.error && <LoadError message={msgs.error} retry={msgs.refresh} />}
           {id && conv.data === undefined && !conv.loading && !conv.error && <Notice>This conversation was not found in this browser. <Link href="/workspace" className="underline">Start a new chat</Link>.</Notice>}
           {(!id || (msgs.data && list.length === 0)) && <section className="chat-welcome reveal" aria-labelledby="welcome-title" data-testid="empty-chat-welcome">
-            <div className="chat-welcome-mark" aria-hidden><Sparkles size={19} /></div>
+            <div className="flex flex-col items-center justify-center mb-6">
+              <LiquidOrbAgent
+                state={chatAgentState}
+                size={160}
+                onClick={openSts}
+                className="shadow-2xl transition-transform hover:scale-105"
+              />
+              <button
+                type="button"
+                onClick={openSts}
+                className="mt-3 flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[.04] px-3.5 py-1 text-xs text-slate-300 hover:bg-white/[.08] hover:text-white transition shadow-sm"
+              >
+                <Radio size={12} className="text-teal-400 animate-pulse" />
+                <span>Tap orb to speak · Voice STS</span>
+              </button>
+            </div>
             <p className="chat-kicker"><span /> A space to think clearly</p>
             <h2 id="welcome-title" className="display"><MotionText>{prefs.displayName ? `Good to see you, ${prefs.displayName}.` : 'Where should we start?'}</MotionText></h2>
             <p className="chat-welcome-copy">Bring a question, a creative prompt, or a problem to solve. Current mode: <span className="font-semibold text-violet-300">{currentModeObj.label}</span> ({currentModeObj.desc}).</p>
@@ -704,7 +762,41 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
               </div>
               </div></div>
             </li>)}
-            {streamFor === id && busy && <li className="chat-message chat-message-assistant" data-testid="status-generation"><div className="chat-message-inner"><div className="chat-avatar chat-avatar-assistant" aria-hidden><Sparkles size={15} /></div><div className="chat-message-body"><div className="chat-message-label">Ayatrisya</div><div className="chat-prose prose prose-invert prose-sm max-w-none" aria-live="polite">{stream ? <MarkdownRenderer content={stream} messageId="streaming" isStreaming={busy} /> : <p className="chat-thinking" role="status"><span className="chat-thinking-orbit" aria-hidden><i /><i /><i /></span><span><b>Thinking</b><small>Waiting for the model. No response has arrived yet.</small></span></p>}</div></div></div></li>}
+            {streamFor === id && busy && (
+              <li className="chat-message chat-message-assistant" data-testid="status-generation">
+                <div className="chat-message-inner">
+                  <div className="chat-avatar chat-avatar-assistant" aria-hidden><Sparkles size={15} /></div>
+                  <div className="chat-message-body">
+                    <div className="chat-message-label flex items-center gap-2">
+                      <span>Ayatrisya</span>
+                      <span className="text-[10px] text-teal-400 capitalize flex items-center gap-1.5 font-medium">
+                        <span className="size-1.5 rounded-full bg-teal-400 animate-ping" />
+                        {isSearchQuery ? 'Searching web...' : 'Thinking...'}
+                      </span>
+                    </div>
+                    <div className="chat-prose prose prose-invert prose-sm max-w-none" aria-live="polite">
+                      {stream ? (
+                        <MarkdownRenderer content={stream} messageId="streaming" isStreaming={busy} />
+                      ) : (
+                        <div className="my-2 flex items-center gap-4 p-3 rounded-2xl bg-white/[.03] border border-white/[.06]">
+                          <LiquidOrbAgent state={isSearchQuery ? 'searching' : 'thinking'} size={72} interactive={false} />
+                          <div>
+                            <p className="font-semibold text-xs text-slate-200">
+                              {isSearchQuery ? 'Searching the web' : 'Ayatrisya is thinking'}
+                            </p>
+                            <p className="text-[11px] text-slate-400">
+                              {isSearchQuery
+                                ? 'Gathering latest data, facts, and live context...'
+                                : 'Reasoning through response and synthesizing output...'}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </li>
+            )}
           </ul>
           {error && <div role="alert" className="chat-error" data-testid="status-chat-error"><span>{error}</span>{retryRef.current && !busy && <Button variant="outline" onClick={() => retryRef.current && ((hasModelConsent() || consent) ? void run(retryRef.current.cid, retryRef.current.history) : setAsk(retryRef.current))} data-testid="button-retry">Retry</Button>}</div>}
           <div ref={endRef} />

@@ -64,3 +64,4 @@ describe('Bubble UI (Soap Film Interface Components)', () => {
     expect(html).toContain('Soap Film Button');
   });
 });
+

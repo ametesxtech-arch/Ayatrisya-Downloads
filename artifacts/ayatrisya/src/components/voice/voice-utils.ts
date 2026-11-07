@@ -190,17 +190,26 @@ export function speakText(
     if (selected) utterance.voice = selected;
   }
 
+function notifyTtsState(isSpeaking: boolean) {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('ayatrisya-tts-state', { detail: { isSpeaking } }));
+  }
+}
+
   utterance.onstart = () => {
+    notifyTtsState(true);
     options.onStart?.();
   };
 
   utterance.onend = () => {
     activeUtterance = null;
+    notifyTtsState(false);
     options.onEnd?.();
   };
 
   utterance.onerror = (e) => {
     activeUtterance = null;
+    notifyTtsState(false);
     if (e.error !== 'canceled' && e.error !== 'interrupted') {
       options.onError?.(e);
     }
@@ -213,6 +222,7 @@ export function speakText(
     stop: () => {
       window.speechSynthesis.cancel();
       activeUtterance = null;
+      notifyTtsState(false);
     },
     pause: () => {
       window.speechSynthesis.pause();

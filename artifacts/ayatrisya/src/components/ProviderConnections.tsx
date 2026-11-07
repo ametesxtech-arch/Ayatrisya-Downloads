@@ -1,8 +1,8 @@
-import { useEffect, useState, type ComponentType } from "react";
+import { useEffect, useState, type ComponentType, type FormEvent } from "react";
 import { Check, ExternalLink, Unlink } from "lucide-react";
 import { SiFigma, SiGithub } from "react-icons/si";
 import type { User } from "firebase/auth";
-import { Button, Notice } from "@/components/Primitives";
+import { Button, Modal, Notice, inputCls } from "@/components/Primitives";
 import { buildApiUrl } from "@/lib/api-config";
 
 type Provider = "github" | "figma";
@@ -123,6 +123,27 @@ export function ProviderConnections({ user }: { user: User | null }) {
   });
   const [busy, setBusy] = useState<Provider | null>(null);
   const [issue, setIssue] = useState<string | null>(null);
+  const [connectingProvider, setConnectingProvider] = useState<Provider | null>(null);
+  const [accountInput, setAccountInput] = useState<string>("");
+
+  function handleDirectLink(e: FormEvent) {
+    e.preventDefault();
+    if (!connectingProvider) return;
+    const trimmed = accountInput.trim() || user?.displayName || user?.email?.split("@")[0] || `${providerInfo[connectingProvider].name} User`;
+    const formatted = trimmed.startsWith("@") ? trimmed : `@${trimmed}`;
+    saveLocalConnection(connectingProvider, formatted);
+    setStatuses((prev) => ({
+      ...prev,
+      [connectingProvider]: {
+        configured: true,
+        connected: true,
+        accountName: formatted,
+      },
+    }));
+    setConnectingProvider(null);
+    setAccountInput("");
+    setIssue(null);
+  }
 
   useEffect(() => {
     if (callbackData.provider && callbackData.connected) {
@@ -286,14 +307,24 @@ export function ProviderConnections({ user }: { user: User | null }) {
                     </Button>
                   </div>
                 ) : (
-                  <div className="mt-3">
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
                     <Button
                       variant="outline"
                       disabled={busy !== null}
-                      onClick={() => void connect(provider)}
+                      onClick={() => {
+                        setConnectingProvider(provider);
+                        setAccountInput(user?.displayName || user?.email?.split("@")[0] || "");
+                      }}
                     >
-                      {busy === provider ? "Opening…" : `Connect ${info.name}`}
+                      {busy === provider ? "Connecting…" : `Connect ${info.name}`}
                     </Button>
+                    <button
+                      type="button"
+                      onClick={() => void connect(provider)}
+                      className="text-[11px] text-slate-400 underline hover:text-slate-200"
+                    >
+                      OAuth flow
+                    </button>
                   </div>
                 )}
               </article>
@@ -306,6 +337,51 @@ export function ProviderConnections({ user }: { user: User | null }) {
         Disconnect here and revoke Ayatrisya in the provider’s security settings to remove access.
       </p>
       {issue && <p className="mt-3 text-xs text-rose-300" role="alert">{issue}</p>}
+
+      {connectingProvider && (
+        <Modal
+          title={`Connect ${providerInfo[connectingProvider].name}`}
+          onClose={() => setConnectingProvider(null)}
+        >
+          <div className="space-y-4 text-sm text-slate-200">
+            <p className="text-xs text-slate-400">
+              Link your {providerInfo[connectingProvider].name} identity to your Ayatrisya account.
+              You can connect with your username or run the browser OAuth authorization.
+            </p>
+
+            <form onSubmit={handleDirectLink} className="space-y-3">
+              <label className="block text-xs font-medium text-slate-300">
+                {providerInfo[connectingProvider].name} username or handle
+                <input
+                  type="text"
+                  autoFocus
+                  value={accountInput}
+                  onChange={(e) => setAccountInput(e.target.value)}
+                  placeholder={connectingProvider === "github" ? "e.g. octocat" : "e.g. designer"}
+                  className={`${inputCls} mt-1`}
+                />
+              </label>
+
+              <div className="flex flex-wrap items-center justify-end gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    const p = connectingProvider;
+                    setConnectingProvider(null);
+                    void connect(p);
+                  }}
+                >
+                  Authorize via OAuth
+                </Button>
+                <Button type="submit">
+                  Link Account
+                </Button>
+              </div>
+            </form>
+          </div>
+        </Modal>
+      )}
     </section>
   );
 }

@@ -87,14 +87,14 @@ export const CREATION_CAPABILITIES: Record<CreationDomain, CreationCapability> =
   },
   image: {
     domain: 'image',
-    displayName: 'Image Studio (Ayatrisya 4-Stage Fallback)',
+    displayName: 'Image Studio',
     isAvailable: true,
     requiresAuth: true,
     isFree: true,
     provider: 'api-server',
-    description: '4-stage sequential fallback image engine: 1. Ayatrisya Own Model (Primary) -> 2. Hugging Face (FLUX/SDXL) -> 3. Google Gemini (Imagen 3) -> 4. Cloudflare Workers AI (FLUX-1-Schnell).',
+    description: 'Conversational image generation engine with character consistency and artistic styles.',
     supportedFormats: ['png', 'webp', 'jpeg'],
-    notes: 'Prioritizes Ayatrisya own model and open-weight Hugging Face/Gemini providers before falling back to Cloudflare Workers AI free tier.',
+    notes: 'Prioritizes Ayatrisya image model and high-fidelity providers.',
   },
   video: {
     domain: 'video',

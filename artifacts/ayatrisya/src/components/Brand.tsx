@@ -26,7 +26,7 @@ export function Mark({ small = false }: { small?: boolean }) {
 }
 
 export function Wordmark({ className = '' }: { className?: string }) {
-  return <span className={cx('display font-extrabold tracking-[-.04em] truncate select-none', className)}>ayatrisya</span>;
+  return <span className={cx('display font-extrabold tracking-[-.04em] truncate select-none min-w-0 overflow-hidden inline-block', className)}>ayatrisya</span>;
 }
 
 /** Compact brand: never plays the full intro. Optional quiet idle pulse when enabled in settings. */
@@ -39,8 +39,8 @@ export function Brand({ compact = false, markOnly = false }: { compact?: boolean
     return () => window.clearInterval(t);
   }, [prefs.logoIdle, prefs.animationIntensity, prefs.reducedMotion]);
   return (
-    <div className="flex items-center gap-2.5">
-      <span key={tick} className="grid size-8 place-items-center"><Emblem size={30} mode={tick ? 'subtle' : 'static'} /></span>
+    <div className="flex items-center gap-2.5 min-w-0 overflow-hidden shrink-0">
+      <span key={tick} className="grid size-8 shrink-0 place-items-center"><Emblem size={30} mode={tick ? 'subtle' : 'static'} /></span>
       {!markOnly && <Wordmark className={compact ? 'text-[15px]' : 'text-[17px]'} />}
     </div>
   );

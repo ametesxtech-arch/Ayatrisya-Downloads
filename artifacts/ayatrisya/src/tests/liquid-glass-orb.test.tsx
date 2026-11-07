@@ -3,8 +3,9 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { LiquidGlassOrb } from '../components/liquid-glass-orb';
 import { SpeechToSpeechModal } from '../components/voice/SpeechToSpeechModal';
+import { LiquidOrbAgent } from '../components/voice/LiquidOrbAgent';
 
-describe('LiquidGlassOrb in STS', () => {
+describe('LiquidGlassOrb in STS and Chat UI', () => {
   const commonProps = {
     baseColor: '#ffffff',
     colorA: '#000000',
@@ -90,5 +91,27 @@ describe('LiquidGlassOrb in STS', () => {
     expect(html).toContain('modal-sts');
     expect(html).toContain('data-state="idle"');
     expect(html).toContain('Tap orb to speak');
+  });
+
+  it('renders LiquidOrbAgent wrapper with all 5 states in Chat UI', () => {
+    const idleHtml = renderToStaticMarkup(<LiquidOrbAgent state="idle" size={160} />);
+    expect(idleHtml).toContain('data-agent-state="idle"');
+    expect(idleHtml).toContain('data-state="idle"');
+
+    const thinkingHtml = renderToStaticMarkup(<LiquidOrbAgent state="thinking" size={80} />);
+    expect(thinkingHtml).toContain('data-agent-state="thinking"');
+    expect(thinkingHtml).toContain('data-state="thinking"');
+
+    const listeningHtml = renderToStaticMarkup(<LiquidOrbAgent state="listening" size={80} />);
+    expect(listeningHtml).toContain('data-agent-state="listening"');
+    expect(listeningHtml).toContain('data-state="listening"');
+
+    const searchingHtml = renderToStaticMarkup(<LiquidOrbAgent state="searching" size={80} />);
+    expect(searchingHtml).toContain('data-agent-state="searching"');
+    expect(searchingHtml).toContain('data-state="searching"');
+
+    const speakingHtml = renderToStaticMarkup(<LiquidOrbAgent state="speaking" size={80} />);
+    expect(speakingHtml).toContain('data-agent-state="speaking"');
+    expect(speakingHtml).toContain('data-state="speaking"');
   });
 });

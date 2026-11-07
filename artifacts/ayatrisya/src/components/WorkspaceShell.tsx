@@ -203,7 +203,7 @@ function WorkspaceContent() {
             </IconButton>
           ) : (
             <>
-              <Link href="/workspace" onClick={() => setMobileOpen(false)} aria-label="Ayatrisya home" className="shrink-0"><Brand compact /></Link>
+              <Link href="/workspace" onClick={() => setMobileOpen(false)} aria-label="Ayatrisya home" className="shrink-0 min-w-0 overflow-hidden"><Brand compact markOnly={effectiveCollapsed} /></Link>
               <button ref={closeBtn} aria-label="Close navigation" className="grid size-9 shrink-0 place-items-center rounded-lg text-slate-400 hover:bg-white/[.07] lg:hidden" onClick={() => setMobileOpen(false)}><X size={16} /></button>
               <IconButton label="Collapse navigation" className="hidden lg:grid shrink-0" onClick={() => save({ sidebarCollapsed: true })}><PanelLeftClose size={16} /></IconButton>
             </>
@@ -283,11 +283,11 @@ function WorkspaceContent() {
           <Link href="/workspace/settings" onClick={() => setMobileOpen(false)} className={cx('mt-1 flex items-center gap-2 rounded-md px-2 py-2 text-[11px] text-slate-400 hover:bg-white/[.05] hover:text-slate-100', effectiveCollapsed && 'justify-center')} title="Settings"><Settings size={14} />{!effectiveCollapsed && 'Settings'}</Link>
         </div>
       </aside>
-      <div ref={mainRef} className="flex min-w-0 flex-1 flex-col h-full min-h-0 overflow-hidden">
-        <header className="safe-t flex min-h-[56px] sm:min-h-[66px] shrink-0 items-center justify-between gap-2 border-b border-white/[.06] px-3 sm:px-6">
+      <div ref={mainRef} className="flex min-w-0 flex-1 flex-col h-full min-h-0 overflow-hidden relative">
+        <header className="safe-t flex min-h-[56px] sm:min-h-[66px] shrink-0 items-center justify-between gap-2 border-b border-white/[.06] px-3 sm:px-6 bg-[#101116] z-10">
           <div className="flex min-w-0 items-center gap-2">
-            <button ref={menuBtn} aria-label="Open navigation" className="grid size-9 place-items-center rounded-lg text-slate-400 hover:bg-white/[.07] lg:hidden" onClick={() => setMobileOpen(true)}><Menu size={17} /></button>
-            <h1 className="truncate text-[13px] font-medium text-slate-200"><MotionText>{title}</MotionText></h1>
+            <button ref={menuBtn} aria-label="Open navigation" className="grid size-9 shrink-0 place-items-center rounded-lg text-slate-400 hover:bg-white/[.07] lg:hidden" onClick={() => setMobileOpen(true)}><Menu size={17} /></button>
+            <h1 className="truncate text-[13px] font-medium text-slate-200 min-w-0"><MotionText>{title}</MotionText></h1>
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2">
             <select aria-label="Workspace mode" value={prefs.workspaceMode} onChange={(e) => void save({ workspaceMode: e.target.value as WorkspaceMode })} className="hidden max-w-[126px] rounded-md border border-white/[.08] bg-[#171920] px-2 py-2 text-[11px] text-slate-200 lg:block">
@@ -345,9 +345,9 @@ function WorkspaceContent() {
 
 export function SideLink({ href, active, icon, label, collapsed, onSelect }: { href: string; active: boolean; icon: ReactNode; label: string; collapsed: boolean; onSelect: () => void }) {
   return (
-    <Link href={href} onClick={onSelect} title={collapsed ? label : undefined} aria-label={collapsed ? label : undefined} aria-current={active ? 'page' : undefined} className={cx('workspace-nav-link my-0.5 flex min-h-10 items-center gap-3 rounded-lg px-2.5 text-[12px] transition', active ? 'bg-violet-300/[.1] text-violet-100' : 'text-slate-400 hover:bg-white/[.04] hover:text-slate-100', collapsed && 'justify-center px-0')}>
+    <Link href={href} onClick={onSelect} title={collapsed ? label : undefined} aria-label={collapsed ? label : undefined} aria-current={active ? 'page' : undefined} className={cx('workspace-nav-link my-0.5 flex min-h-10 items-center gap-3 rounded-lg px-2.5 text-[12px] transition min-w-0 overflow-hidden', active ? 'bg-violet-300/[.1] text-violet-100' : 'text-slate-400 hover:bg-white/[.04] hover:text-slate-100', collapsed && 'justify-center px-0')}>
       <span className="shrink-0">{icon}</span>
-      {!collapsed && <span className="truncate">{label}</span>}
+      {!collapsed && <span className="truncate min-w-0">{label}</span>}
     </Link>
   );
 }

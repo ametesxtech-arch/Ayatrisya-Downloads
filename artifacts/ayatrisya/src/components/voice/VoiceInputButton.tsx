@@ -53,6 +53,7 @@ export function VoiceInputButton({
         continuous: true,
         onStart: () => {
           setIsRecording(true);
+          window.dispatchEvent(new CustomEvent('ayatrisya-voice-input-state', { detail: { isListening: true } }));
           timerRef.current = window.setInterval(() => {
             setRecordingSeconds((s) => s + 1);
           }, 1000);
@@ -70,6 +71,7 @@ export function VoiceInputButton({
         },
         onEnd: () => {
           setIsRecording(false);
+          window.dispatchEvent(new CustomEvent('ayatrisya-voice-input-state', { detail: { isListening: false } }));
           if (timerRef.current) clearInterval(timerRef.current);
         },
       });
