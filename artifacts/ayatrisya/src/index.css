@@ -374,6 +374,7 @@ html[data-appearance="light"] .chat-prose .katex-display>.katex{color:#0d9488}
 .chat-thinking-orbit i{display:block;width:5px;height:5px;border-radius:50%;background:#b6a8e6;animation:chat-think 1.35s ease-in-out infinite}
 .chat-thinking-orbit i:nth-child(2){animation-delay:.16s}.chat-thinking-orbit i:nth-child(3){animation-delay:.32s}
 @keyframes chat-think{0%,100%{transform:translateY(0);opacity:.35}50%{transform:translateY(-3px);opacity:1}}
+@keyframes loading-bar{0%{transform:translateX(-100%)}50%{transform:translateX(20%)}100%{transform:translateX(100%)}}
 .chat-error{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;max-width:760px;margin:12px auto 0;padding:13px 15px;border:1px solid rgba(220,124,140,.22);border-radius:10px;background:rgba(150,55,75,.09);color:#e9aeb9;font-size:12px}
 .chat-composer-dock{
   z-index:5;

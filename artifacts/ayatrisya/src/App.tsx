@@ -173,10 +173,12 @@ function MotionEffects() {
   return null;
 }
 
+import { FractalGlassLoading } from '@/components/FractalGlassLoading';
+
 function Router() {
   return (
     <RoutedBoundary>
-      <Suspense fallback={<div className="grid min-h-[100dvh] place-items-center text-xs text-slate-500" role="status"><span className="grid place-items-center gap-3"><Emblem size={44} mode="loading" /><span>Loading Ayatrisya</span></span></div>}>
+      <Suspense fallback={<FractalGlassLoading />}>
         <Switch>
           <Route path="/" component={Landing} />
           <Route path="/product" component={PublicLegalRoute} />

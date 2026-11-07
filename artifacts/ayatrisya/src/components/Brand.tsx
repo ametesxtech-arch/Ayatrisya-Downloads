@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { cx } from '@/lib/cx';
 import { usePrefs } from '@/hooks/use-prefs';
 
