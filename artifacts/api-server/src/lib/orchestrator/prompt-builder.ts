@@ -100,3 +100,4 @@ Provide an actionable, realistic study schedule formatted using responsive Markd
 
   return instructions.join("\n\n");
 }
+

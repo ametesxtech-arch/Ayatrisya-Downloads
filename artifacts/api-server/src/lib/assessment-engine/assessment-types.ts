@@ -80,3 +80,4 @@ export interface AssessmentSubmission {
   }>;
   topicBreakdown: Record<string, { total: number; correct: number; percent: number }>;
 }
+
