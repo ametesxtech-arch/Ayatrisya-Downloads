@@ -16,7 +16,7 @@ class ChatEngine:
         device: str = "cpu",
         mock_inference: bool = False,
         max_input_tokens: int = 4096,
-        max_new_tokens: int = 512,
+        max_new_tokens: int = 2048,
         request_timeout: float = 60.0,
     ):
         self.model_id = model_id

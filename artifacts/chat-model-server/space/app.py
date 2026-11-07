@@ -26,7 +26,7 @@ logger = logging.getLogger("ayatrisya.zerogpu")
 
 MODEL_ID = os.getenv("MODEL_ID", "Qwen/Qwen2.5-0.5B-Instruct")
 MAX_INPUT_TOKENS = int(os.getenv("MAX_INPUT_TOKENS", "4096"))
-MAX_NEW_TOKENS = int(os.getenv("MAX_NEW_TOKENS", "512"))
+MAX_NEW_TOKENS = int(os.getenv("MAX_NEW_TOKENS", "2048"))
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 logger.info(f"Initializing Ayatrisya ZeroGPU Engine: model={MODEL_ID}, device={DEVICE}, has_spaces={HAS_SPACES}")
@@ -213,11 +213,11 @@ def chat_predict(payload_json: str) -> str:
         model_choice = data.get("model", "v1-fast")
 
         if model_choice == "v2-best":
-            max_tokens = min(512, MAX_NEW_TOKENS)
+            max_tokens = min(2048, MAX_NEW_TOKENS)
             temperature = 0.65
             top_p = 0.95
         else:
-            max_tokens = min(256, MAX_NEW_TOKENS)
+            max_tokens = min(2048, MAX_NEW_TOKENS)
             temperature = 0.75
             top_p = 0.9
 

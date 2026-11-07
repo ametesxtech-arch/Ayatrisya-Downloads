@@ -84,7 +84,6 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
   const [showImageConsent, setShowImageConsent] = useState(false);
   const [pendingImageGen, setPendingImageGen] = useState<{ cid: string; prompt: string; userMessageId?: string } | null>(null);
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null), [confirmDel, setConfirmDel] = useState(false), [renaming, setRenaming] = useState<string | null>(null), [delMsg, setDelMsg] = useState<Message | null>(null), [resubmit, setResubmit] = useState<{ m: Message; text: string } | null>(null), [copied, setCopied] = useState<string | null>(null), [atBottom, setAtBottom] = useState(true);
-  const [expandedMsgs, setExpandedMsgs] = useState<Record<string, boolean>>({});
   const streamRef = useRef('');
 
   // Per-conversation mode: initialize from conversation record if present, otherwise fallback to global prefs
@@ -601,30 +600,7 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
               {editing?.id === m.id ? <div className="w-full"><label className="sr-only" htmlFor="edit-msg">Edit message</label><textarea id="edit-msg" data-testid="input-edit-message" data-autofocus value={editing.text} onChange={(e) => setEditing({ id: m.id, text: e.target.value })} className="chat-edit-area" />
                 <div className="mt-2 flex flex-wrap justify-end gap-2"><Button variant="outline" onClick={() => setEditing(null)} data-testid="button-cancel-edit">Cancel</Button><Button onClick={async () => { try { await repository.editMessage(m.id, editing.text); setEditing(null); } catch (e) { notify(errMsg(e)); } }} data-testid="button-save-edit">Save edit</Button><Button disabled={!available || busy || !editing.text.trim()} title={available ? undefined : 'Resubmitting needs a connected model'} onClick={() => setResubmit({ m, text: editing.text })} data-testid="button-resubmit-edit">{available ? 'Save and resubmit' : 'Resubmit unavailable'}</Button></div></div>
                 : <div className={m.role === 'user' ? 'chat-user-content' : 'chat-prose prose prose-invert prose-sm max-w-none'}>
-                  <div className={m.content.length > 900 && !expandedMsgs[m.id] ? 'max-h-56 overflow-hidden relative' : ''}>
                     <MarkdownRenderer content={m.content} messageId={m.id} />
-                    {m.content.length > 900 && !expandedMsgs[m.id] && (
-                      <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-[#101116] to-transparent pointer-events-none" />
-                    )}
-                  </div>
-                  {m.content.length > 900 && (
-                    <button
-                      type="button"
-                      onClick={() => setExpandedMsgs((prev) => ({ ...prev, [m.id]: !prev[m.id] }))}
-                      data-testid={`button-toggle-expand-${m.id}`}
-                      className="mt-2 flex items-center gap-1 rounded bg-white/[0.04] px-2.5 py-1 text-[11px] font-medium text-teal-300 transition-colors hover:bg-white/[0.08]"
-                    >
-                      {expandedMsgs[m.id] ? (
-                        <>
-                          <ChevronUp size={12} /> Collapse response
-                        </>
-                      ) : (
-                        <>
-                          <ChevronDown size={12} /> Expand full response ({m.content.length} characters)
-                        </>
-                      )}
-                    </button>
-                  )}
 
                   {/* Render generated images and attachments */}
                   {m.attachmentIds.length > 0 && <div className="mt-3 flex flex-col gap-2">
@@ -653,31 +629,31 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
                     })}
                   </div>}
                 </div>}
-              <div className="chat-message-actions">
+              <div className="chat-message-actions flex flex-wrap items-center gap-1.5 min-h-[36px] mt-2 mb-1 text-slate-400">
                 {m.role === 'user' && lastUserUnanswered(m, i) && !busy && <span data-testid="status-not-sent">{available ? 'No reply recorded' : 'Saved locally, not sent to any model'}</span>}
                 {m.role === 'assistant' && <MessageTtsButton content={m.content} messageId={m.id} />}
                 
                 {/* Instant Docx / PDF / Zip Export for any AI message in chat */}
                 {m.role === 'assistant' && (
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1 shrink-0">
                     <button
                       type="button"
                       onClick={() => downloadDocx(`Ayatrisya_${m.id.slice(0, 6)}`, m.content)}
-                      className="chat-action flex items-center gap-1 rounded px-2 py-1 text-[11px] text-slate-300 hover:bg-white/[.07] hover:text-white"
+                      className="flex items-center gap-1 rounded border border-white/[.08] px-2 py-1 text-[11px] text-slate-300 hover:bg-white/[.07] hover:text-white shrink-0 whitespace-nowrap min-w-max transition-colors"
                       title="Export as Word (.docx)"
                       data-testid={`button-export-docx-${m.id}`}
                     >
-                      <FileText size={12} className="text-blue-400" />
+                      <FileText size={12} className="text-blue-400 shrink-0" />
                       <span>.docx</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => downloadPdf(`Ayatrisya_${m.id.slice(0, 6)}`, m.content)}
-                      className="chat-action flex items-center gap-1 rounded px-2 py-1 text-[11px] text-slate-300 hover:bg-white/[.07] hover:text-white"
+                      className="flex items-center gap-1 rounded border border-white/[.08] px-2 py-1 text-[11px] text-slate-300 hover:bg-white/[.07] hover:text-white shrink-0 whitespace-nowrap min-w-max transition-colors"
                       title="Export as PDF"
                       data-testid={`button-export-pdf-${m.id}`}
                     >
-                      <FileText size={12} className="text-red-400" />
+                      <FileText size={12} className="text-red-400 shrink-0" />
                       <span>.pdf</span>
                     </button>
                     <button
@@ -685,18 +661,18 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
                       onClick={() => downloadZip(`Ayatrisya_${m.id.slice(0, 6)}`, [
                         { path: `response-${m.id.slice(0, 6)}.md`, data: m.content }
                       ])}
-                      className="chat-action flex items-center gap-1 rounded px-2 py-1 text-[11px] text-slate-300 hover:bg-white/[.07] hover:text-white"
+                      className="flex items-center gap-1 rounded border border-white/[.08] px-2 py-1 text-[11px] text-slate-300 hover:bg-white/[.07] hover:text-white shrink-0 whitespace-nowrap min-w-max transition-colors"
                       title="Export as .ZIP package"
                       data-testid={`button-export-zip-${m.id}`}
                     >
-                      <FileArchive size={12} className="text-amber-400" />
+                      <FileArchive size={12} className="text-amber-400 shrink-0" />
                       <span>.zip</span>
                     </button>
                   </div>
                 )}
 
-                <IconButton label={copied === m.id ? 'Copied' : 'Copy message'} onClick={() => navigator.clipboard.writeText(m.content).then(() => { setCopied(m.id); window.setTimeout(() => setCopied(null), 1600); }, () => notify('Copy was blocked by the browser.'))} className="chat-action" data-testid={`button-copy-message-${m.id}`}>{copied === m.id ? <Check size={13} className="text-teal-300" /> : <Copy size={13} />}</IconButton>
-                {m.role === 'user' && <IconButton label="Edit message" onClick={() => setEditing({ id: m.id, text: m.content })} className="chat-action" data-testid={`button-edit-message-${m.id}`}><Pencil size={13} /></IconButton>}
+                <IconButton label={copied === m.id ? 'Copied' : 'Copy message'} onClick={() => navigator.clipboard.writeText(m.content).then(() => { setCopied(m.id); window.setTimeout(() => setCopied(null), 1600); }, () => notify('Copy was blocked by the browser.'))} className="shrink-0 size-8" data-testid={`button-copy-message-${m.id}`}>{copied === m.id ? <Check size={13} className="text-teal-300" /> : <Copy size={13} />}</IconButton>
+                {m.role === 'user' && <IconButton label="Edit message" onClick={() => setEditing({ id: m.id, text: m.content })} className="shrink-0 size-8" data-testid={`button-edit-message-${m.id}`}><Pencil size={13} /></IconButton>}
                 {m.role === 'assistant' && i === list.length - 1 && (
                   <button
                     type="button"
@@ -715,14 +691,14 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
                       if (hasModelConsent() || consent) void go();
                       else setAsk({ cid: id!, history, after: go });
                     }}
-                    className="chat-action flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] text-teal-300 hover:bg-white/[.07] disabled:opacity-40"
+                    className="flex items-center gap-1.5 rounded-lg border border-teal-500/30 bg-teal-500/10 px-2.5 py-1 text-[11px] font-medium text-teal-300 hover:bg-teal-500/20 transition-colors disabled:opacity-40 shrink-0 whitespace-nowrap min-w-max"
                   >
-                    <Play size={12} />
+                    <Play size={12} fill="currentColor" />
                     <span>Continue</span>
                   </button>
                 )}
-                {m.role === 'assistant' && i === list.length - 1 && <button type="button" disabled={!available || busy} title={available ? 'Regenerate this reply' : 'Regeneration needs a connected model'} aria-label={available ? 'Regenerate reply' : 'Regenerate unavailable: no model connected'} data-testid={`button-regenerate-${m.id}`} onClick={() => { const history: Turn = list.slice(0, i).map((x) => ({ role: x.role, content: x.content })); const go = async () => { try { await repository.deleteMessage(m.id); void run(id!, history); } catch (e) { notify(errMsg(e)); } }; if (hasModelConsent() || consent) void go(); else setAsk({ cid: id!, history, after: go }); }} className="chat-action grid size-9 place-items-center rounded-lg text-slate-400 hover:bg-white/[.07] hover:text-slate-100 disabled:opacity-40"><RefreshCw size={13} /></button>}
-                <IconButton label="Delete message" onClick={() => setDelMsg(m)} className="chat-action" data-testid={`button-delete-message-${m.id}`}>{copied === m.id ? <Check size={13} className="text-teal-300" /> : <Trash2 size={13} />}</IconButton>
+                {m.role === 'assistant' && i === list.length - 1 && <button type="button" disabled={!available || busy} title={available ? 'Regenerate this reply' : 'Regeneration needs a connected model'} aria-label={available ? 'Regenerate reply' : 'Regenerate unavailable: no model connected'} data-testid={`button-regenerate-${m.id}`} onClick={() => { const history: Turn = list.slice(0, i).map((x) => ({ role: x.role, content: x.content })); const go = async () => { try { await repository.deleteMessage(m.id); void run(id!, history); } catch (e) { notify(errMsg(e)); } }; if (hasModelConsent() || consent) void go(); else setAsk({ cid: id!, history, after: go }); }} className="grid size-8 place-items-center rounded-lg text-slate-400 hover:bg-white/[.07] hover:text-slate-100 transition-colors disabled:opacity-40 shrink-0"><RefreshCw size={13} /></button>}
+                <IconButton label="Delete message" onClick={() => setDelMsg(m)} className="shrink-0 size-8" data-testid={`button-delete-message-${m.id}`}>{copied === m.id ? <Check size={13} className="text-teal-300" /> : <Trash2 size={13} />}</IconButton>
               </div>
               </div></div>
             </li>)}

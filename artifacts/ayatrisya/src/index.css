@@ -362,9 +362,9 @@ button,input,textarea,select{ min-width:0; }
 html[data-appearance="light"] .chat-prose .katex{color:#24222e}
 html[data-appearance="light"] .chat-prose .katex-display{background:rgba(0,0,0,.025);border-color:rgba(52,43,76,.1)}
 html[data-appearance="light"] .chat-prose .katex-display>.katex{color:#0d9488}
-.chat-message-actions{display:flex;min-height:38px;align-items:center;gap:2px;margin:5px 0 0 -5px;color:#817e8c;font-size:10px}
+.chat-message-actions{display:flex;flex-wrap:wrap;min-height:36px;align-items:center;gap:6px;margin:6px 0 0 -2px;color:#817e8c;font-size:11px}
 .chat-message-actions>[data-testid="status-not-sent"]{margin-right:auto}
-.chat-action{width:34px;height:34px;opacity:.78}
+.chat-action{min-width:32px;min-height:32px;width:auto;height:auto;opacity:.78}
 .chat-action:hover,.chat-action:focus-visible{opacity:1}
 .chat-edit-area{width:100%;min-height:112px;resize:vertical;border:1px solid rgba(181,168,235,.25);border-radius:10px;background:#14141b;padding:13px;color:var(--chat-ink);font-size:14px;line-height:1.7}
 .chat-thinking{display:flex;align-items:center;gap:11px;margin:14px 0;color:#b9b5c4}
