@@ -37,7 +37,7 @@ describe("Interactive Component Events API", () => {
     });
 
     expect(res.status).toBe(200);
-    const body = await res.json();
+    const body: any = await res.json();
     expect(body.status).toBe("success");
     expect(body.result).toBe(52);
   });
@@ -73,7 +73,7 @@ describe("Interactive Component Events API", () => {
     });
 
     expect(res1.status).toBe(200);
-    const body1 = await res1.json();
+    const body1: any = await res1.json();
     expect(body1.status).toBe("recorded");
     expect(body1.votes["opt_mcq"]).toBeGreaterThanOrEqual(1);
 
@@ -89,7 +89,7 @@ describe("Interactive Component Events API", () => {
     });
 
     expect(res2.status).toBe(200);
-    const body2 = await res2.json();
+    const body2: any = await res2.json();
     expect(body2.votes["opt_mcq"]).toBe(body1.votes["opt_mcq"] + 1);
   });
 
@@ -109,7 +109,7 @@ describe("Interactive Component Events API", () => {
     });
 
     expect(res.status).toBe(200);
-    const body = await res.json();
+    const body: any = await res.json();
     expect(body.status).toBe("submitted");
     expect(body.submittedFields.rating).toBe(5);
   });

@@ -111,7 +111,7 @@ describe("Assessment & Examination Engine API", () => {
     });
 
     expect(res.status).toBe(201);
-    const body = await res.json();
+    const body: any = await res.json();
     expect(body.id).toBeDefined();
     expect(body.title).toBe("CBSE Class 12 Physics & Math Challenge");
     expect(body.mode).toBe("examination");
@@ -131,7 +131,7 @@ describe("Assessment & Examination Engine API", () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(testAssessmentPayload),
     });
-    const { id: assessmentId } = await createRes.json();
+    const { id: assessmentId }: any = await createRes.json();
 
     const progressRes = await fetch(`${baseUrl}/api/assessments/${assessmentId}/progress`, {
       method: "POST",
@@ -149,7 +149,7 @@ describe("Assessment & Examination Engine API", () => {
     });
 
     expect(progressRes.status).toBe(200);
-    const progressBody = await progressRes.json();
+    const progressBody: any = await progressRes.json();
     expect(progressBody.status).toBe("saved");
 
     // Fetch and check progress
@@ -158,7 +158,7 @@ describe("Assessment & Examination Engine API", () => {
     });
 
     expect(getRes.status).toBe(200);
-    const getBody = await getRes.json();
+    const getBody: any = await getRes.json();
     expect(getBody.progress).toBeDefined();
     expect(getBody.progress.answers).toEqual({ q1: "b" });
     expect(getBody.progress.markedForReview).toEqual({ q2: true });
@@ -170,7 +170,7 @@ describe("Assessment & Examination Engine API", () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(testAssessmentPayload),
     });
-    const { id: assessmentId } = await createRes.json();
+    const { id: assessmentId }: any = await createRes.json();
 
     // Submit answers: q1 correct, q2 correct, q3 partial (missed d), q4 correct
     const submitRes = await fetch(`${baseUrl}/api/assessments/${assessmentId}/submit`, {
@@ -191,7 +191,7 @@ describe("Assessment & Examination Engine API", () => {
     });
 
     expect(submitRes.status).toBe(200);
-    const submitBody = await submitRes.json();
+    const submitBody: any = await submitRes.json();
     expect(submitBody.totalQuestions).toBe(4);
     expect(submitBody.correctCount).toBe(3);
     expect(submitBody.incorrectCount).toBe(1);
@@ -226,7 +226,7 @@ describe("Assessment & Examination Engine API", () => {
     });
 
     expect(resultsRes.status).toBe(200);
-    const resultsBody = await resultsRes.json();
+    const resultsBody: any = await resultsRes.json();
     expect(resultsBody.scorePercent).toBe(75);
   });
 });
