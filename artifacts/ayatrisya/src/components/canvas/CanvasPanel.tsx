@@ -17,6 +17,7 @@ import {
   FolderPlus,
 } from 'lucide-react';
 import { useCanvas } from './CanvasContext';
+import { CanvasBackground } from './CanvasBackground';
 import { modelClient } from '@/ai/client';
 import { usePrefs } from '@/hooks/use-prefs';
 import { generateProjectFromPrompt, type ProjectGenerationProgress } from '@/ai/project-generator';
@@ -512,24 +513,27 @@ Return ONLY the complete updated file content. Do not include markdown code fenc
 
         {/* Tab 2: Sandboxed Web Preview */}
         {activeTab === 'preview' && (
-          <div className="h-full w-full bg-black/80 flex flex-col">
-            {isWebExecutable ? (
-              <iframe
-                title="Sandboxed Preview"
-                srcDoc={sandboxedHtml}
-                sandbox="allow-scripts"
-                className="h-full w-full border-none bg-white rounded-b-lg"
-              />
-            ) : (
-              <div className="flex h-full flex-col items-center justify-center p-6 text-center text-xs text-slate-400">
-                <ShieldAlert size={28} className="mb-2 text-amber-400" />
-                <h4 className="font-semibold text-slate-200">Execution Not Available in Web Sandbox</h4>
-                <p className="mt-1 max-w-sm text-slate-400">
-                  {activeFile.language.toUpperCase()} execution requires compiling or native binaries.
-                  To run safely without arbitrary privileges, export the file or use the Desktop Local Runner.
-                </p>
-              </div>
-            )}
+          <div className="relative h-full w-full bg-black/80 flex flex-col overflow-hidden">
+            <CanvasBackground opacity={0.3} />
+            <div className="relative z-10 flex-1 h-full w-full flex flex-col">
+              {isWebExecutable ? (
+                <iframe
+                  title="Sandboxed Preview"
+                  srcDoc={sandboxedHtml}
+                  sandbox="allow-scripts"
+                  className="h-full w-full border-none bg-white rounded-b-lg"
+                />
+              ) : (
+                <div className="flex h-full flex-col items-center justify-center p-6 text-center text-xs text-slate-400">
+                  <ShieldAlert size={28} className="mb-2 text-amber-400" />
+                  <h4 className="font-semibold text-slate-200">Execution Not Available in Web Sandbox</h4>
+                  <p className="mt-1 max-w-sm text-slate-400">
+                    {activeFile.language.toUpperCase()} execution requires compiling or native binaries.
+                    To run safely without arbitrary privileges, export the file or use the Desktop Local Runner.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>

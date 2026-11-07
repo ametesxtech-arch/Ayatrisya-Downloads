@@ -26,6 +26,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { useCanvas, CanvasProvider, useOptionalCanvas } from '@/components/canvas/CanvasContext';
+import { CanvasBackground } from '@/components/canvas/CanvasBackground';
 import { usePrefs } from '@/hooks/use-prefs';
 import { useDesktopRuntime } from '@/desktop/use-runtime';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -517,7 +518,8 @@ Return ONLY the complete updated file content without markdown code fences or co
   const currentVm = linuxVmRef.current;
 
   return (
-    <div className="flex h-full w-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#101014] text-[#ebe8f1] select-none font-sans">
+    <div className="relative flex h-full w-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#101014] text-[#ebe8f1] select-none font-sans">
+      <CanvasBackground opacity={0.12} />
       {/* 1. TOP TOOLBAR - Aligned with Ayatrisya Workspace Palette */}
       <header className="flex h-11 sm:h-12 shrink-0 items-center justify-between border-b border-white/[.07] bg-[#121116]/95 px-2.5 sm:px-4 backdrop-blur-md gap-2 overflow-x-auto scrollbar-none">
         {/* Left: Branding & Project Meta */}
@@ -958,9 +960,10 @@ Return ONLY the complete updated file content without markdown code fences or co
                 </div>
 
                 {/* Sandboxed iframe Container */}
-                <div className="flex-1 min-h-0 flex items-center justify-center p-1 sm:p-2 overflow-auto bg-[#09090d]">
+                <div className="relative flex-1 min-h-0 flex items-center justify-center p-1 sm:p-2 overflow-auto bg-[#09090d]">
+                  <CanvasBackground opacity={0.35} />
                   <div
-                    className={`h-full max-w-full transition-all duration-200 bg-white shadow-2xl rounded-md overflow-hidden ${
+                    className={`relative z-10 h-full max-w-full transition-all duration-200 bg-white shadow-2xl rounded-md overflow-hidden ${
                       deviceViewport === 'mobile'
                         ? 'w-[375px]'
                         : deviceViewport === 'tablet'
@@ -1304,9 +1307,10 @@ Return ONLY the complete updated file content without markdown code fences or co
           </div>
 
           {/* Fullscreen Iframe Canvas */}
-          <div className="flex-1 min-h-0 flex items-center justify-center p-0 md:p-3 overflow-hidden bg-[#050608]">
+          <div className="relative flex-1 min-h-0 flex items-center justify-center p-0 md:p-3 overflow-hidden bg-[#050608]">
+            <CanvasBackground opacity={0.4} />
             <div
-              className={`h-full transition-all duration-200 bg-white shadow-2xl rounded-none md:rounded-lg overflow-hidden ${
+              className={`relative z-10 h-full transition-all duration-200 bg-white shadow-2xl rounded-none md:rounded-lg overflow-hidden ${
                 deviceViewport === 'mobile'
                   ? 'w-[375px]'
                   : deviceViewport === 'tablet'
