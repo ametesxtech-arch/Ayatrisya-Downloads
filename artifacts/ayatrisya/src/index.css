@@ -466,9 +466,9 @@ html[data-appearance="light"] .chat-thinking small,html[data-appearance="light"]
   .chat-message-list{gap:20px;padding-top:14px}
   .chat-message-inner{grid-template-columns:25px minmax(0,1fr);gap:9px}
   .chat-avatar{width:25px;height:25px;border-radius:8px}
-  .chat-prose{font-size:13px;line-height:1.7}
-  .chat-user-content{font-size:13px;padding:10px 12px}
-  .chat-message-actions{margin-top:4px}
+  .chat-prose{font-size:13px;line-height:1.7;overflow-wrap:break-word;word-break:break-word}
+  .chat-user-content{font-size:13px;padding:10px 12px;min-width:48px;overflow-wrap:break-word;word-break:break-word}
+  .chat-message-actions{margin-top:6px;gap:6px 8px;row-gap:8px}
   .chat-action{opacity:1}
   .chat-composer-dock{padding-top:6px;padding-bottom:max(env(safe-area-inset-bottom),8px)}
   .chat-composer{min-height:50px;gap:2px;padding:8px 10px;border-radius:16px}

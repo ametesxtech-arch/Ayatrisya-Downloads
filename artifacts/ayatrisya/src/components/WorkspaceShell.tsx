@@ -187,23 +187,32 @@ function WorkspaceContent() {
   const capFor = (id: ModelId) => caps.find((c) => c.id === id);
   const selectedCap = capFor(prefs.model);
   const anyReady = caps.some((c) => c.available);
-  const L = (href: string, active: boolean, icon: ReactNode, label: string) => <SideLink href={href} active={active} icon={icon} label={label} collapsed={collapsed} onSelect={() => setMobileOpen(false)} />;
+  const effectiveCollapsed = !isMobile && collapsed;
+  const L = (href: string, active: boolean, icon: ReactNode, label: string) => <SideLink href={href} active={active} icon={icon} label={label} collapsed={effectiveCollapsed} onSelect={() => setMobileOpen(false)} />;
   const initials = (user?.displayName || prefs.displayName || user?.email || 'G').slice(0, 2).toUpperCase();
-  const h = (t: string) => !collapsed && <div className="mb-2 mt-6 px-2 text-[10px] font-bold uppercase tracking-[.17em] text-slate-500">{t}</div>;
+  const h = (t: string) => !effectiveCollapsed && <div className="mb-2 mt-6 px-2 text-[10px] font-bold uppercase tracking-[.17em] text-slate-500">{t}</div>;
   return (
     <div className="app-noise workspace-shell flex h-[100dvh] min-h-0 overflow-hidden bg-[#101116] text-slate-100" data-workspace-mode={prefs.workspaceMode}>
       <a href="#main" className="skip-link">Skip to content</a>
       {mobileOpen && <button aria-label="Close navigation overlay" tabIndex={-1} onClick={() => setMobileOpen(false)} className="fixed inset-0 z-30 bg-black/60 lg:hidden" />}
-      <aside ref={asideRef} onKeyDown={trap} onClickCapture={(e) => { if ((e.target as HTMLElement).closest('a[href]') && !confirmDiscard()) { e.preventDefault(); e.stopPropagation(); } }} role={isMobile && mobileOpen ? 'dialog' : undefined} aria-modal={isMobile && mobileOpen ? true : undefined} aria-label="Workspace navigation" className={cx('workspace-sidebar safe-t fixed inset-y-0 left-0 z-40 flex w-[270px] flex-col border-r border-white/[.065] bg-[#12141a] transition-[width,transform] duration-200 overflow-hidden lg:relative lg:translate-x-0', mobileOpen ? 'translate-x-0' : '-translate-x-full', collapsed && 'lg:w-[72px]')}>
-        <div className={cx('flex h-[66px] items-center overflow-hidden transition-[padding]', collapsed ? 'justify-between px-2.5' : 'justify-between px-4')}>
-          <Link href="/workspace" onClick={() => setMobileOpen(false)} aria-label="Ayatrisya home" className="shrink-0"><Brand compact markOnly={collapsed} /></Link>
-          <button ref={closeBtn} aria-label="Close navigation" className="grid size-9 shrink-0 place-items-center rounded-lg text-slate-400 hover:bg-white/[.07] lg:hidden" onClick={() => setMobileOpen(false)}><X size={16} /></button>
-          <IconButton label={collapsed ? 'Expand navigation' : 'Collapse navigation'} className="hidden lg:grid shrink-0" onClick={() => save({ sidebarCollapsed: !collapsed })}>{collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}</IconButton>
+      <aside ref={asideRef} onKeyDown={trap} onClickCapture={(e) => { if ((e.target as HTMLElement).closest('a[href]') && !confirmDiscard()) { e.preventDefault(); e.stopPropagation(); } }} role={isMobile && mobileOpen ? 'dialog' : undefined} aria-modal={isMobile && mobileOpen ? true : undefined} aria-label="Workspace navigation" className={cx('workspace-sidebar safe-t fixed inset-y-0 left-0 z-40 flex w-[270px] flex-col border-r border-white/[.065] bg-[#12141a] transition-[width,transform] duration-200 overflow-hidden lg:relative lg:translate-x-0', mobileOpen ? 'translate-x-0' : '-translate-x-full', effectiveCollapsed && 'lg:w-[72px]')}>
+        <div className={cx('flex h-[66px] items-center overflow-hidden transition-[padding]', effectiveCollapsed ? 'justify-center px-1' : 'justify-between px-4')}>
+          {effectiveCollapsed ? (
+            <IconButton label="Expand navigation" className="hidden lg:grid shrink-0 size-9" onClick={() => save({ sidebarCollapsed: false })}>
+              <PanelLeftOpen size={17} />
+            </IconButton>
+          ) : (
+            <>
+              <Link href="/workspace" onClick={() => setMobileOpen(false)} aria-label="Ayatrisya home" className="shrink-0"><Brand compact /></Link>
+              <button ref={closeBtn} aria-label="Close navigation" className="grid size-9 shrink-0 place-items-center rounded-lg text-slate-400 hover:bg-white/[.07] lg:hidden" onClick={() => setMobileOpen(false)}><X size={16} /></button>
+              <IconButton label="Collapse navigation" className="hidden lg:grid shrink-0" onClick={() => save({ sidebarCollapsed: true })}><PanelLeftClose size={16} /></IconButton>
+            </>
+          )}
         </div>
         <div className="px-3">
-          <Button className={cx('w-full', collapsed ? 'justify-center px-0' : 'justify-start')} onClick={() => void newChat()} disabled={creating} data-testid="button-new-chat"><Plus size={16} />{!collapsed && 'New chat'}</Button>
-          <button onClick={() => setDialog('palette')} aria-label="Search workspace" className={cx('mt-2 flex h-10 w-full items-center gap-3 rounded-lg px-3 text-xs text-slate-400 hover:bg-white/[.05] hover:text-white', collapsed && 'justify-center px-0')}>
-            <Search size={16} />{!collapsed && <>Search workspace<span className="ml-auto rounded border border-white/[.08] px-1.5 py-0.5 text-[9px]">Ctrl K</span></>}
+          <Button className={cx('w-full', effectiveCollapsed ? 'justify-center px-0' : 'justify-start')} onClick={() => void newChat()} disabled={creating} data-testid="button-new-chat"><Plus size={16} />{!effectiveCollapsed && 'New chat'}</Button>
+          <button onClick={() => setDialog('palette')} aria-label="Search workspace" className={cx('mt-2 flex h-10 w-full items-center gap-3 rounded-lg px-3 text-xs text-slate-400 hover:bg-white/[.05] hover:text-white', effectiveCollapsed && 'justify-center px-0')}>
+            <Search size={16} />{!effectiveCollapsed && <>Search workspace<span className="ml-auto rounded border border-white/[.08] px-1.5 py-0.5 text-[9px]">Ctrl K</span></>}
           </button>
         </div>
         <nav className="mt-3 flex-1 overflow-y-auto px-3 pb-3">
@@ -223,7 +232,7 @@ function WorkspaceContent() {
           {h('Organise')}
           {L('/workspace/projects', path.startsWith('/workspace/projects'), <FolderKanban size={15} />, 'Projects')}
           {L('/workspace/library', path === '/workspace/library', <Library size={15} />, 'Library')}
-          {!collapsed && <>
+          {!effectiveCollapsed && <>
             <div className="mb-2 mt-6 px-2 text-[10px] font-bold uppercase tracking-[.17em] text-slate-500">Recent chats</div>
             <label className="sr-only" htmlFor="chat-search">Search conversations</label>
             <input id="chat-search" value={chatSearch} onChange={(e) => { setChatSearch(e.target.value); setChatPage(0); }} placeholder="Search conversations" className="mb-1 h-8 w-full rounded-md border border-white/[.07] bg-transparent px-2 text-[11px] text-slate-300 placeholder:text-slate-500" />
@@ -264,14 +273,14 @@ function WorkspaceContent() {
           </>}
         </nav>
         <div className="safe-b border-t border-white/[.06] p-3">
-          <Link href="/workspace/storage" onClick={() => setMobileOpen(false)} className={cx('mb-1 flex items-center gap-2 rounded-md px-2 py-2 text-[11px] text-slate-400 hover:bg-white/[.05] hover:text-slate-100', collapsed && 'justify-center')} title="Storage and backup">
-            <HardDrive size={14} />{!collapsed && <span className="truncate">Local only{stats.data ? ` · ${stats.data.conversations} chats, ${stats.data.projects} projects` : ''}</span>}
+          <Link href="/workspace/storage" onClick={() => setMobileOpen(false)} className={cx('mb-1 flex items-center gap-2 rounded-md px-2 py-2 text-[11px] text-slate-400 hover:bg-white/[.05] hover:text-slate-100', effectiveCollapsed && 'justify-center')} title="Storage and backup">
+            <HardDrive size={14} />{!effectiveCollapsed && <span className="truncate">Local only{stats.data ? ` · ${stats.data.conversations} chats, ${stats.data.projects} projects` : ''}</span>}
           </Link>
-          <Link href="/workspace/account" onClick={() => setMobileOpen(false)} className={cx('flex items-center gap-2 rounded-lg p-2 hover:bg-white/[.05]', collapsed && 'justify-center')} aria-label="Account">
+          <Link href="/workspace/account" onClick={() => setMobileOpen(false)} className={cx('flex items-center gap-2 rounded-lg p-2 hover:bg-white/[.05]', effectiveCollapsed && 'justify-center')} aria-label="Account">
             <span className="grid size-8 shrink-0 place-items-center rounded-full border border-white/10 bg-[#22242c] text-[10px] font-semibold text-slate-300">{initials}</span>
-            {!collapsed && <span className="min-w-0 flex-1"><span className="block truncate text-xs font-medium">{user ? user.displayName || user.email : prefs.displayName || 'Account'}</span><span className="block truncate text-[10px] text-slate-500">{user ? (user.emailVerified ? 'Signed in, verified' : 'Signed in, unverified') : 'Not signed in'}</span></span>}
+            {!effectiveCollapsed && <span className="min-w-0 flex-1"><span className="block truncate text-xs font-medium">{user ? user.displayName || user.email : prefs.displayName || 'Account'}</span><span className="block truncate text-[10px] text-slate-500">{user ? (user.emailVerified ? 'Signed in, verified' : 'Signed in, unverified') : 'Not signed in'}</span></span>}
           </Link>
-          <Link href="/workspace/settings" onClick={() => setMobileOpen(false)} className={cx('mt-1 flex items-center gap-2 rounded-md px-2 py-2 text-[11px] text-slate-400 hover:bg-white/[.05] hover:text-slate-100', collapsed && 'justify-center')} title="Settings"><Settings size={14} />{!collapsed && 'Settings'}</Link>
+          <Link href="/workspace/settings" onClick={() => setMobileOpen(false)} className={cx('mt-1 flex items-center gap-2 rounded-md px-2 py-2 text-[11px] text-slate-400 hover:bg-white/[.05] hover:text-slate-100', effectiveCollapsed && 'justify-center')} title="Settings"><Settings size={14} />{!effectiveCollapsed && 'Settings'}</Link>
         </div>
       </aside>
       <div ref={mainRef} className="flex min-w-0 flex-1 flex-col h-full min-h-0 overflow-hidden">
@@ -289,7 +298,7 @@ function WorkspaceContent() {
               <span className="text-cyan-100/30">/</span>
               <span>{caps.filter((cap) => cap.available).length} model capabilities reported ready</span>
             </div>}
-            <select aria-label="Model" value={prefs.model} onChange={(e) => { const m = e.target.value as ModelId; void save({ model: m }); const c = capFor(m); if (!c?.available) notify(`${modelNames[m]} is not available: ${c?.reason ?? 'no model connection is configured.'}`); }} className="max-w-[118px] rounded-md border border-white/[.08] bg-[#171920] px-2 py-2 text-[11px] text-slate-200 sm:max-w-none sm:px-3">
+            <select aria-label="Model" value={prefs.model} onChange={(e) => { const m = e.target.value as ModelId; void save({ model: m }); const c = capFor(m); if (!c?.available) notify(`${modelNames[m]} is not available: ${c?.reason ?? 'no model connection is configured.'}`); }} className="max-w-[102px] xs:max-w-[124px] rounded-md border border-white/[.08] bg-[#171920] px-2 py-2 text-[11px] text-slate-200 sm:max-w-none sm:px-3">
               {(Object.keys(modelNames) as ModelId[]).map((m) => <option key={m} value={m}>{modelNames[m]}{capFor(m)?.available ? '' : ' (unavailable)'}</option>)}
             </select>
             <select aria-label="Chat mode" value={prefs.mode} onChange={(e) => void save({ mode: e.target.value as ChatMode })} className="hidden max-w-[84px] rounded-md border border-white/[.08] bg-[#171920] px-2 py-2 text-[11px] text-slate-200 lg:block sm:max-w-none sm:px-3">
@@ -337,7 +346,8 @@ function WorkspaceContent() {
 export function SideLink({ href, active, icon, label, collapsed, onSelect }: { href: string; active: boolean; icon: ReactNode; label: string; collapsed: boolean; onSelect: () => void }) {
   return (
     <Link href={href} onClick={onSelect} title={collapsed ? label : undefined} aria-label={collapsed ? label : undefined} aria-current={active ? 'page' : undefined} className={cx('workspace-nav-link my-0.5 flex min-h-10 items-center gap-3 rounded-lg px-2.5 text-[12px] transition', active ? 'bg-violet-300/[.1] text-violet-100' : 'text-slate-400 hover:bg-white/[.04] hover:text-slate-100', collapsed && 'justify-center px-0')}>
-      {icon}{!collapsed && label}
+      <span className="shrink-0">{icon}</span>
+      {!collapsed && <span className="truncate">{label}</span>}
     </Link>
   );
 }

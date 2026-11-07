@@ -26,7 +26,7 @@ export function Mark({ small = false }: { small?: boolean }) {
 }
 
 export function Wordmark({ className = '' }: { className?: string }) {
-  return <span className={cx('display font-extrabold tracking-[-.04em]', className)}>ayatrisya</span>;
+  return <span className={cx('display font-extrabold tracking-[-.04em] truncate select-none', className)}>ayatrisya</span>;
 }
 
 /** Compact brand: never plays the full intro. Optional quiet idle pulse when enabled in settings. */

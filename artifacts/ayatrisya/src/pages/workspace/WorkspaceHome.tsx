@@ -83,11 +83,11 @@ function EmptyState({ title, detail, actionLabel, onAction }: { title: string; d
 
 function ActionTile({ icon: Icon, label, hint, onClick, accent = false, testId }: { icon: typeof MessageSquare; label: string; hint: string; onClick: () => void; accent?: boolean; testId?: string }) {
   return (
-    <button type="button" data-testid={testId} onClick={onClick} className={`group flex min-h-[74px] items-center gap-3 rounded-xl border px-3.5 text-left transition duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-300 ${accent ? 'border-violet-300/20 bg-violet-300/[.075] hover:border-violet-300/40 hover:bg-violet-300/[.11]' : 'border-white/[.075] bg-[#15171e]/80 hover:border-white/[.14] hover:bg-[#1b1d26]'}`}>
+    <button type="button" data-testid={testId} onClick={onClick} className={`group flex min-h-[70px] items-center gap-3 rounded-xl border px-3.5 py-2.5 text-left transition duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-300 ${accent ? 'border-violet-300/20 bg-violet-300/[.075] hover:border-violet-300/40 hover:bg-violet-300/[.11]' : 'border-white/[.075] bg-[#15171e]/80 hover:border-white/[.14] hover:bg-[#1b1d26]'}`}>
       <span className={`grid size-9 shrink-0 place-items-center rounded-lg border ${accent ? 'border-violet-200/15 bg-violet-200/[.08] text-violet-100' : 'border-white/[.07] bg-white/[.035] text-slate-300 group-hover:text-cyan-100'}`}><Icon size={16} strokeWidth={1.8} /></span>
       <span className="min-w-0 flex-1">
-        <span className="block text-[12px] font-semibold text-slate-200">{label}</span>
-        <span className="mt-0.5 block text-[10px] text-slate-500">{hint}</span>
+        <span className="block truncate text-[12px] font-semibold text-slate-200">{label}</span>
+        <span className="mt-0.5 block truncate text-[10px] text-slate-500">{hint}</span>
       </span>
       <ArrowRight size={14} className="shrink-0 text-slate-600 transition group-hover:translate-x-0.5 group-hover:text-slate-300" />
     </button>
@@ -161,7 +161,7 @@ export function WorkspaceHome({
               </button>
             </div>
           </div>
-          <div className="relative z-10 mt-7 grid grid-cols-2 gap-2 sm:grid-cols-4 md:max-w-[760px]">
+          <div className="relative z-10 mt-7 grid grid-cols-1 min-[420px]:grid-cols-2 sm:grid-cols-4 gap-2 md:max-w-[760px]">
             <ActionTile icon={FileText} label="Create document" hint="Start with a blank page" testId="button-create-document" onClick={() => onAction('create-document')} />
             <ActionTile icon={Image} label="Image studio" hint="Open your visual tools" onClick={() => onAction('image-studio')} />
             <ActionTile icon={Waves} label="Voice studio" hint="Work with audio" onClick={() => onAction('voice-studio')} />

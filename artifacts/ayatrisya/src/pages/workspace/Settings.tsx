@@ -602,10 +602,10 @@ function DrivePanel({ notify, onRemote }: { notify: (m: string) => void; onRemot
   }
   return <Card title="Google Drive backup (manual)">
     <div className="py-3"><Notice>This is manual backup and restore to your own Drive, not continuous sync. It has not been tested live in this build.</Notice></div>
-    <div className="py-3 text-sm" data-testid="drive-status">
+    <div className="py-3 text-sm min-w-0" data-testid="drive-status">
       {!st && !err && <Skeleton className="h-12" />}
-      {st && <><p>{st.message}</p><p className="mt-1 text-xs text-slate-500">Configured: {st.configured ? 'yes' : 'no'} · Connected: {st.connected ? 'yes' : 'no'} · Paused: {st.paused ? 'yes' : 'no'} · Pending: {st.pending} · Conflicts: {st.conflicts} · Last success: {st.lastSuccess ? new Date(st.lastSuccess).toLocaleString() : 'never'}</p></>}
-      {err && <p role="alert" className="mt-2 text-xs text-rose-300">{err}</p>}
+      {st && <><p className="break-words">{st.message}</p><p className="mt-1 text-xs text-slate-500 break-words leading-relaxed">Configured: {st.configured ? 'yes' : 'no'} · Connected: {st.connected ? 'yes' : 'no'} · Paused: {st.paused ? 'yes' : 'no'} · Pending: {st.pending} · Conflicts: {st.conflicts} · Last success: {st.lastSuccess ? new Date(st.lastSuccess).toLocaleString() : 'never'}</p></>}
+      {err && <p role="alert" className="mt-2 text-xs text-rose-300 break-words">{err}</p>}
     </div>
     <div className="flex flex-wrap gap-2 py-3">
       <Button variant="outline" disabled={!st?.configured || st.connected || !!busy} onClick={() => run('c', () => driveSync.connect(), 'Connected to Google Drive.')}>Connect Drive</Button>
