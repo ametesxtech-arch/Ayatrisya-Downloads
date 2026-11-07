@@ -266,9 +266,9 @@ export function PersonalizationPage() {
               <div className="absolute inset-0 grid place-items-center bg-[radial-gradient(ellipse_at_20%_15%,rgba(130,112,220,.15),transparent_48%),linear-gradient(135deg,#171922,#11131a)]">
                 <span className="rounded-full border border-white/10 bg-[#101116]/70 px-3 py-1.5 text-xs text-slate-400">A quiet canvas</span>
               </div>}
-          <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-[#101116]/90 to-transparent px-4 pb-3 pt-8">
-            <span className="text-xs font-medium text-white">{describeWallpaper(prefs.wallpaper)}</span>
-            {prefs.customWallpaperData && <button type="button" onClick={() => void removeCustomWallpaper()} className="inline-flex items-center gap-1.5 rounded-md border border-white/15 bg-[#101116]/75 px-2.5 py-1.5 text-[11px] text-white hover:bg-[#20232c]" aria-label="Remove saved custom wallpaper" data-testid="button-remove-wallpaper"><X size={13} />Remove custom</button>}
+          <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-gradient-to-t from-[#101116]/90 to-transparent px-4 pb-3 pt-8">
+            <span className="text-xs font-medium text-white truncate min-w-0">{describeWallpaper(prefs.wallpaper)}</span>
+            {prefs.customWallpaperData && <button type="button" onClick={() => void removeCustomWallpaper()} className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-white/15 bg-[#101116]/75 px-2.5 py-1.5 text-[11px] text-white hover:bg-[#20232c]" aria-label="Remove saved custom wallpaper" data-testid="button-remove-wallpaper"><X size={13} />Remove custom</button>}
           </div>
         </div>
         <div className="flex flex-col justify-center rounded-xl border border-dashed border-white/[.14] bg-white/[.015] p-4">

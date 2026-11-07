@@ -257,18 +257,18 @@ export function ProviderConnections({ user }: { user: User | null }) {
             const status = statuses[provider];
             return (
               <article key={provider} className="rounded-lg border border-white/[.07] bg-white/[.02] p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-2.5">
-                    <span className="grid size-9 place-items-center rounded-lg bg-white/[.06] text-slate-200">
+                <div className="flex items-start justify-between gap-2.5">
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-white/[.06] text-slate-200">
                       <Icon size={18} aria-hidden="true" />
                     </span>
-                    <div>
-                      <h3 className="text-sm font-semibold">{info.name}</h3>
-                      <p className="mt-0.5 text-[11px] text-slate-500">{info.description}</p>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-sm font-semibold truncate">{info.name}</h3>
+                      <p className="mt-0.5 text-[11px] text-slate-500 truncate">{info.description}</p>
                     </div>
                   </div>
-                  <div className="flex flex-col items-end gap-1.5">
-                    {status?.connected && <span className="inline-flex items-center gap-1 text-[10px] text-emerald-300"><Check size={12} /> Connected</span>}
+                  <div className="flex flex-col items-end gap-1.5 shrink-0">
+                    {status?.connected && <span className="inline-flex items-center gap-1 text-[10px] text-emerald-300 whitespace-nowrap"><Check size={12} /> Connected</span>}
                     <a href={info.docsUrl} target="_blank" rel="noreferrer" aria-label={`${info.name} OAuth documentation`} className="text-slate-500 hover:text-white"><ExternalLink size={13} /></a>
                   </div>
                 </div>

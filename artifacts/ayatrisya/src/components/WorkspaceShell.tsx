@@ -194,14 +194,14 @@ function WorkspaceContent() {
     <div className="app-noise workspace-shell flex h-[100dvh] min-h-0 overflow-hidden bg-[#101116] text-slate-100" data-workspace-mode={prefs.workspaceMode}>
       <a href="#main" className="skip-link">Skip to content</a>
       {mobileOpen && <button aria-label="Close navigation overlay" tabIndex={-1} onClick={() => setMobileOpen(false)} className="fixed inset-0 z-30 bg-black/60 lg:hidden" />}
-      <aside ref={asideRef} onKeyDown={trap} onClickCapture={(e) => { if ((e.target as HTMLElement).closest('a[href]') && !confirmDiscard()) { e.preventDefault(); e.stopPropagation(); } }} role={isMobile && mobileOpen ? 'dialog' : undefined} aria-modal={isMobile && mobileOpen ? true : undefined} aria-label="Workspace navigation" className={cx('workspace-sidebar safe-t fixed inset-y-0 left-0 z-40 flex w-[270px] flex-col border-r border-white/[.065] bg-[#12141a] transition-transform duration-200 lg:relative lg:translate-x-0', mobileOpen ? 'translate-x-0' : '-translate-x-full', collapsed && 'lg:w-[72px]')}>
-        <div className="flex h-[66px] items-center justify-between px-4">
-          <Link href="/workspace" onClick={() => setMobileOpen(false)} aria-label="Ayatrisya home"><Brand compact /></Link>
-          <button ref={closeBtn} aria-label="Close navigation" className="grid size-9 place-items-center rounded-lg text-slate-400 hover:bg-white/[.07] lg:hidden" onClick={() => setMobileOpen(false)}><X size={16} /></button>
-          <IconButton label={collapsed ? 'Expand navigation' : 'Collapse navigation'} className="hidden lg:grid" onClick={() => save({ sidebarCollapsed: !collapsed })}>{collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}</IconButton>
+      <aside ref={asideRef} onKeyDown={trap} onClickCapture={(e) => { if ((e.target as HTMLElement).closest('a[href]') && !confirmDiscard()) { e.preventDefault(); e.stopPropagation(); } }} role={isMobile && mobileOpen ? 'dialog' : undefined} aria-modal={isMobile && mobileOpen ? true : undefined} aria-label="Workspace navigation" className={cx('workspace-sidebar safe-t fixed inset-y-0 left-0 z-40 flex w-[270px] flex-col border-r border-white/[.065] bg-[#12141a] transition-[width,transform] duration-200 overflow-hidden lg:relative lg:translate-x-0', mobileOpen ? 'translate-x-0' : '-translate-x-full', collapsed && 'lg:w-[72px]')}>
+        <div className={cx('flex h-[66px] items-center overflow-hidden transition-[padding]', collapsed ? 'justify-between px-2.5' : 'justify-between px-4')}>
+          <Link href="/workspace" onClick={() => setMobileOpen(false)} aria-label="Ayatrisya home" className="shrink-0"><Brand compact markOnly={collapsed} /></Link>
+          <button ref={closeBtn} aria-label="Close navigation" className="grid size-9 shrink-0 place-items-center rounded-lg text-slate-400 hover:bg-white/[.07] lg:hidden" onClick={() => setMobileOpen(false)}><X size={16} /></button>
+          <IconButton label={collapsed ? 'Expand navigation' : 'Collapse navigation'} className="hidden lg:grid shrink-0" onClick={() => save({ sidebarCollapsed: !collapsed })}>{collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}</IconButton>
         </div>
         <div className="px-3">
-          <Button className="w-full justify-start" onClick={() => void newChat()} disabled={creating} data-testid="button-new-chat"><Plus size={16} />{!collapsed && 'New chat'}</Button>
+          <Button className={cx('w-full', collapsed ? 'justify-center px-0' : 'justify-start')} onClick={() => void newChat()} disabled={creating} data-testid="button-new-chat"><Plus size={16} />{!collapsed && 'New chat'}</Button>
           <button onClick={() => setDialog('palette')} aria-label="Search workspace" className={cx('mt-2 flex h-10 w-full items-center gap-3 rounded-lg px-3 text-xs text-slate-400 hover:bg-white/[.05] hover:text-white', collapsed && 'justify-center px-0')}>
             <Search size={16} />{!collapsed && <>Search workspace<span className="ml-auto rounded border border-white/[.08] px-1.5 py-0.5 text-[9px]">Ctrl K</span></>}
           </button>

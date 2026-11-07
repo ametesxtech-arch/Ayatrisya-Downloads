@@ -66,7 +66,21 @@ export function LoadError({ message, retry }: { message: string; retry: () => vo
   return <div role="alert" className="rounded-xl border border-rose-400/20 bg-rose-400/[.06] p-5 text-sm text-rose-200"><p>Could not read local storage: {message}</p><Button variant="outline" className="mt-3" onClick={retry}>Try again</Button></div>;
 }
 export function Switch({ checked, onChange, label, description }: { checked: boolean; onChange: (v: boolean) => void; label: string; description?: string }) {
-  return <label className="flex cursor-pointer items-start justify-between gap-4 py-3"><span><span className="block text-sm font-medium text-slate-200">{label}</span>{description && <span className="mt-0.5 block text-xs leading-5 text-slate-500">{description}</span>}</span><input type="checkbox" role="switch" checked={checked} onChange={(e) => onChange(e.target.checked)} className="mt-1 size-5 shrink-0 accent-violet-500" /></label>;
+  return (
+    <label className="flex cursor-pointer items-start justify-between gap-3 sm:gap-4 py-3 min-w-0">
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-medium text-slate-200 break-words">{label}</span>
+        {description && <span className="mt-0.5 block text-xs leading-5 text-slate-400 break-words">{description}</span>}
+      </span>
+      <input
+        type="checkbox"
+        role="switch"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="mt-1 size-5 shrink-0 accent-violet-500 cursor-pointer"
+      />
+    </label>
+  );
 }
 export function EmptyPreview({ title, detail }: { title: string; detail: string }) {
   return <div className="flex min-h-52 flex-col items-center justify-center rounded-xl border border-dashed border-white/10 bg-white/[.012] px-6 text-center"><div className="mb-3 grid size-11 place-items-center rounded-xl border border-violet-300/15 bg-violet-300/[.06] text-violet-200"><Sparkles size={19}/></div><h3 className="font-semibold text-slate-200">{title}</h3><p className="mt-1 max-w-sm text-xs leading-relaxed text-slate-500">{detail}</p></div>;

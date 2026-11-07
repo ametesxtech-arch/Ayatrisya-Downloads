@@ -3,6 +3,7 @@ import { Link } from 'wouter';
 import { Download, HardDrive, Trash2, Upload } from 'lucide-react';
 import { Button, ConfirmDialog, LoadError, Modal, Notice, Skeleton, Switch, inputCls } from '@/components/Primitives';
 import { PageHeading } from '@/components/PageHeading';
+import { cx } from '@/lib/cx';
 import { useCaps, usePrefs } from '@/hooks/use-prefs';
 import { repository } from '@/storage/repository';
 import { useLocalQuery } from '@/storage/hooks';
@@ -29,24 +30,24 @@ export function SettingsPage({ notify, goto, initial = 'appearance' }: { notify:
   return <div className="mx-auto max-w-[900px] p-3 sm:p-8">
     {section !== 'personalization' && <PageHeading eyebrow="Settings" title={section === 'storage' ? 'Storage and backup' : 'Settings'} description="Preferences are saved in this browser for the current workspace owner." />}
     
-    {/* Mobile Compact Category Dropdown */}
-    <div className="mb-4 sm:hidden">
-      <label htmlFor="mobile-settings-category" className="sr-only">Settings section</label>
-      <select
-        id="mobile-settings-category"
-        value={section}
-        onChange={(e) => setSection(e.target.value as Section)}
-        className="w-full rounded-lg border border-white/10 bg-[#161822] px-3 py-2.5 text-xs font-medium text-slate-200 focus:outline-none focus:ring-1 focus:ring-violet-400"
-      >
-        {sections.map(([k, l]) => (
-          <option key={k} value={k}>{l}</option>
-        ))}
-      </select>
-    </div>
-
-    {/* Desktop/Tablet Horizontal Tabs */}
-    <div role="tablist" aria-label="Settings sections" className="mb-6 hidden sm:flex gap-1 overflow-x-auto border-b border-white/[.07] scrollbar-none">
-      {sections.map(([k, l]) => <button key={k} role="tab" aria-selected={section === k} onClick={() => setSection(k)} className={`shrink-0 whitespace-nowrap border-b-2 px-4 py-3 text-xs font-medium transition ${section === k ? 'border-violet-400 text-white' : 'border-transparent text-slate-400 hover:text-slate-100'}`}>{l}</button>)}
+    {/* Touch-Friendly Responsive Tabs */}
+    <div role="tablist" aria-label="Settings sections" className="mb-6 flex gap-1.5 overflow-x-auto border-b border-white/[.07] pb-2 scrollbar-none -mx-1 px-1">
+      {sections.map(([k, l]) => (
+        <button
+          key={k}
+          role="tab"
+          aria-selected={section === k}
+          onClick={() => setSection(k)}
+          className={cx(
+            'shrink-0 whitespace-nowrap rounded-lg px-3.5 py-2 text-xs font-medium transition-all',
+            section === k
+              ? 'bg-violet-500/20 text-violet-200 border border-violet-400/30'
+              : 'text-slate-400 hover:bg-white/[.04] hover:text-slate-100'
+          )}
+        >
+          {l}
+        </button>
+      ))}
     </div>
     {section === 'appearance' && <Appearance />}
     {section === 'personalization' && <PersonalizationPage />}
@@ -59,15 +60,15 @@ export function SettingsPage({ notify, goto, initial = 'appearance' }: { notify:
 }
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
-  return <section className="mb-5 rounded-xl border border-white/[.075] bg-[#15171e] p-4 sm:p-5"><h2 className="mb-1 text-sm font-semibold text-slate-200">{title}</h2><div className="divide-y divide-white/[.05]">{children}</div></section>;
+  return <section className="mb-5 rounded-xl border border-white/[.075] bg-[#15171e] p-4 sm:p-5 overflow-hidden"><h2 className="mb-1 text-sm font-semibold text-slate-200">{title}</h2><div className="divide-y divide-white/[.05]">{children}</div></section>;
 }
 
 function Appearance() {
   const { prefs, save } = usePrefs();
   return <>
     <Card title="Theme">
-      <label className="block py-3 text-xs font-medium text-slate-400">Theme<select value={prefs.theme} onChange={(e) => void save({ theme: e.target.value as Preferences['theme'] })} className={`${inputCls} mt-1.5 max-w-xs`}><option>Dark</option><option>Light</option><option>Follow system</option></select></label>
-      <label className="block py-3 text-xs font-medium text-slate-400">Language<select disabled value="English" className={`${inputCls} mt-1.5 max-w-xs opacity-70`}><option>English</option></select><span className="mt-1 block text-[11px] text-slate-500">English is the only interface language available.</span></label>
+      <label className="block py-3 text-xs font-medium text-slate-400">Theme<select value={prefs.theme} onChange={(e) => void save({ theme: e.target.value as Preferences['theme'] })} className={`${inputCls} mt-1.5 max-w-full sm:max-w-xs`}><option>Dark</option><option>Light</option><option>Follow system</option></select></label>
+      <label className="block py-3 text-xs font-medium text-slate-400">Language<select disabled value="English" className={`${inputCls} mt-1.5 max-w-full sm:max-w-xs opacity-70`}><option>English</option></select><span className="mt-1 block text-[11px] text-slate-500">English is the only interface language available.</span></label>
     </Card>
     <Card title="Behaviour">
       <Switch label="Reduce motion" description="Turns off animations and transitions, in addition to your system setting." checked={prefs.reducedMotion} onChange={(v) => void save({ reducedMotion: v })} />
@@ -75,11 +76,31 @@ function Appearance() {
       <Switch label="Send with Enter" description="On: Enter sends and Shift+Enter adds a line. Off: Ctrl+Enter sends." checked={prefs.enterToSend} onChange={(v) => void save({ enterToSend: v })} />
       <Switch label="Pinned chats first" description="Keep pinned conversations at the top of history and the sidebar." checked={prefs.historyPinnedFirst} onChange={(v) => void save({ historyPinnedFirst: v })} />
       <Switch label="Quiet logo animation while idle" description="Plays a short orbit nudge on the sidebar logo every 40 seconds. Pauses when the tab is hidden." checked={prefs.logoIdle} onChange={(v) => void save({ logoIdle: v })} />
-      <label className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-3 text-sm">Workspace mode<select aria-label="Workspace mode" value={prefs.workspaceMode} onChange={(e) => void save({ workspaceMode: e.target.value as Preferences['workspaceMode'] })} className="rounded-md border border-white/10 bg-[#101116] px-3 py-2 text-xs w-full sm:w-auto"><option value="standard">Standard</option><option value="focus">Focus</option><option value="studio">Studio</option><option value="developer">Developer</option><option value="compact">Compact</option></select></label>
+      <label className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-3 text-sm min-w-0">
+        <span className="font-medium text-slate-200">Workspace mode</span>
+        <select aria-label="Workspace mode" value={prefs.workspaceMode} onChange={(e) => void save({ workspaceMode: e.target.value as Preferences['workspaceMode'] })} className="rounded-md border border-white/10 bg-[#101116] px-3 py-2 text-xs w-full sm:w-auto">
+          <option value="standard">Standard</option><option value="focus">Focus</option><option value="studio">Studio</option><option value="developer">Developer</option><option value="compact">Compact</option>
+        </select>
+      </label>
       <p className="pb-2 text-[11px] leading-5 text-slate-500">Focus hides desktop navigation; Studio widens chat; Developer shows real local and model status; Compact tightens navigation. The mode is saved with your browser preferences.</p>
-      <label className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-3 text-sm">History order<select value={prefs.historySort} onChange={(e) => void save({ historySort: e.target.value as typeof prefs.historySort })} className="rounded-md border border-white/10 bg-[#101116] px-3 py-2 text-xs w-full sm:w-auto"><option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="title">Title A to Z</option></select></label>
-      <label className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-3 text-sm">Project view<select value={prefs.projectView} onChange={(e) => void save({ projectView: e.target.value as typeof prefs.projectView })} className="rounded-md border border-white/10 bg-[#101116] px-3 py-2 text-xs w-full sm:w-auto"><option value="grid">Grid</option><option value="list">List</option></select></label>
-      <label className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-3 text-sm">Animation intensity<select value={prefs.animationIntensity} onChange={(e) => void save({ animationIntensity: e.target.value as typeof prefs.animationIntensity })} className="rounded-md border border-white/10 bg-[#101116] px-3 py-2 text-xs w-full sm:w-auto"><option value="full">Full</option><option value="subtle">Subtle</option><option value="none">None</option></select></label>
+      <label className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-3 text-sm min-w-0">
+        <span className="font-medium text-slate-200">History order</span>
+        <select value={prefs.historySort} onChange={(e) => void save({ historySort: e.target.value as typeof prefs.historySort })} className="rounded-md border border-white/10 bg-[#101116] px-3 py-2 text-xs w-full sm:w-auto">
+          <option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="title">Title A to Z</option>
+        </select>
+      </label>
+      <label className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-3 text-sm min-w-0">
+        <span className="font-medium text-slate-200">Project view</span>
+        <select value={prefs.projectView} onChange={(e) => void save({ projectView: e.target.value as typeof prefs.projectView })} className="rounded-md border border-white/10 bg-[#101116] px-3 py-2 text-xs w-full sm:w-auto">
+          <option value="grid">Grid</option><option value="list">List</option>
+        </select>
+      </label>
+      <label className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-3 text-sm min-w-0">
+        <span className="font-medium text-slate-200">Animation intensity</span>
+        <select value={prefs.animationIntensity} onChange={(e) => void save({ animationIntensity: e.target.value as typeof prefs.animationIntensity })} className="rounded-md border border-white/10 bg-[#101116] px-3 py-2 text-xs w-full sm:w-auto">
+          <option value="full">Full</option><option value="subtle">Subtle</option><option value="none">None</option>
+        </select>
+      </label>
       <Switch label="Skip the intro screen" description="Go straight to your workspace when opening Ayatrisya." checked={prefs.skipIntro} onChange={(v) => void save({ skipIntro: v })} />
     </Card>
   </>;
@@ -91,14 +112,14 @@ function Models({ goto }: { goto?: (h: string) => void }) {
   const [demoOpen, setDemoOpen] = useState(false);
   return <>
     {goto && (
-      <div className="mb-5 rounded-xl border border-violet-500/30 bg-violet-500/[.08] p-4.5 flex flex-wrap items-center justify-between gap-3">
-        <div>
+      <div className="mb-5 rounded-xl border border-violet-500/30 bg-violet-500/[.08] p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="min-w-0 flex-1">
           <h3 className="text-sm font-semibold text-slate-100">Models & Engines Hub</h3>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">
             Dedicated view for local runtimes, hardware capability diagnostics, package provisioning, and prompt tests.
           </p>
         </div>
-        <Button variant="solid" onClick={() => goto('/workspace/models')}>
+        <Button variant="solid" onClick={() => goto('/workspace/models')} className="shrink-0 w-full sm:w-auto">
           Open Models & Engines
         </Button>
       </div>
@@ -106,15 +127,27 @@ function Models({ goto }: { goto?: (h: string) => void }) {
     <DesktopLocalModel />
     <SeedModelHostPanel />
     <Card title="Defaults">
-      <label className="block py-3 text-xs font-medium text-slate-400">Default model<select value={prefs.model} onChange={(e) => void save({ model: e.target.value as ModelId })} className={`${inputCls} mt-1.5 max-w-xs`}><option value="v1-fast">V1 Fast</option><option value="v2-best">V2 Best Result</option></select></label>
-      <label className="block py-3 text-xs font-medium text-slate-400">Default chat mode<select value={prefs.mode} onChange={(e) => void save({ mode: e.target.value as ChatMode })} className={`${inputCls} mt-1.5 max-w-xs`}><option>Normal</option><option>Savage</option><option>Joke</option></select><span className="mt-1 block text-[11px] text-slate-500">Mode is passed to the model as configuration. It does not change anything without a connected model.</span></label>
+      <label className="block py-3 text-xs font-medium text-slate-400">Default model<select value={prefs.model} onChange={(e) => void save({ model: e.target.value as ModelId })} className={`${inputCls} mt-1.5 max-w-full sm:max-w-xs`}><option value="v1-fast">V1 Fast</option><option value="v2-best">V2 Best Result</option></select></label>
+      <label className="block py-3 text-xs font-medium text-slate-400">Default chat mode<select value={prefs.mode} onChange={(e) => void save({ mode: e.target.value as ChatMode })} className={`${inputCls} mt-1.5 max-w-full sm:max-w-xs`}><option>Normal</option><option>Savage</option><option>Joke</option></select><span className="mt-1 block text-[11px] text-slate-500">Mode is passed to the model as configuration. It does not change anything without a connected model.</span></label>
     </Card>
     <Card title="Model status">
       {loading && <Skeleton className="my-3 h-14" />}
       {error && <LoadError message={error} retry={refresh} />}
-      {caps.map((c) => <div key={c.id} className="py-3 text-sm" data-testid={`capability-${c.id}`}><div className="flex items-center justify-between"><b>{c.label}</b><span className={`text-xs ${c.available ? 'text-teal-300' : 'text-amber-300'}`}>{c.available ? 'Reported available' : 'Unavailable'}</span></div><p className="mt-1 text-xs text-slate-500">{c.reason}{c.available ? ` Streaming: ${c.streaming ? 'yes' : 'no'}. Modalities: ${c.modalities.join(', ') || 'text'}.` : ''}</p></div>)}
+      {caps.map((c) => (
+        <div key={c.id} className="py-3 text-sm min-w-0" data-testid={`capability-${c.id}`}>
+          <div className="flex flex-wrap sm:flex-nowrap items-start sm:items-center justify-between gap-2">
+            <b className="min-w-0 break-words text-slate-200">{c.label}</b>
+            <span className={cx('text-xs shrink-0 font-medium', c.available ? 'text-teal-300' : 'text-amber-300')}>
+              {c.available ? 'Reported available' : 'Unavailable'}
+            </span>
+          </div>
+          <p className="mt-1 text-xs text-slate-400 break-words leading-relaxed">
+            {c.reason}{c.available ? ` Streaming: ${c.streaming ? 'yes' : 'no'}. Modalities: ${c.modalities.join(', ') || 'text'}.` : ''}
+          </p>
+        </div>
+      ))}
       {!loading && caps.length === 0 && !error && <p className="py-3 text-sm text-slate-400">No capabilities were reported. No model is connected.</p>}
-      <p className="py-3 text-xs text-slate-500">“Reported available” comes from the model capability list; it does not prove inference works. Hosted model calls are authenticated and proxied through Ayatrisya’s server. Desktop localhost inference remains separate. No third-party AI service is used.</p>
+      <p className="py-3 text-xs text-slate-500 leading-relaxed">“Reported available” comes from the model capability list; it does not prove inference works. Hosted model calls are authenticated and proxied through Ayatrisya’s server. Desktop localhost inference remains separate. No third-party AI service is used.</p>
     </Card>
     <LiveModelTest model={prefs.model} />
     {import.meta.env.DEV && <Card title="Developer-only visual preview">
@@ -521,11 +554,11 @@ function Storage({ notify }: { notify: (m: string) => void }) {
     <Card title="This browser">
       {stats.loading && !s && <Skeleton className="my-3 h-20" />}
       {stats.error && <LoadError message={stats.error} retry={stats.refresh} />}
-      {s && <dl className="grid grid-cols-2 gap-4 py-4 text-sm sm:grid-cols-4" data-testid="storage-stats">
-        {([['Conversations', s.conversations], ['Projects', s.projects], ['Items', s.items], ['Files', s.attachments]] as const).map(([k, v]) => <div key={k}><dt className="text-[11px] text-slate-500">{k}</dt><dd className="display text-xl font-semibold">{v}</dd></div>)}
-        <div><dt className="text-[11px] text-slate-500">Used (estimate)</dt><dd>{s.usage !== undefined ? formatBytes(s.usage) : 'Not reported by this browser'}</dd></div>
-        <div><dt className="text-[11px] text-slate-500">Quota (estimate)</dt><dd>{s.quota !== undefined ? formatBytes(s.quota) : 'Not reported'}</dd></div>
-        <div className="col-span-2"><dt className="text-[11px] text-slate-500">Persistent storage</dt><dd>{(persist ?? s.persistent) === null ? 'Unknown' : (persist ?? s.persistent) ? 'Granted (the browser may still evict under extreme pressure)' : 'Not granted; the browser may clear data when space is low'}</dd></div>
+      {s && <dl className="grid grid-cols-2 gap-3 py-4 text-sm sm:grid-cols-4" data-testid="storage-stats">
+        {([['Conversations', s.conversations], ['Projects', s.projects], ['Items', s.items], ['Files', s.attachments]] as const).map(([k, v]) => <div key={k} className="min-w-0"><dt className="text-[11px] text-slate-500">{k}</dt><dd className="display text-xl font-semibold text-slate-100">{v}</dd></div>)}
+        <div className="col-span-1 min-w-0"><dt className="text-[11px] text-slate-500">Used (estimate)</dt><dd className="truncate text-xs sm:text-sm text-slate-200">{s.usage !== undefined ? formatBytes(s.usage) : 'Not reported'}</dd></div>
+        <div className="col-span-1 min-w-0"><dt className="text-[11px] text-slate-500">Quota (estimate)</dt><dd className="truncate text-xs sm:text-sm text-slate-200">{s.quota !== undefined ? formatBytes(s.quota) : 'Not reported'}</dd></div>
+        <div className="col-span-2 min-w-0"><dt className="text-[11px] text-slate-500">Persistent storage</dt><dd className="text-xs sm:text-sm text-slate-200 leading-snug break-words">{(persist ?? s.persistent) === null ? 'Unknown' : (persist ?? s.persistent) ? 'Granted (the browser may still evict under extreme pressure)' : 'Not granted; the browser may clear data when space is low'}</dd></div>
       </dl>}
       <div className="py-3"><Button variant="outline" onClick={async () => { try { const g = await repository.requestPersistence(); setPersist(g); notify(g ? 'The browser granted persistent storage. This is not a guarantee.' : 'The browser did not grant persistent storage.'); } catch (e) { notify(errMsg(e)); } }}>Request persistent storage</Button></div>
     </Card>

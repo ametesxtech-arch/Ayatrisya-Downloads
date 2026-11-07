@@ -30,7 +30,7 @@ export function Wordmark({ className = '' }: { className?: string }) {
 }
 
 /** Compact brand: never plays the full intro. Optional quiet idle pulse when enabled in settings. */
-export function Brand({ compact = false }: { compact?: boolean }) {
+export function Brand({ compact = false, markOnly = false }: { compact?: boolean; markOnly?: boolean }) {
   const { prefs } = usePrefs();
   const [tick, setTick] = useState(0);
   useEffect(() => {
@@ -41,7 +41,7 @@ export function Brand({ compact = false }: { compact?: boolean }) {
   return (
     <div className="flex items-center gap-2.5">
       <span key={tick} className="grid size-8 place-items-center"><Emblem size={30} mode={tick ? 'subtle' : 'static'} /></span>
-      <Wordmark className={compact ? 'text-[15px]' : 'text-[17px]'} />
+      {!markOnly && <Wordmark className={compact ? 'text-[15px]' : 'text-[17px]'} />}
     </div>
   );
 }

@@ -177,7 +177,7 @@ export function AIMemorySummaryCard({ notify }: AIMemorySummaryCardProps) {
             <Brain size={22} />
           </div>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <h3 className="text-base font-semibold text-slate-100">AI Memory Summary Engine</h3>
               <span className="rounded-full border border-violet-400/30 bg-violet-400/10 px-2 py-0.5 text-[10px] font-medium text-violet-300">
                 Layer B
@@ -257,7 +257,7 @@ export function AIMemorySummaryCard({ notify }: AIMemorySummaryCardProps) {
                   <Edit3 size={11} /> Edit
                 </button>
               ) : (
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <button
                     type="button"
                     onClick={() => void handleSaveOverview()}
@@ -320,7 +320,7 @@ export function AIMemorySummaryCard({ notify }: AIMemorySummaryCardProps) {
                     className="flex cursor-pointer items-start justify-between gap-2"
                   >
                     <div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <span className="text-xs font-semibold text-slate-200">{label}</span>
                         <span className={`rounded border px-1.5 py-0.2 text-[9px] font-medium ${badgeColor}`}>
                           {items.length}
