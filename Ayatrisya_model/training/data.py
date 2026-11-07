@@ -80,7 +80,7 @@ def load_documents(paths: Iterable[Path]) -> tuple[list[str], str, int]:
                     text = "\n".join(parts)
                 entries.append(text)
         elif suffix == ".txt":
-            entries = [part.strip() for part in content.split("\n\n")]
+            entries = [part.strip() for part in content.replace("\r\n", "\n").split("\n\n")]
         else:
             raise ValueError(f"only .txt and .jsonl datasets are supported: {path}")
 

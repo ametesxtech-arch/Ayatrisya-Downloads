@@ -193,7 +193,7 @@ class SeedRequestHandler(BaseHTTPRequestHandler):
             self._write_json(
                 200,
                 {
-                    "status": "ok",
+                    "status": "ready",
                     "model": "Ayatrisya Seed",
                     "readiness": "experimental_checkpoint_loaded",
                     "parameter_count": self.server.model.parameter_count(),
