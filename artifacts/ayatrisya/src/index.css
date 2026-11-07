@@ -150,7 +150,7 @@ html[data-appearance="light"][data-wallpaper-active="true"] .workspace-shell mai
 html[data-intensity="subtle"] .stagger>*{animation-delay:0ms!important}
 
 /* Workspace modes change usable space and density without hiding the mode control. */
-.workspace-sidebar{transition:width var(--dur-base) var(--ease-out),opacity var(--dur-base) var(--ease-out),border-color var(--dur-base) var(--ease-out)}
+.workspace-sidebar{transition:width var(--dur-base) var(--ease-out),transform var(--dur-base) var(--ease-out),opacity var(--dur-base) var(--ease-out),border-color var(--dur-base) var(--ease-out);overflow-x:hidden!important}
 @media(min-width:1024px){
   .workspace-shell[data-workspace-mode="focus"] .workspace-sidebar{display:none}
 }
@@ -185,8 +185,41 @@ button,input,textarea,select{ min-width:0; }
 }
 @media(max-width:639px){
   .workspace-main-content :where(input,select,textarea){ max-width:100%; }
-  .workspace-main-content :where(button,a){ overflow-wrap:normal; word-break:normal; }
-  .workspace-main-content :where(button, [role="button"]){ white-space:nowrap; flex-shrink:0; }
+  .workspace-main-content :where(button,a){ overflow-wrap:break-word; word-break:normal; }
+  .workspace-main-content :where(button, [role="button"]){ max-width:100%; }
+  .workspace-sidebar{ box-shadow: 10px 0 35px rgba(0,0,0,0.65); }
+}
+
+/* ChatGPT-style revised prompt accordion in chat */
+.chat-revised-prompt {
+  margin: 0.75rem 0;
+  border-radius: 0.625rem;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  background: rgba(245, 158, 11, 0.05);
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8125rem;
+  transition: all 0.2s ease;
+}
+.chat-revised-prompt summary {
+  cursor: pointer;
+  color: #fbbf24;
+  user-select: none;
+  font-weight: 500;
+  list-style-type: none;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+.chat-revised-prompt summary::-webkit-details-marker {
+  display: none;
+}
+.chat-revised-prompt blockquote {
+  margin-top: 0.5rem;
+  padding-left: 0.75rem;
+  border-left: 2px solid rgba(245, 158, 11, 0.4);
+  color: #d1d5db;
+  font-style: italic;
+  line-height: 1.5;
 }
 
 /* Ayatrisya chat: a quiet, editorial canvas for long-form work. */

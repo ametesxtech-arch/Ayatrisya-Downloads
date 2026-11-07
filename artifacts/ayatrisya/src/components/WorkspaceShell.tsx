@@ -195,15 +195,35 @@ function WorkspaceContent() {
     <div className="app-noise workspace-shell flex h-[100dvh] min-h-0 overflow-hidden bg-[#101116] text-slate-100" data-workspace-mode={prefs.workspaceMode}>
       <a href="#main" className="skip-link">Skip to content</a>
       {mobileOpen && <button aria-label="Close navigation overlay" tabIndex={-1} onClick={() => setMobileOpen(false)} className="fixed inset-0 z-30 bg-black/60 lg:hidden" />}
-      <aside ref={asideRef} onKeyDown={trap} onClickCapture={(e) => { if ((e.target as HTMLElement).closest('a[href]') && !confirmDiscard()) { e.preventDefault(); e.stopPropagation(); } }} role={isMobile && mobileOpen ? 'dialog' : undefined} aria-modal={isMobile && mobileOpen ? true : undefined} aria-label="Workspace navigation" className={cx('workspace-sidebar safe-t fixed inset-y-0 left-0 z-40 flex w-[270px] flex-col border-r border-white/[.065] bg-[#12141a] transition-[width,transform] duration-200 overflow-hidden lg:relative lg:translate-x-0', mobileOpen ? 'translate-x-0' : '-translate-x-full', effectiveCollapsed && 'lg:w-[72px]')}>
-        <div className={cx('flex h-[66px] items-center overflow-hidden transition-[padding]', effectiveCollapsed ? 'justify-center px-1' : 'justify-between px-4')}>
+      <aside
+        ref={asideRef}
+        onKeyDown={trap}
+        onClickCapture={(e) => { if ((e.target as HTMLElement).closest('a[href]') && !confirmDiscard()) { e.preventDefault(); e.stopPropagation(); } }}
+        role={isMobile && mobileOpen ? 'dialog' : undefined}
+        aria-modal={isMobile && mobileOpen ? true : undefined}
+        aria-label="Workspace navigation"
+        data-mobile-open={mobileOpen}
+        className={cx(
+          'workspace-sidebar safe-t flex flex-col border-r border-white/[.065] bg-[#12141a] overflow-x-hidden select-none',
+          isMobile
+            ? cx(
+                'fixed inset-y-0 left-0 z-50 w-[280px] max-w-[85vw] shadow-2xl transition-[transform,visibility] duration-250 ease-out',
+                mobileOpen ? 'translate-x-0 visible pointer-events-auto' : '-translate-x-full invisible pointer-events-none'
+              )
+            : cx(
+                'relative translate-x-0 transition-[width] duration-200',
+                effectiveCollapsed ? 'w-[72px]' : 'w-[270px]'
+              )
+        )}
+      >
+        <div className={cx('flex h-[66px] items-center overflow-hidden transition-[padding] shrink-0', effectiveCollapsed ? 'justify-center px-1' : 'justify-between px-4')}>
           {effectiveCollapsed ? (
             <IconButton label="Expand navigation" className="hidden lg:grid shrink-0 size-9" onClick={() => save({ sidebarCollapsed: false })}>
               <PanelLeftOpen size={17} />
             </IconButton>
           ) : (
             <>
-              <Link href="/workspace" onClick={() => setMobileOpen(false)} aria-label="Ayatrisya home" className="shrink-0 min-w-0 overflow-hidden"><Brand compact markOnly={effectiveCollapsed} /></Link>
+              <Link href="/workspace" onClick={() => setMobileOpen(false)} aria-label="Ayatrisya home" className="shrink-0 min-w-0 max-w-[190px] overflow-hidden"><Brand compact markOnly={effectiveCollapsed} /></Link>
               <button ref={closeBtn} aria-label="Close navigation" className="grid size-9 shrink-0 place-items-center rounded-lg text-slate-400 hover:bg-white/[.07] lg:hidden" onClick={() => setMobileOpen(false)}><X size={16} /></button>
               <IconButton label="Collapse navigation" className="hidden lg:grid shrink-0" onClick={() => save({ sidebarCollapsed: true })}><PanelLeftClose size={16} /></IconButton>
             </>

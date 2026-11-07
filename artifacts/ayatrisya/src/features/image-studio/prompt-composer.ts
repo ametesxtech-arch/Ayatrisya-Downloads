@@ -1,6 +1,7 @@
 import type { CharacterProfile, ImageStyleId } from './types';
 import { applyStylePreset, IMAGE_STYLE_PRESETS } from './styles';
 import { formatCharacterPromptSegment } from './character-profiles';
+import { enhancePromptLikeChatGPT } from '@/lib/chatgpt-prompt-engine';
 
 export interface PromptCompositionInput {
   userInput: string;
@@ -8,6 +9,7 @@ export interface PromptCompositionInput {
   character?: CharacterProfile;
   styleId?: ImageStyleId;
   customStyleModifier?: string;
+  enhanceWithChatGPT?: boolean;
 }
 
 export interface PromptCompositionResult {
@@ -78,11 +80,18 @@ export function composeConversationalPrompt(input: PromptCompositionInput): Prom
     input.customStyleModifier,
   );
 
+  let effectivePrompt = finalPrompt;
+  if (input.enhanceWithChatGPT) {
+    const enhanced = enhancePromptLikeChatGPT(finalPrompt, { style: effectiveStyleId });
+    effectivePrompt = enhanced.enhancedPrompt;
+    refinementSummary = refinementSummary || enhanced.enhancementSummary;
+  }
+
   const honestLimitationNote =
     'FLUX.1-schnell synthesizes a new composition from this refined description. Text-to-image models generate fresh diffusion samples and do not guarantee pixel-identical facial preservation.';
 
   return {
-    effectivePrompt: finalPrompt,
+    effectivePrompt,
     refinementSummary,
     detectedStyleOverride: styleMatch,
     honestLimitationNote,

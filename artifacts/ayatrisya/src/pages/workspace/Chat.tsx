@@ -35,6 +35,7 @@ import { hasModelConsent, grantModelConsent } from '@/lib/model-consent';
 import { hasCloudImageConsent } from '@/features/image-studio/consent';
 import { CloudImageConsentModal } from '@/features/image-studio/CloudImageConsentModal';
 import { detectImageRequest } from '@/lib/image-intent';
+import { enhancePromptLikeChatGPT } from '@/lib/chatgpt-prompt-engine';
 import { MemoryEngine } from '@/storage/memory-engine';
 import { KnowledgeBaseEngine } from '@/storage/knowledge-engine';
 import { AIMemorySummaryEngine } from '@/storage/ai-memory-summary-engine';
@@ -180,10 +181,14 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
     setBusy(true); setStreamFor(cid); setStream('🎨 Generating image with Ayatrisya Vision Engine...'); setError('');
 
     try {
+      // Automatic ChatGPT-style prompt expansion for ultra-high visual fidelity
+      const enhanced = enhancePromptLikeChatGPT(imgPrompt);
+      const promptToSend = enhanced.enhancedPrompt;
+
       const job = modelClient.submitJob({
         kind: 'asset',
         assetKind: 'image',
-        prompt: imgPrompt,
+        prompt: promptToSend,
         options: {
           model: prefs.model,
           format: 'PNG',
@@ -195,7 +200,12 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
       const file = new File([asset.blob], asset.fileName, { type: asset.blob.type });
       const saved = await repository.addFile(file, null, cid);
       const displayLabel = userFacingLabel || imgPrompt;
-      const outText = `Generated image for **"${displayLabel}"**:\n\n*Format: ${asset.blob.type === 'image/jpeg' ? 'JPEG' : 'PNG'} · Size: ${formatBytes(asset.blob.size)}*`;
+      const outText = `Generated image for **"${displayLabel}"**:\n\n` +
+        `<details className="chat-revised-prompt">\n` +
+        `<summary>✨ <b>Revised Prompt (ChatGPT Style)</b></summary>\n\n` +
+        `> *${enhanced.enhancedPrompt}*\n\n` +
+        `</details>\n\n` +
+        `*Format: ${asset.blob.type === 'image/jpeg' ? 'JPEG' : 'PNG'} · Size: ${formatBytes(asset.blob.size)}*`;
       if (!ac.signal.aborted) {
         await repository.addMessage(cid, outText, 'assistant', [saved.id]);
       }

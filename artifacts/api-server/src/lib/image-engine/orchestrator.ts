@@ -11,6 +11,7 @@ import { AyatrisyaImageModel, type ImageGenerationResult, type AyatrisyaImageCon
 import { HfImageProvider } from "./hf-provider";
 import { GeminiImageProvider } from "./gemini-provider";
 import { CloudflareImageProvider } from "./cloudflare-provider";
+import { enrichImagePrompt, DEFAULT_NEGATIVE_PROMPT } from "./prompt-enhancer";
 
 export interface StageAuditEntry {
   stage: 1 | 2 | 3 | 4;
@@ -42,11 +43,14 @@ export class ImageProviderOrchestrator {
    */
   async generateImage(config: AyatrisyaImageConfig): Promise<OrchestratedImageResult> {
     const stageAudit: StageAuditEntry[] = [];
-    const prompt = config.prompt?.trim();
+    const rawPrompt = config.prompt?.trim();
 
-    if (!prompt) {
+    if (!rawPrompt) {
       throw new Error("Image generation requires a non-empty prompt.");
     }
+
+    const prompt = enrichImagePrompt(rawPrompt);
+    const negativePrompt = config.negativePrompt || DEFAULT_NEGATIVE_PROMPT;
 
     // ==========================================
     // STAGE 1: AYATRISYA PROPRIETARY IMAGE MODEL
@@ -64,7 +68,7 @@ export class ImageProviderOrchestrator {
           durationMs: Date.now() - stage1Start,
         });
       } else {
-        const result = await this.ayatrisyaModel.generate(config);
+        const result = await this.ayatrisyaModel.generate({ ...config, prompt, negativePrompt });
         stageAudit.push({
           stage: 1,
           provider: "ayatrisya-own-model",
@@ -103,7 +107,7 @@ export class ImageProviderOrchestrator {
       } else {
         const result = await this.hfProvider.generate({
           prompt,
-          negativePrompt: config.negativePrompt,
+          negativePrompt,
           format: config.format,
         });
         stageAudit.push({
