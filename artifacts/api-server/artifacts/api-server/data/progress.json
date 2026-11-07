@@ -40,5 +40,19 @@
     "timeRemainingSeconds": 2400,
     "totalTimeSpentSeconds": 300,
     "updatedAt": "2026-11-07T17:07:20.778Z"
+  },
+  "student_101:exam_1794072420895_ozz4u": {
+    "assessmentId": "exam_1794072420895_ozz4u",
+    "userId": "student_101",
+    "currentQuestionIndex": 1,
+    "answers": {
+      "q1": "b"
+    },
+    "markedForReview": {
+      "q2": true
+    },
+    "timeRemainingSeconds": 2400,
+    "totalTimeSpentSeconds": 300,
+    "updatedAt": "2026-11-07T17:27:00.908Z"
   }
 }

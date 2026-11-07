@@ -111,7 +111,27 @@ export function classifyConversationIntent(
     };
   }
 
-  // 6. Artifact / Website / Application Creation
+  // 6. Presentation / Slide Deck (PPT, PPTX) Request
+  if (/\b(presentation|slides?|slide\s*deck|pitch\s*deck|ppt|pptx|powerpoint)\b/i.test(p)) {
+    return {
+      intent: "artifact_creation",
+      confidence: 0.95,
+      tags: ["artifact", "presentation", "slides", "pptx", "smartart"],
+      suggestedBlockType: "artifact",
+    };
+  }
+
+  // 7. Structured Document / PDF / DOCX Request
+  if (/\b(pdf|docx?|word\s*doc(ument)?|whitepaper|report|manual|handbook)\b/i.test(p)) {
+    return {
+      intent: "artifact_creation",
+      confidence: 0.95,
+      tags: ["artifact", "document", "pdf", "docx", "smartart"],
+      suggestedBlockType: "artifact",
+    };
+  }
+
+  // 8. Artifact / Website / Application Creation
   if (/\b(build|create|make|design)\s+(a\s+)?(website|web\s*page|landing\s*page|html|interactive\s*tool|canvas\s*project|app|dashboard)\b/i.test(p)) {
     return {
       intent: "artifact_creation",
@@ -121,7 +141,7 @@ export function classifyConversationIntent(
     };
   }
 
-  // 7. Code Generation
+  // 9. Code Generation
   if (/\b(write\s+code|implement|function|algorithm|typescript|python|javascript|react|rust|golang|sql|bug|fix\s+code)\b/i.test(p)) {
     return {
       intent: "code_generation",

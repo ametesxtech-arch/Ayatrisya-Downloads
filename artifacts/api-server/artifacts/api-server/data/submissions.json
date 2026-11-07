@@ -253,5 +253,90 @@
         "percent": 0
       }
     }
+  },
+  {
+    "assessmentId": "exam_1794072420974_vrolp",
+    "userId": "student_101",
+    "submittedAt": "2026-11-07T17:27:00.986Z",
+    "timeSpentSeconds": 1200,
+    "scorePercent": 75,
+    "isPassed": true,
+    "totalMarksObtained": 4,
+    "maxMarks": 6,
+    "totalQuestions": 4,
+    "correctCount": 3,
+    "incorrectCount": 1,
+    "unattemptedCount": 0,
+    "userAnswers": {
+      "q1": "b",
+      "q2": "a",
+      "q3": [
+        "a",
+        "b"
+      ],
+      "q4": {
+        "p1": "q(v x B)",
+        "p2": "E . A"
+      }
+    },
+    "questionResults": [
+      {
+        "questionId": "q1",
+        "isCorrect": true,
+        "userAnswer": "b",
+        "correctAnswer": "b",
+        "explanation": "The SI unit of magnetic flux is the weber (Wb). Tesla is the unit of magnetic flux density.",
+        "topic": "Electromagnetism"
+      },
+      {
+        "questionId": "q2",
+        "isCorrect": true,
+        "userAnswer": "a",
+        "correctAnswer": "a",
+        "explanation": "Transformers operate on Faraday's law of induction, which requires a time-varying magnetic flux. Direct current creates a steady magnetic field, resulting in zero induced EMF.",
+        "topic": "Electromagnetism"
+      },
+      {
+        "questionId": "q3",
+        "isCorrect": false,
+        "userAnswer": [
+          "a",
+          "b"
+        ],
+        "correctAnswer": [
+          "a",
+          "b",
+          "d"
+        ],
+        "explanation": "sin(x), |x|, and cos(x) are defined and continuous everywhere, including at x=0. 1/x has an essential discontinuity at x=0.",
+        "topic": "Calculus"
+      },
+      {
+        "questionId": "q4",
+        "isCorrect": true,
+        "userAnswer": {
+          "p1": "q(v x B)",
+          "p2": "E . A"
+        },
+        "correctAnswer": {
+          "p1": "q(v x B)",
+          "p2": "E . A"
+        },
+        "explanation": "Lorentz magnetic force is F = q(v x B) and electric flux is Phi = E . A.",
+        "topic": "Electromagnetism"
+      }
+    ],
+    "topicBreakdown": {
+      "Electromagnetism": {
+        "total": 3,
+        "correct": 3,
+        "percent": 100
+      },
+      "Calculus": {
+        "total": 1,
+        "correct": 0,
+        "percent": 0
+      }
+    }
   }
 ]

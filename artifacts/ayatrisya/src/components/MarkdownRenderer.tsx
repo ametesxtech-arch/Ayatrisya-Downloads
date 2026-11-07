@@ -157,7 +157,7 @@ export function CodeBlock({ children }: { children?: ReactNode }) {
       />
     );
   }
-  if (/^(presentation|slides|deck)$/i.test(langLower)) {
+  if (/^(presentation|slides|deck|ppt|pptx|powerpoint)$/i.test(langLower)) {
     return (
       <ArtifactBlockRenderer
         block={{
@@ -169,7 +169,7 @@ export function CodeBlock({ children }: { children?: ReactNode }) {
       />
     );
   }
-  if (/^(document|doc-preview|report)$/i.test(langLower)) {
+  if (/^(document|doc-preview|report|pdf|docx|word)$/i.test(langLower)) {
     return (
       <ArtifactBlockRenderer
         block={{

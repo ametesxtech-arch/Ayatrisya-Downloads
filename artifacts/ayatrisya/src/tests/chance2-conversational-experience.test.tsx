@@ -95,10 +95,55 @@ console.log(status);
       expect(html).toContain('Deck (2 slides)');
       expect(html).toContain('Executive Summary');
       expect(html).toContain('data-testid="artifact-presentation"');
+      expect(html).toContain('.PPTX');
+      expect(html).toContain('.PDF');
     });
 
-    it('renders structured document preview with markdown styling and download action', () => {
-      const docMarkdown = '# Engineering Manifesto\n\nQuality and reliability are first-order metrics.';
+    it('renders presentation deck with SmartArt KPI cards and curated pictures', () => {
+      const slidesWithSmartArtAndImage = JSON.stringify({
+        slides: [
+          {
+            title: 'Q3 Financial Highlights',
+            subtitle: 'Market Performance',
+            content: 'Strong enterprise ARR acceleration driven by our agentic platform adoption.',
+            bullets: ['Sub-35ms p99 response times', 'Zero reported security incidents'],
+            smartArt: {
+              type: 'kpi',
+              items: [
+                { label: 'Revenue Growth', value: '+340%', badge: 'Verified' },
+                { label: 'Enterprise Customers', value: '1,200+' },
+              ],
+            },
+            image: {
+              url: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71',
+              caption: 'Executive Dashboard Analytics',
+              source: 'Unsplash',
+            },
+            speakerNotes: 'Highlight the +340% YoY expansion during discussion.',
+          },
+        ],
+      });
+      const html = renderToStaticMarkup(
+        <ArtifactBlockRenderer
+          block={{
+            type: 'artifact',
+            artifactKind: 'presentation',
+            title: 'Q3 Financial Deck',
+            content: slidesWithSmartArtAndImage,
+          }}
+        />
+      );
+      expect(html).toContain('Q3 Financial Highlights');
+      expect(html).toContain('+340%');
+      expect(html).toContain('Revenue Growth');
+      expect(html).toContain('Executive Dashboard Analytics');
+      expect(html).toContain('Unsplash');
+      expect(html).toContain('.PPTX');
+      expect(html).toContain('.PDF');
+    });
+
+    it('renders structured document preview with markdown styling, SmartArt, and download actions', () => {
+      const docMarkdown = '# Engineering Manifesto\n\nQuality and reliability are first-order metrics.\n\n![Global Topology](https://images.unsplash.com/photo-1451187580459-43490279c0fa)\n*Figure 1: Global network topology*';
       const html = renderToStaticMarkup(
         <ArtifactBlockRenderer
           block={{
@@ -112,6 +157,8 @@ console.log(status);
       expect(html).toContain('Engineering Manifesto');
       expect(html).toContain('Quality and reliability are first-order metrics.');
       expect(html).toContain('data-testid="artifact-document"');
+      expect(html).toContain('.PDF');
+      expect(html).toContain('.DOCX');
     });
   });
 

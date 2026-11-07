@@ -42,6 +42,24 @@ describe("Conversational Orchestrator 2.0", () => {
       expect(res.intent).toBe("timetable_request");
     });
 
+    it("classifies presentation and PPT slide deck requests with SmartArt tags", () => {
+      const res = classifyConversationIntent("Make a 5-slide PPT presentation on Quantum Computing with SmartArt and pictures");
+      expect(res.intent).toBe("artifact_creation");
+      expect(res.suggestedBlockType).toBe("artifact");
+      expect(res.tags).toContain("presentation");
+      expect(res.tags).toContain("pptx");
+      expect(res.tags).toContain("smartart");
+    });
+
+    it("classifies PDF and DOCX document requests", () => {
+      const res = classifyConversationIntent("Generate a PDF whitepaper and DOCX document on climate technology");
+      expect(res.intent).toBe("artifact_creation");
+      expect(res.suggestedBlockType).toBe("artifact");
+      expect(res.tags).toContain("document");
+      expect(res.tags).toContain("pdf");
+      expect(res.tags).toContain("docx");
+    });
+
     it("classifies general conversation naturally", () => {
       const res = classifyConversationIntent("Hello! Good evening, how are you doing?");
       expect(res.intent).toBe("general_conversation");
