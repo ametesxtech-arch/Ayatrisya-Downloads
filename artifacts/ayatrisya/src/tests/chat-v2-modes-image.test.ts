@@ -96,6 +96,45 @@ describe("Chat 2.0 - Image Intent Detection & Guardrails", () => {
     const res4 = detectImageRequest("paint a painting of a stormy ocean");
     expect(res4.isImageRequest).toBe(true);
     expect(res4.cleanPrompt).toBe("a stormy ocean");
+
+    const res5 = detectImageRequest("make image of cow");
+    expect(res5.isImageRequest).toBe(true);
+    expect(res5.cleanPrompt).toBe("cow");
+  });
+
+  it("detects conversational image follow-ups and synthesizes consistent prompts across turns", () => {
+    const history = [
+      { role: "user", content: "make image of cow" },
+      { role: "assistant", content: 'Generated image for **"cow"**:\n\n*Format: JPEG · Size: 744.4 KB*' },
+    ];
+
+    // Follow-up: "make that cow eating grass"
+    const followUp1 = detectImageRequest("make that cow eating grass", history);
+    expect(followUp1.isImageRequest).toBe(true);
+    expect(followUp1.isFollowUp).toBe(true);
+    expect(followUp1.previousSubject).toBe("cow");
+    expect(followUp1.cleanPrompt).toContain("exact same cow from the previous image");
+    expect(followUp1.cleanPrompt).toContain("actively eating grass");
+    expect(followUp1.cleanPrompt).toContain("consistent character continuity");
+
+    // Follow-up: "make it at night"
+    const followUp2 = detectImageRequest("make it at night", history);
+    expect(followUp2.isImageRequest).toBe(true);
+    expect(followUp2.isFollowUp).toBe(true);
+    expect(followUp2.cleanPrompt).toContain("exact same cow from the previous image");
+    expect(followUp2.cleanPrompt).toContain("at night");
+
+    // Follow-up: "put sunglasses on it"
+    const followUp3 = detectImageRequest("put sunglasses on it", history);
+    expect(followUp3.isImageRequest).toBe(true);
+    expect(followUp3.isFollowUp).toBe(true);
+    expect(followUp3.cleanPrompt).toContain("sunglasses");
+
+    // Follow-up: "change the background to snowy mountains"
+    const followUp4 = detectImageRequest("change the background to snowy mountains", history);
+    expect(followUp4.isImageRequest).toBe(true);
+    expect(followUp4.isFollowUp).toBe(true);
+    expect(followUp4.cleanPrompt).toContain("snowy mountains");
   });
 
   it("strictly guards against ordinary text queries mentioning image words", () => {

@@ -250,7 +250,7 @@ export function SpeechToSpeechModal({
 
         {/* Honest architecture badge */}
         <div className="mt-2.5 flex items-center gap-1.5 rounded-full border border-teal-500/20 bg-teal-500/5 px-3 py-1 text-[11px] text-teal-300/80">
-          <span>Pipeline: STT &rarr; {prefs.model === 'v1-fast' ? 'Cloudflare V1 Fast' : 'Ayatrisya V2'} &rarr; TTS</span>
+          <span>Pipeline: STT &rarr; {prefs.model === 'v1-fast' ? 'Ayatrisya V1 Fast' : 'Ayatrisya V2'} &rarr; TTS</span>
         </div>
 
         {/* Central Dynamic Visualizer State */}

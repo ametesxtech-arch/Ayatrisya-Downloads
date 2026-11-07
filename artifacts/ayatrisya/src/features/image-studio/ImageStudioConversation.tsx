@@ -338,11 +338,11 @@ export function ImageStudioConversation({
         ) : capable ? (
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="font-semibold text-teal-200">Ayatrisya 4-Stage Image Generation Engine Active</span>
-            <span className="text-xs text-slate-400">Sequence: 1. Proprietary Model → 2. Hugging Face → 3. Gemini → 4. Cloudflare</span>
+            <span className="text-xs text-slate-400">Sequence: 1. Proprietary Model → 2. Hugging Face → 3. Gemini → 4. Ayatrisya Vision Engine</span>
           </div>
         ) : (
           <span className="text-rose-200">
-            No image generation model is connected. Configure Ayatrisya Image Model, Hugging Face, Gemini, or Cloudflare credentials on your API server.
+            No image generation model is connected. Configure Ayatrisya Image Model, Hugging Face, Gemini, or Vision Engine credentials on your API server.
           </span>
         )}
         {isLimitedGuest && (
@@ -453,7 +453,7 @@ export function ImageStudioConversation({
           <div className="flex items-end">
             <div className="text-[11px] leading-tight">
               <span className="font-semibold text-teal-300">4-Stage Pipeline</span>
-              <span className="text-slate-500 block text-[10px]">Proprietary → HF → Gemini → Cloudflare</span>
+              <span className="text-slate-500 block text-[10px]">Proprietary → HF → Gemini → Vision Engine</span>
             </div>
           </div>
         </div>
@@ -548,7 +548,7 @@ export function ImageStudioConversation({
                     <Sparkles size={28} className="mx-auto text-amber-300 animate-spin" />
                     <h4 className="mt-3 text-sm font-semibold text-slate-200">Generating image…</h4>
                     <p className="mt-1 text-xs text-slate-400">
-                      Processing with Cloudflare Workers AI FLUX.1-schnell model.
+                      Processing with Ayatrisya FLUX Vision Engine model.
                     </p>
                   </div>
                 )}
@@ -605,7 +605,7 @@ export function ImageStudioConversation({
                             </span>
                           ) : (
                             <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 text-[10px] font-semibold text-amber-300">
-                              Cloudflare Workers AI
+                              Ayatrisya Vision Engine
                             </span>
                           )}
 

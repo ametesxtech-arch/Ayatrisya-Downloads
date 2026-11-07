@@ -133,8 +133,8 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
     }
   };
 
-  /** Executes image generation through Cloudflare Workers AI with consent verification */
-  async function executeImageGeneration(cid: string, imgPrompt: string) {
+  /** Executes image generation through Ayatrisya Vision Engine with consent verification */
+  async function executeImageGeneration(cid: string, imgPrompt: string, userFacingLabel?: string) {
     if (!hasCloudImageConsent()) {
       setPendingImageGen({ cid, prompt: imgPrompt });
       setShowImageConsent(true);
@@ -145,7 +145,7 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
     runningRef.current = true;
     const ac = new AbortController();
     abortRef.current = ac;
-    setBusy(true); setStreamFor(cid); setStream('🎨 Generating image with Cloudflare Workers AI...'); setError('');
+    setBusy(true); setStreamFor(cid); setStream('🎨 Generating image with Ayatrisya Vision Engine...'); setError('');
 
     try {
       const job = modelClient.submitJob({
@@ -162,7 +162,8 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
       const asset = await job.result;
       const file = new File([asset.blob], asset.fileName, { type: asset.blob.type });
       const saved = await repository.addFile(file, null, cid);
-      const outText = `Generated image for **"${imgPrompt}"**:\n\n*Format: ${asset.blob.type === 'image/jpeg' ? 'JPEG' : 'PNG'} · Size: ${formatBytes(asset.blob.size)}*`;
+      const displayLabel = userFacingLabel || imgPrompt;
+      const outText = `Generated image for **"${displayLabel}"**:\n\n*Format: ${asset.blob.type === 'image/jpeg' ? 'JPEG' : 'PNG'} · Size: ${formatBytes(asset.blob.size)}*`;
       if (!ac.signal.aborted) {
         await repository.addMessage(cid, outText, 'assistant', [saved.id]);
       }
@@ -179,10 +180,10 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
     if (runningRef.current) return;
     const latestTurn = history[history.length - 1];
 
-    // Detect explicit (/image) or natural language image generation intent
-    const imageIntent = latestTurn?.content ? detectImageRequest(latestTurn.content) : null;
+    // Detect explicit (/image), natural language, or multi-turn conversational follow-up image requests
+    const imageIntent = latestTurn?.content ? detectImageRequest(latestTurn.content, history.slice(0, -1)) : null;
     if (imageIntent && imageIntent.isImageRequest) {
-      await executeImageGeneration(cid, imageIntent.cleanPrompt);
+      await executeImageGeneration(cid, imageIntent.cleanPrompt, imageIntent.userFacingLabel);
       return;
     }
 
@@ -444,14 +445,14 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
       setText(''); setFiles([]);
       if (!id) goto(`/workspace/chat/${cid}`);
 
-      // Check if this is an image request
-      const imageIntent = detectImageRequest(content);
+      // Check if this is an image request (including conversational continuations)
+      const imageIntent = detectImageRequest(content, list);
       if (imageIntent.isImageRequest) {
         if (!hasCloudImageConsent()) {
           setPendingImageGen({ cid, prompt: imageIntent.cleanPrompt });
           setShowImageConsent(true);
         } else {
-          void executeImageGeneration(cid, imageIntent.cleanPrompt);
+          void executeImageGeneration(cid, imageIntent.cleanPrompt, imageIntent.userFacingLabel);
         }
         return;
       }

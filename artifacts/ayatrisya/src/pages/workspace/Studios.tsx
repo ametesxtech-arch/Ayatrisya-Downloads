@@ -336,7 +336,7 @@ function GenerativeStudio({ kind, notify, guestLimited }: { kind: Exclude<Kind, 
   }
 
   return <div className="mx-auto max-w-[1000px] p-4 sm:p-8">
-    <PageHeading eyebrow={m.eyebrow} title={m.title} description={kind === 'image' ? `Generate and export images powered by Cloudflare Workers AI in the cloud or local engines on Desktop.` : `Generate and manage ${m.noun} files with an Ayatrisya-owned model. No third-party inference API is used.`} />
+    <PageHeading eyebrow={m.eyebrow} title={m.title} description={kind === 'image' ? `Generate and export images powered by Ayatrisya Vision Engine in the cloud or local engines on Desktop.` : `Generate and manage ${m.noun} files with an Ayatrisya-owned model. No third-party inference API is used.`} />
     <div role="status" className="mb-5 rounded-xl border border-amber-300/15 bg-amber-300/[.04] p-4 text-sm text-amber-100/90" data-testid={`status-${kind}`}>
         {loading ? 'Checking model status…' : (kind === '3d' && !isDesktop) ? (
           <div>
@@ -344,7 +344,7 @@ function GenerativeStudio({ kind, notify, guestLimited }: { kind: Exclude<Kind, 
             <p className="mt-1 text-xs text-amber-200/80">Cloud 3D generation is disabled to avoid nonfunctional requests. You can still import, inspect, and view local 3D models in the browser below, or switch to the Desktop application for local 3D generation.</p>
             <Link href="/workspace/storage" className="mt-2 inline-block text-xs font-semibold underline text-amber-200 hover:text-white">Review Desktop status & backup</Link>
           </div>
-        ) : capable ? (kind === 'image' ? 'Ayatrisya 4-Stage Image Generation Engine is active (Proprietary → HF → Gemini → Cloudflare).' : `Your Ayatrisya endpoint reports ${m.modality} generation. Prompts are sent only after you approve each request.`) : (kind === 'image' ? 'No image generation model is connected. Ensure Ayatrisya Image Model, Hugging Face, Gemini, or Cloudflare credentials are configured on your API server.' : `No Ayatrisya ${m.noun.endsWith('model') ? m.noun : `${m.noun} model`} is connected. Generation is unavailable until your own endpoint reports this capability.`)}
+        ) : capable ? (kind === 'image' ? 'Ayatrisya 4-Stage Image Generation Engine is active (Proprietary → HF → Gemini → Vision Engine).' : `Your Ayatrisya endpoint reports ${m.modality} generation. Prompts are sent only after you approve each request.`) : (kind === 'image' ? 'No image generation model is connected. Ensure Ayatrisya Image Model, Hugging Face, Gemini, or Vision Engine credentials are configured on your API server.' : `No Ayatrisya ${m.noun.endsWith('model') ? m.noun : `${m.noun} model`} is connected. Generation is unavailable until your own endpoint reports this capability.`)}
         {isLimitedGuest && <span className="mt-2 block" data-testid="status-guest-image-quota">{guestImagesRemaining} of {GUEST_IMAGE_LIMIT} guest image generations remaining in this browser.</span>}
     </div>
     <div className="grid gap-5 md:grid-cols-[1fr_1fr]">
@@ -391,7 +391,7 @@ function GenerativeStudio({ kind, notify, guestLimited }: { kind: Exclude<Kind, 
             <Sparkles size={24} className="mx-auto text-amber-300 animate-spin" />
             <h3 className="mt-3 text-sm font-medium text-slate-200">Generating {m.noun}…</h3>
             <p className="mt-1 text-xs text-slate-500">
-              {kind === 'image' ? 'Generating image with Cloudflare Workers AI…' : 'Communicating with your configured Ayatrisya model endpoint.'}
+              {kind === 'image' ? 'Generating image with Ayatrisya Vision Engine…' : 'Communicating with your configured Ayatrisya model endpoint.'}
             </p>
           </div>
         )}
@@ -440,7 +440,7 @@ function GenerativeStudio({ kind, notify, guestLimited }: { kind: Exclude<Kind, 
       </div>
       <p className="text-sm leading-6 text-slate-400">
         {kind === 'image'
-          ? 'Ayatrisya sends this prompt and generation settings securely to Cloudflare Workers AI for cloud image generation. No other data or chat history is shared. Review the prompt before sending.'
+          ? 'Ayatrisya sends this prompt and generation settings securely to the Ayatrisya Vision Engine for cloud image generation. No other data or chat history is shared. Review the prompt before sending.'
           : 'Ayatrisya sends this prompt and generation settings to your configured Ayatrisya model server. No image, 3D, or music vendor API is used. Review the prompt before sending.'}
       </p>
       <div className="mt-3 rounded-lg border border-white/[.07] bg-black/10 p-3 text-xs leading-5 text-slate-300"><p className="whitespace-pre-wrap">{prompt.trim()}</p><p className="mt-2 text-slate-500">Model: {prefs.model} · Format: {fmt}{kind === 'image' ? ` · ${dimsFor(ratio, base)} · ${ratio}` : ''}{kind === 'music' ? ` · ${duration} seconds` : ''}</p></div>

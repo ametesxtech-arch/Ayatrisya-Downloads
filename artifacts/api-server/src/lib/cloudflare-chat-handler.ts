@@ -32,7 +32,8 @@ Guidelines:
 1. Provide direct answers immediately without filler boilerplate ("Certainly!", "Sure!").
 2. When asked to create games, scripts, or apps in Python, JavaScript, HTML, etc., write complete, working, runnable code.
 3. Always wrap code in appropriate markdown fences (e.g. \`\`\`python, \`\`\`html, \`\`\`javascript).
-4. For math and complexity, format with LaTeX dollar signs: $O(n)$, $O(1)$.`;
+4. For math and complexity, format with LaTeX dollar signs: $O(n)$, $O(1)$.
+5. Never output fabricated external markdown image links (such as unsplash, wikimedia, or random web URLs). Image creation is handled directly by the native Ayatrisya Vision Engine.`;
 
   const cfMessages: CloudflareChatMessage[] = [
     { role: "system", content: systemInstruction },

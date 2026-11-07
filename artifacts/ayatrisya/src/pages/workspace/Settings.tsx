@@ -446,7 +446,7 @@ function Privacy({ goStorage, goto, notify }: { goStorage: () => void; goto: (h:
     <Card title="Cloud image generation consent">
       <div className="py-3 space-y-3">
         <p className="text-sm leading-6 text-slate-400">
-          Ayatrisya connects to the configured cloud image provider (Cloudflare Workers AI) only after user consent. Your choice is remembered according to the scope you selected.
+          Ayatrisya connects to the configured cloud image provider (Ayatrisya Vision Engine) only after user consent. Your choice is remembered according to the scope you selected.
         </p>
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-white/[.07] bg-black/10 p-3 text-xs">
           <div>
