@@ -2,6 +2,10 @@ import * as React from 'react';
 import { Slot } from '@radix-ui/react-slot';
 import { cn } from '@/lib/utils';
 import { cva, type VariantProps } from 'class-variance-authority';
+import {
+  SoapBubbleButton,
+  SoapBubbleIconButton,
+} from '@/components/soap-bubble';
 
 const buttonVariants = cva(
   'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0' +
@@ -25,6 +29,8 @@ const buttonVariants = cva(
         // @replit no hover, transparent border
         ghost: 'border border-transparent',
         link: 'text-primary underline-offset-4 hover:underline',
+        bubble: 'soap-bubble-button bg-transparent text-white border-0 shadow-none hover:shadow-lg transition-all',
+        'bubble-icon': 'soap-bubble-icon-button bg-transparent text-white border-0 shadow-none hover:shadow-lg transition-all',
       },
       size: {
         // @replit changed sizes
@@ -49,6 +55,28 @@ export interface ButtonProps
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, ...props }, ref) => {
+    if (variant === 'bubble' && !asChild) {
+      return (
+        <SoapBubbleButton
+          className={cn(buttonVariants({ variant, size, className }))}
+          ref={ref}
+          {...(props as any)}
+        />
+      );
+    }
+    if (variant === 'bubble-icon' && !asChild) {
+      return (
+        <SoapBubbleIconButton
+          aria-label={
+            (props['aria-label'] as string) ||
+            (typeof props.title === 'string' ? props.title : 'Action')
+          }
+          className={cn(buttonVariants({ variant, size, className }))}
+          ref={ref}
+          {...(props as any)}
+        />
+      );
+    }
     const Comp = asChild ? Slot : 'button';
     return (
       <Comp
@@ -61,4 +89,12 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 );
 Button.displayName = 'Button';
 
-export { Button, buttonVariants };
+export {
+  Button,
+  buttonVariants,
+  SoapBubbleButton,
+  SoapBubbleIconButton,
+  SoapBubbleButton as BubbleButton,
+  SoapBubbleIconButton as BubbleIconButton,
+};
+

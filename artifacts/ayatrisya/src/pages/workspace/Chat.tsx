@@ -546,7 +546,7 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
               <span className="hidden sm:inline">Canvas IDE</span>
               <ExternalLink size={10} className="text-slate-400 ml-0.5 hidden sm:inline" />
             </Button>
-            <Button variant="quiet" onClick={openSts} data-testid="button-header-sts" title="Start real-time Voice Conversation" className="whitespace-nowrap text-xs h-7 px-2">
+            <Button variant="bubble" onClick={openSts} data-testid="button-header-sts" title="Start real-time Voice Conversation" className="whitespace-nowrap text-xs h-7 px-2.5">
               <Radio size={13} className="text-violet-300 animate-pulse" />
               <span className="hidden sm:inline">Voice</span>
             </Button>

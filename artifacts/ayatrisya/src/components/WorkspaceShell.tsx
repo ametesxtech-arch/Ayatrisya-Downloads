@@ -210,7 +210,7 @@ function WorkspaceContent() {
           )}
         </div>
         <div className="px-3">
-          <Button className={cx('w-full', effectiveCollapsed ? 'justify-center px-0' : 'justify-start')} onClick={() => void newChat()} disabled={creating} data-testid="button-new-chat"><Plus size={16} />{!effectiveCollapsed && 'New chat'}</Button>
+          <Button variant="bubble" className={cx('w-full', effectiveCollapsed ? 'justify-center px-0' : 'justify-start')} onClick={() => void newChat()} disabled={creating} data-testid="button-new-chat"><Plus size={16} />{!effectiveCollapsed && 'New chat'}</Button>
           <button onClick={() => setDialog('palette')} aria-label="Search workspace" className={cx('mt-2 flex h-10 w-full items-center gap-3 rounded-lg px-3 text-xs text-slate-400 hover:bg-white/[.05] hover:text-white', effectiveCollapsed && 'justify-center px-0')}>
             <Search size={16} />{!effectiveCollapsed && <>Search workspace<span className="ml-auto rounded border border-white/[.08] px-1.5 py-0.5 text-[9px]">Ctrl K</span></>}
           </button>

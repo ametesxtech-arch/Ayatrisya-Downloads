@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { useCanvas, CanvasProvider, useOptionalCanvas } from '@/components/canvas/CanvasContext';
 import { CanvasBackground } from '@/components/canvas/CanvasBackground';
+import { SoapBubbleButton } from '@/components/soap-bubble';
 import { usePrefs } from '@/hooks/use-prefs';
 import { useDesktopRuntime } from '@/desktop/use-runtime';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -624,15 +625,15 @@ Return ONLY the complete updated file content without markdown code fences or co
           </button>
 
           {/* AI Generate Project Modal Trigger */}
-          <button
+          <SoapBubbleButton
             type="button"
             onClick={() => setShowAiModal(true)}
-            className="shrink-0 whitespace-nowrap min-w-max flex items-center gap-1 sm:gap-1.5 rounded-lg border border-violet-500/40 bg-violet-500/15 px-2.5 sm:px-3 py-1 text-xs font-medium text-violet-200 hover:bg-violet-500/25 transition shadow-sm"
+            className="shrink-0 whitespace-nowrap min-w-max flex items-center gap-1 sm:gap-1.5 px-3 py-1 text-xs font-medium text-violet-200 transition shadow-sm"
             title="Generate whole project or game with AI"
           >
             <Sparkles size={12} />
             <span className="hidden sm:inline">AI Generate</span>
-          </button>
+          </SoapBubbleButton>
 
           {/* Export Project */}
           <button
@@ -947,15 +948,15 @@ Return ONLY the complete updated file content without markdown code fences or co
                     </button>
 
                     {/* Full Screen Preview Button */}
-                    <button
+                    <SoapBubbleButton
                       type="button"
                       onClick={() => setIsFullscreenPreview(true)}
-                      className="flex items-center gap-1 rounded bg-violet-500/15 border border-violet-500/30 px-2 py-0.5 text-xs font-medium text-violet-200 hover:bg-violet-500/25 transition shadow-sm"
+                      className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-violet-200 transition shadow-sm"
                       title="Full Screen Preview"
                     >
                       <Maximize2 size={12} />
                       <span className="hidden sm:inline">Full Screen</span>
-                    </button>
+                    </SoapBubbleButton>
                   </div>
                 </div>
 
