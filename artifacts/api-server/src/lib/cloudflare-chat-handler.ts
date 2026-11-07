@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import { isCloudflareConfigured } from "./cloudflare-image";
 import { streamCloudflareChat, type CloudflareChatMessage } from "./cloudflare-chat";
+import { searchInternet, shouldSearchInternet, formatSourcesSection, type SearchResult } from "./web-search";
 
 export async function handleCloudflareChatFallback(
   req: Request,
@@ -18,6 +19,23 @@ export async function handleCloudflareChatFallback(
   if (!isCloudflareConfigured()) return false;
 
   const { messages: history, mode, stream } = chatData;
+  const lastUserMsg = [...history].reverse().find((m) => m.role === "user")?.content ?? "";
+  let webSearchContext = "";
+  let gatheredSources: SearchResult[] = [];
+
+  if (shouldSearchInternet(lastUserMsg)) {
+    try {
+      const searchResults = await searchInternet(lastUserMsg, 5);
+      if (searchResults.length > 0) {
+        gatheredSources = searchResults;
+        webSearchContext = "\n\nLive Internet Search Results:\n" +
+          searchResults.map((r, i) => `[${i + 1}] "${r.title}": ${r.snippet} (Source: ${r.link})`).join("\n") +
+          "\n\nCRITICAL INSTRUCTION FOR SOURCES CITATION:\n" +
+          "Use the live web search results above to provide accurate, up-to-date facts. At the very end of your response, you MUST ALWAYS provide a dedicated '### 🌐 Sources & References' section with numbered markdown links to all consulted sources.";
+      }
+    } catch {}
+  }
+
   const toneInstruction =
     mode === "Savage"
       ? "Savage Mode: Be razor-sharp, brilliantly sarcastic, roast-level witty, but deliver excellent solutions."
@@ -26,7 +44,7 @@ export async function handleCloudflareChatFallback(
         : "Normal Mode: Be articulate, deeply helpful, clear, and direct.";
 
   const systemInstruction = `You are Ayatrisya AI, a powerful, lightning-fast intelligent reasoning, coding, and creative assistant built by Ametesx.
-Tone: ${toneInstruction}
+Tone: ${toneInstruction}${webSearchContext}
 
 Guidelines:
 1. Provide direct answers immediately without filler boilerplate ("Certainly!", "Sure!").
@@ -69,6 +87,7 @@ Guidelines:
       const reader = cfRes.body.getReader();
       const decoder = new TextDecoder("utf-8");
       let buffer = "";
+      let fullStreamOutput = "";
 
       while (true) {
         const { value, done } = await reader.read();
@@ -85,6 +104,7 @@ Guidelines:
               const parsed = JSON.parse(trimmed.slice(5).trim());
               const token = parsed.response || parsed.choices?.[0]?.delta?.content || "";
               if (token) {
+                fullStreamOutput += token;
                 if (isNdjson) {
                   res.write(`${JSON.stringify({ token })}\n`);
                 } else {
@@ -92,6 +112,20 @@ Guidelines:
                 }
               }
             } catch {}
+          }
+        }
+      }
+
+      // Ensure sources are cited at the end if web search was performed
+      if (gatheredSources.length > 0) {
+        const hasSourcesSection = /###\s*(🌐\s*)?(sources|references)/i.test(fullStreamOutput) ||
+          gatheredSources.some((s) => fullStreamOutput.includes(s.link));
+        if (!hasSourcesSection) {
+          const sourcesBlock = formatSourcesSection(gatheredSources);
+          if (isNdjson) {
+            res.write(`${JSON.stringify({ token: sourcesBlock })}\n`);
+          } else {
+            res.write(`data: ${JSON.stringify({ token: sourcesBlock })}\n\n`);
           }
         }
       }
@@ -105,10 +139,19 @@ Guidelines:
       return true;
     } else {
       const data = (await cfRes.json()) as any;
-      const text =
+      let text =
         data?.result?.response ||
         data?.result?.choices?.[0]?.message?.content ||
         "Ayatrisya AI generated response.";
+
+      // Ensure sources are cited at the end if web search was performed
+      if (gatheredSources.length > 0) {
+        const hasSourcesSection = /###\s*(🌐\s*)?(sources|references)/i.test(text) ||
+          gatheredSources.some((s) => text.includes(s.link));
+        if (!hasSourcesSection) {
+          text += formatSourcesSection(gatheredSources);
+        }
+      }
 
       res.status(200).set({
         "Cache-Control": "no-store",

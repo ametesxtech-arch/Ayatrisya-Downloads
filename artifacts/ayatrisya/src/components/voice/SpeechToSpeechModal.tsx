@@ -121,6 +121,7 @@ export function SpeechToSpeechModal({
       };
     } else {
       setAudioLevel(0.55);
+      return undefined;
     }
   }, [state]);
 
@@ -211,7 +212,7 @@ export function SpeechToSpeechModal({
     const isSearchIntent =
       /\b(search|google|find|lookup|who is|what is|where is|latest|recent|news|current|web|browse|weather|stock)\b/i.test(
         userPrompt,
-      ) || prefs.mode === 'research';
+      ) || (prefs.mode as string) === 'research';
 
     if (isSearchIntent) {
       setState('searching');

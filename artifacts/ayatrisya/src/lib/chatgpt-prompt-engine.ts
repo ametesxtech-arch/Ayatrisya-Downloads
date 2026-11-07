@@ -247,3 +247,4 @@ export function getNegativePromptForStyle(style?: string): string {
 
   return baseNegatives.join(', ');
 }
+

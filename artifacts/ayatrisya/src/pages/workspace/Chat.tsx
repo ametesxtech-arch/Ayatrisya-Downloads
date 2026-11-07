@@ -94,6 +94,7 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
   // Live Agent State Tracking (idle | thinking | listening | searching | speaking) for LiquidGlassOrb
   const [isTtsSpeaking, setIsTtsSpeaking] = useState(false);
   const [isVoiceListening, setIsVoiceListening] = useState(false);
+  const [pendingQuery, setPendingQuery] = useState('');
 
   useEffect(() => {
     const onTts = (e: any) => setIsTtsSpeaking(Boolean(e.detail?.isSpeaking));
@@ -107,13 +108,14 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
   }, []);
 
   const isSearchQuery = useMemo(() => {
+    const candidate = (pendingQuery || text || stream || '').trim().toLowerCase();
     return (
-      activeMode === 'Deep Research' ||
-      /\b(search|google|find|lookup|who is|what is|where is|latest|recent|news|current|web|browse|weather|stock)\b/i.test(
-        text || stream || '',
+      (activeMode as string) === 'Deep Research' ||
+      /\b(search(ed|ing)?|google|web|internet|find online|browse|lookup|who is|what is|where is|latest|recent|news|current|price|stock|weather|score|today)\b/i.test(
+        candidate
       )
     );
-  }, [activeMode, text, stream]);
+  }, [activeMode, pendingQuery, text, stream]);
 
   const chatAgentState: LiquidOrbState = useMemo(() => {
     if (isVoiceListening) return 'listening';
@@ -179,6 +181,7 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
     const ac = new AbortController();
     abortRef.current = ac;
     setBusy(true); setStreamFor(cid); setStream('🎨 Generating image with Ayatrisya Vision Engine...'); setError('');
+    setPendingQuery(imgPrompt);
 
     try {
       // Automatic ChatGPT-style prompt expansion for ultra-high visual fidelity
@@ -213,7 +216,7 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
     } catch (e) {
       setError(ac.signal.aborted ? 'Image generation stopped.' : errMsg(e, 'Image generation failed.'));
     } finally {
-      runningRef.current = false; setBusy(false); setStream(''); setStreamFor(null);
+      runningRef.current = false; setPendingQuery(''); setBusy(false); setStream(''); setStreamFor(null);
       abortRef.current = null; jobIdRef.current = null;
     }
   }
@@ -233,6 +236,7 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
     const ac = new AbortController();
     abortRef.current = ac; retryRef.current = { cid, history };
     streamRef.current = '';
+    setPendingQuery(latestTurn?.content || '');
     setBusy(true); setStreamFor(cid); setStream(''); setError('');
     try {
       // Retrieve relevant AI memories & structured memory summary (if memory is enabled)
@@ -327,13 +331,13 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
           };
           const extension = extMap[rawExt] || (rawExt.length <= 4 && rawExt !== 'code' ? rawExt : 'ts');
           const canvasFilename = `project-${Date.now().toString().slice(-4)}.${extension}`;
-          
+
           canvas.openCanvas({
             name: canvasFilename,
             content: code,
             language: rawExt !== 'code' && rawExt ? rawExt : 'typescript',
           });
-          
+
           // Automatically launch dedicated full-screen Canvas IDE tab
           window.open('/workspace/canvas', '_blank');
 
@@ -365,7 +369,7 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
       }
       setError(ac.signal.aborted ? 'Generation stopped. Partial response preserved.' : errMsg(e, 'The model request failed.'));
     }
-    finally { runningRef.current = false; setBusy(false); setStream(''); setStreamFor(null); abortRef.current = null; jobIdRef.current = null; }
+    finally { runningRef.current = false; setPendingQuery(''); setBusy(false); setStream(''); setStreamFor(null); abortRef.current = null; jobIdRef.current = null; }
   }
 
   function stop() {
@@ -434,7 +438,7 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
               dataBase64: base64,
               size: f.size,
             });
-          } catch {}
+          } catch { }
         } else if (f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf')) {
           try {
             const dataUrl = await new Promise<string>((resolve, reject) => {
@@ -450,7 +454,7 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
               dataBase64: base64,
               size: f.size,
             });
-          } catch {}
+          } catch { }
         } else if (
           f.type.startsWith('text/') ||
           /\.(txt|md|csv|json|ts|tsx|js|jsx|py|html|css|yaml|yml|xml|sql|rs|go|c|cpp|h)$/i.test(f.name)
@@ -468,7 +472,7 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
               textContent,
               size: f.size,
             });
-          } catch {}
+          } catch { }
         } else {
           msgAttachments.push({
             name: f.name,
@@ -555,15 +559,14 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
                     onClick={() => void setConversationMode(mode.id)}
                     title={`${mode.label} Mode: ${mode.desc}`}
                     data-testid={`mode-tab-${mode.id.toLowerCase()}`}
-                    className={`shrink-0 whitespace-nowrap min-w-max flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 text-xs font-medium rounded-md transition-all ${
-                      isSelected
+                    className={`shrink-0 whitespace-nowrap min-w-max flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 text-xs font-medium rounded-md transition-all ${isSelected
                         ? mode.id === 'Savage'
                           ? 'bg-rose-500/20 text-rose-300 shadow-sm border border-rose-500/30'
                           : mode.id === 'Joke'
                             ? 'bg-amber-500/20 text-amber-300 shadow-sm border border-amber-500/30'
                             : 'bg-violet-500/20 text-violet-200 shadow-sm border border-violet-500/30'
                         : 'text-slate-400 hover:text-slate-200 hover:bg-white/[.05]'
-                    }`}
+                      }`}
                   >
                     <Icon size={12} className={isSelected ? 'animate-pulse' : ''} />
                     <span className="shrink-0 whitespace-nowrap">{mode.label}</span>
@@ -659,118 +662,118 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
           <ul className="chat-message-list" aria-label="Conversation messages">
             {list.map((m, i) => <li key={m.id} className={`chat-message chat-message-${m.role}`} data-testid={`message-${m.id}`}>
               <div className="chat-message-inner">
-              <div className={`chat-avatar chat-avatar-${m.role}`} aria-hidden>{m.role === 'user' ? 'You' : <Sparkles size={15} />}</div>
-              <div className="chat-message-body">
-              <div className="chat-message-label flex items-center gap-2">
-                <span>{m.role === 'user' ? 'You' : 'Ayatrisya'}</span>
-                <span className="text-[10px] font-normal text-slate-500" data-testid={`message-timestamp-${m.id}`}>
-                  {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </span>
-              </div>
-              {editing?.id === m.id ? <div className="w-full"><label className="sr-only" htmlFor="edit-msg">Edit message</label><textarea id="edit-msg" data-testid="input-edit-message" data-autofocus value={editing.text} onChange={(e) => setEditing({ id: m.id, text: e.target.value })} className="chat-edit-area" />
-                <div className="mt-2 flex flex-wrap justify-end gap-2"><Button variant="outline" onClick={() => setEditing(null)} data-testid="button-cancel-edit">Cancel</Button><Button onClick={async () => { try { await repository.editMessage(m.id, editing.text); setEditing(null); } catch (e) { notify(errMsg(e)); } }} data-testid="button-save-edit">Save edit</Button><Button disabled={!available || busy || !editing.text.trim()} title={available ? undefined : 'Resubmitting needs a connected model'} onClick={() => setResubmit({ m, text: editing.text })} data-testid="button-resubmit-edit">{available ? 'Save and resubmit' : 'Resubmit unavailable'}</Button></div></div>
-                : <div className={m.role === 'user' ? 'chat-user-content' : 'chat-prose prose prose-invert prose-sm max-w-none'}>
-                    <MarkdownRenderer content={m.content} messageId={m.id} />
-
-                  {/* Render generated images and attachments */}
-                  {m.attachmentIds.length > 0 && <div className="mt-3 flex flex-col gap-2">
-                    {m.attachmentIds.map((a) => {
-                      const att = attMap.get(a);
-                      if (!att) return null;
-                      if (att.mimeType.startsWith('image/')) {
-                        const originatingPrompt = m.role === 'assistant' ? getPromptForAssistantMessage(i) : undefined;
-                        return (
-                          <ChatInlineImage
-                            key={a}
-                            attachment={att}
-                            promptText={originatingPrompt}
-                            onRegenerate={m.role === 'assistant' && originatingPrompt ? () => {
-                              void executeImageGeneration(id || conv.data?.id || 'current', originatingPrompt);
-                            } : undefined}
-                            onRefine={(refinePrefix) => {
-                              setText(refinePrefix);
-                              taRef.current?.focus();
-                            }}
-                            notify={notify}
-                          />
-                        );
-                      }
-                      return <AttachmentChip key={a} attachment={att} />;
-                    })}
-                  </div>}
-                </div>}
-              <div className="chat-message-actions flex flex-wrap items-center gap-1.5 min-h-[36px] mt-2 mb-1 text-slate-400">
-                {m.role === 'user' && lastUserUnanswered(m, i) && !busy && <span data-testid="status-not-sent">{available ? 'No reply recorded' : 'Saved locally, not sent to any model'}</span>}
-                {m.role === 'assistant' && <MessageTtsButton content={m.content} messageId={m.id} />}
-                
-                {/* Instant Docx / PDF / Zip Export for any AI message in chat */}
-                {m.role === 'assistant' && (
-                  <div className="flex items-center gap-1 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => downloadDocx(`Ayatrisya_${m.id.slice(0, 6)}`, m.content)}
-                      className="flex items-center gap-1 rounded border border-white/[.08] px-2 py-1 text-[11px] text-slate-300 hover:bg-white/[.07] hover:text-white shrink-0 whitespace-nowrap min-w-max transition-colors"
-                      title="Export as Word (.docx)"
-                      data-testid={`button-export-docx-${m.id}`}
-                    >
-                      <FileText size={12} className="text-blue-400 shrink-0" />
-                      <span>.docx</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => downloadPdf(`Ayatrisya_${m.id.slice(0, 6)}`, m.content)}
-                      className="flex items-center gap-1 rounded border border-white/[.08] px-2 py-1 text-[11px] text-slate-300 hover:bg-white/[.07] hover:text-white shrink-0 whitespace-nowrap min-w-max transition-colors"
-                      title="Export as PDF"
-                      data-testid={`button-export-pdf-${m.id}`}
-                    >
-                      <FileText size={12} className="text-red-400 shrink-0" />
-                      <span>.pdf</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => downloadZip(`Ayatrisya_${m.id.slice(0, 6)}`, [
-                        { path: `response-${m.id.slice(0, 6)}.md`, data: m.content }
-                      ])}
-                      className="flex items-center gap-1 rounded border border-white/[.08] px-2 py-1 text-[11px] text-slate-300 hover:bg-white/[.07] hover:text-white shrink-0 whitespace-nowrap min-w-max transition-colors"
-                      title="Export as .ZIP package"
-                      data-testid={`button-export-zip-${m.id}`}
-                    >
-                      <FileArchive size={12} className="text-amber-400 shrink-0" />
-                      <span>.zip</span>
-                    </button>
+                <div className={`chat-avatar chat-avatar-${m.role}`} aria-hidden>{m.role === 'user' ? 'You' : <Sparkles size={15} />}</div>
+                <div className="chat-message-body">
+                  <div className="chat-message-label flex items-center gap-2">
+                    <span>{m.role === 'user' ? 'You' : 'Ayatrisya'}</span>
+                    <span className="text-[10px] font-normal text-slate-500" data-testid={`message-timestamp-${m.id}`}>
+                      {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
                   </div>
-                )}
+                  {editing?.id === m.id ? <div className="w-full"><label className="sr-only" htmlFor="edit-msg">Edit message</label><textarea id="edit-msg" data-testid="input-edit-message" data-autofocus value={editing.text} onChange={(e) => setEditing({ id: m.id, text: e.target.value })} className="chat-edit-area" />
+                    <div className="mt-2 flex flex-wrap justify-end gap-2"><Button variant="outline" onClick={() => setEditing(null)} data-testid="button-cancel-edit">Cancel</Button><Button onClick={async () => { try { await repository.editMessage(m.id, editing.text); setEditing(null); } catch (e) { notify(errMsg(e)); } }} data-testid="button-save-edit">Save edit</Button><Button disabled={!available || busy || !editing.text.trim()} title={available ? undefined : 'Resubmitting needs a connected model'} onClick={() => setResubmit({ m, text: editing.text })} data-testid="button-resubmit-edit">{available ? 'Save and resubmit' : 'Resubmit unavailable'}</Button></div></div>
+                    : <div className={m.role === 'user' ? 'chat-user-content' : 'chat-prose prose prose-invert prose-sm max-w-none'}>
+                      <MarkdownRenderer content={m.content} messageId={m.id} />
 
-                <IconButton label={copied === m.id ? 'Copied' : 'Copy message'} onClick={() => navigator.clipboard.writeText(m.content).then(() => { setCopied(m.id); window.setTimeout(() => setCopied(null), 1600); }, () => notify('Copy was blocked by the browser.'))} className="shrink-0 size-8" data-testid={`button-copy-message-${m.id}`}>{copied === m.id ? <Check size={13} className="text-teal-300" /> : <Copy size={13} />}</IconButton>
-                {m.role === 'user' && <IconButton label="Edit message" onClick={() => setEditing({ id: m.id, text: m.content })} className="shrink-0 size-8" data-testid={`button-edit-message-${m.id}`}><Pencil size={13} /></IconButton>}
-                {m.role === 'assistant' && i === list.length - 1 && (
-                  <button
-                    type="button"
-                    disabled={!available || busy}
-                    title="Continue generation from where it stopped"
-                    aria-label="Continue generation"
-                    data-testid={`button-continue-generation`}
-                    onClick={() => {
-                      const history: Turn = [
-                        ...list.map((x) => ({ role: x.role, content: x.content })),
-                        { role: 'user', content: 'Please continue from where you left off.' }
-                      ];
-                      const go = async () => {
-                        void run(id!, history);
-                      };
-                      if (hasModelConsent() || consent) void go();
-                      else setAsk({ cid: id!, history, after: go });
-                    }}
-                    className="flex items-center gap-1.5 rounded-lg border border-teal-500/30 bg-teal-500/10 px-2.5 py-1 text-[11px] font-medium text-teal-300 hover:bg-teal-500/20 transition-colors disabled:opacity-40 shrink-0 whitespace-nowrap min-w-max"
-                  >
-                    <Play size={12} fill="currentColor" />
-                    <span>Continue</span>
-                  </button>
-                )}
-                {m.role === 'assistant' && i === list.length - 1 && <button type="button" disabled={!available || busy} title={available ? 'Regenerate this reply' : 'Regeneration needs a connected model'} aria-label={available ? 'Regenerate reply' : 'Regenerate unavailable: no model connected'} data-testid={`button-regenerate-${m.id}`} onClick={() => { const history: Turn = list.slice(0, i).map((x) => ({ role: x.role, content: x.content })); const go = async () => { try { await repository.deleteMessage(m.id); void run(id!, history); } catch (e) { notify(errMsg(e)); } }; if (hasModelConsent() || consent) void go(); else setAsk({ cid: id!, history, after: go }); }} className="grid size-8 place-items-center rounded-lg text-slate-400 hover:bg-white/[.07] hover:text-slate-100 transition-colors disabled:opacity-40 shrink-0"><RefreshCw size={13} /></button>}
-                <IconButton label="Delete message" onClick={() => setDelMsg(m)} className="shrink-0 size-8" data-testid={`button-delete-message-${m.id}`}>{copied === m.id ? <Check size={13} className="text-teal-300" /> : <Trash2 size={13} />}</IconButton>
-              </div>
-              </div></div>
+                      {/* Render generated images and attachments */}
+                      {m.attachmentIds.length > 0 && <div className="mt-3 flex flex-col gap-2">
+                        {m.attachmentIds.map((a) => {
+                          const att = attMap.get(a);
+                          if (!att) return null;
+                          if (att.mimeType.startsWith('image/')) {
+                            const originatingPrompt = m.role === 'assistant' ? getPromptForAssistantMessage(i) : undefined;
+                            return (
+                              <ChatInlineImage
+                                key={a}
+                                attachment={att}
+                                promptText={originatingPrompt}
+                                onRegenerate={m.role === 'assistant' && originatingPrompt ? () => {
+                                  void executeImageGeneration(id || conv.data?.id || 'current', originatingPrompt);
+                                } : undefined}
+                                onRefine={(refinePrefix) => {
+                                  setText(refinePrefix);
+                                  taRef.current?.focus();
+                                }}
+                                notify={notify}
+                              />
+                            );
+                          }
+                          return <AttachmentChip key={a} attachment={att} />;
+                        })}
+                      </div>}
+                    </div>}
+                  <div className="chat-message-actions flex flex-wrap items-center gap-1.5 min-h-[36px] mt-2 mb-1 text-slate-400">
+                    {m.role === 'user' && lastUserUnanswered(m, i) && !busy && <span data-testid="status-not-sent">{available ? 'No reply recorded' : 'Saved locally, not sent to any model'}</span>}
+                    {m.role === 'assistant' && <MessageTtsButton content={m.content} messageId={m.id} />}
+
+                    {/* Instant Docx / PDF / Zip Export for any AI message in chat */}
+                    {m.role === 'assistant' && (
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => downloadDocx(`Ayatrisya_${m.id.slice(0, 6)}`, m.content)}
+                          className="flex items-center gap-1 rounded border border-white/[.08] px-2 py-1 text-[11px] text-slate-300 hover:bg-white/[.07] hover:text-white shrink-0 whitespace-nowrap min-w-max transition-colors"
+                          title="Export as Word (.docx)"
+                          data-testid={`button-export-docx-${m.id}`}
+                        >
+                          <FileText size={12} className="text-blue-400 shrink-0" />
+                          <span>.docx</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => downloadPdf(`Ayatrisya_${m.id.slice(0, 6)}`, m.content)}
+                          className="flex items-center gap-1 rounded border border-white/[.08] px-2 py-1 text-[11px] text-slate-300 hover:bg-white/[.07] hover:text-white shrink-0 whitespace-nowrap min-w-max transition-colors"
+                          title="Export as PDF"
+                          data-testid={`button-export-pdf-${m.id}`}
+                        >
+                          <FileText size={12} className="text-red-400 shrink-0" />
+                          <span>.pdf</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => downloadZip(`Ayatrisya_${m.id.slice(0, 6)}`, [
+                            { path: `response-${m.id.slice(0, 6)}.md`, data: m.content }
+                          ])}
+                          className="flex items-center gap-1 rounded border border-white/[.08] px-2 py-1 text-[11px] text-slate-300 hover:bg-white/[.07] hover:text-white shrink-0 whitespace-nowrap min-w-max transition-colors"
+                          title="Export as .ZIP package"
+                          data-testid={`button-export-zip-${m.id}`}
+                        >
+                          <FileArchive size={12} className="text-amber-400 shrink-0" />
+                          <span>.zip</span>
+                        </button>
+                      </div>
+                    )}
+
+                    <IconButton label={copied === m.id ? 'Copied' : 'Copy message'} onClick={() => navigator.clipboard.writeText(m.content).then(() => { setCopied(m.id); window.setTimeout(() => setCopied(null), 1600); }, () => notify('Copy was blocked by the browser.'))} className="shrink-0 size-8" data-testid={`button-copy-message-${m.id}`}>{copied === m.id ? <Check size={13} className="text-teal-300" /> : <Copy size={13} />}</IconButton>
+                    {m.role === 'user' && <IconButton label="Edit message" onClick={() => setEditing({ id: m.id, text: m.content })} className="shrink-0 size-8" data-testid={`button-edit-message-${m.id}`}><Pencil size={13} /></IconButton>}
+                    {m.role === 'assistant' && i === list.length - 1 && (
+                      <button
+                        type="button"
+                        disabled={!available || busy}
+                        title="Continue generation from where it stopped"
+                        aria-label="Continue generation"
+                        data-testid={`button-continue-generation`}
+                        onClick={() => {
+                          const history: Turn = [
+                            ...list.map((x) => ({ role: x.role, content: x.content })),
+                            { role: 'user', content: 'Please continue from where you left off.' }
+                          ];
+                          const go = async () => {
+                            void run(id!, history);
+                          };
+                          if (hasModelConsent() || consent) void go();
+                          else setAsk({ cid: id!, history, after: go });
+                        }}
+                        className="flex items-center gap-1.5 rounded-lg border border-teal-500/30 bg-teal-500/10 px-2.5 py-1 text-[11px] font-medium text-teal-300 hover:bg-teal-500/20 transition-colors disabled:opacity-40 shrink-0 whitespace-nowrap min-w-max"
+                      >
+                        <Play size={12} fill="currentColor" />
+                        <span>Continue</span>
+                      </button>
+                    )}
+                    {m.role === 'assistant' && i === list.length - 1 && <button type="button" disabled={!available || busy} title={available ? 'Regenerate this reply' : 'Regeneration needs a connected model'} aria-label={available ? 'Regenerate reply' : 'Regenerate unavailable: no model connected'} data-testid={`button-regenerate-${m.id}`} onClick={() => { const history: Turn = list.slice(0, i).map((x) => ({ role: x.role, content: x.content })); const go = async () => { try { await repository.deleteMessage(m.id); void run(id!, history); } catch (e) { notify(errMsg(e)); } }; if (hasModelConsent() || consent) void go(); else setAsk({ cid: id!, history, after: go }); }} className="grid size-8 place-items-center rounded-lg text-slate-400 hover:bg-white/[.07] hover:text-slate-100 transition-colors disabled:opacity-40 shrink-0"><RefreshCw size={13} /></button>}
+                    <IconButton label="Delete message" onClick={() => setDelMsg(m)} className="shrink-0 size-8" data-testid={`button-delete-message-${m.id}`}>{copied === m.id ? <Check size={13} className="text-teal-300" /> : <Trash2 size={13} />}</IconButton>
+                  </div>
+                </div></div>
             </li>)}
             {streamFor === id && busy && (
               <li className="chat-message chat-message-assistant" data-testid="status-generation">
@@ -785,18 +788,37 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
                       </span>
                     </div>
                     <div className="chat-prose prose prose-invert prose-sm max-w-none" aria-live="polite">
+                      {isSearchQuery && (
+                        <div className="mb-3 flex items-center gap-3 px-3 py-2 rounded-xl bg-teal-500/[.08] border border-teal-400/20 text-xs text-teal-300">
+                          <LiquidOrbAgent state="searching" size={38} interactive={false} />
+                          <div className="min-w-0">
+                            <span className="font-semibold text-slate-100 flex items-center gap-1.5">
+                              <span>🌐 Web Search Active</span>
+                              {busy && <span className="size-1.5 rounded-full bg-teal-400 animate-ping inline-block" />}
+                            </span>
+                            <span className="text-[11px] text-slate-400 block truncate">Searching internet sources and citing verified references</span>
+                          </div>
+                        </div>
+                      )}
                       {stream ? (
                         <MarkdownRenderer content={stream} messageId="streaming" isStreaming={busy} />
                       ) : (
-                        <div className="my-2 flex items-center gap-4 p-3 rounded-2xl bg-white/[.03] border border-white/[.06]">
-                          <LiquidOrbAgent state={isSearchQuery ? 'searching' : 'thinking'} size={72} interactive={false} />
+                        <div className="my-2 flex items-center gap-4 p-4 rounded-2xl bg-white/[.03] border border-white/[.06] shadow-lg">
+                          <LiquidOrbAgent state={isSearchQuery ? 'searching' : 'thinking'} size={isSearchQuery ? 96 : 72} interactive={false} />
                           <div>
-                            <p className="font-semibold text-xs text-slate-200">
-                              {isSearchQuery ? 'Searching the web' : 'Ayatrisya is thinking'}
+                            <p className="font-semibold text-xs sm:text-sm text-slate-200 flex items-center gap-2">
+                              {isSearchQuery ? (
+                                <>
+                                  <span className="text-teal-300">🌐 Searching the Web</span>
+                                  <span className="inline-block size-2 rounded-full bg-teal-400 animate-ping" />
+                                </>
+                              ) : (
+                                'Ayatrisya is thinking'
+                              )}
                             </p>
-                            <p className="text-[11px] text-slate-400">
+                            <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
                               {isSearchQuery
-                                ? 'Gathering latest data, facts, and live context...'
+                                ? 'Gathering latest data, facts, and live context from web sources...'
                                 : 'Reasoning through response and synthesizing output...'}
                             </p>
                           </div>

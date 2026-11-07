@@ -31,7 +31,7 @@ export function LiquidOrbAgent({
 
   // Modulate voice cadence automatically during speaking if not externally driven
   useEffect(() => {
-    if (overrideAudioLevel !== undefined) return;
+    if (overrideAudioLevel !== undefined) return undefined;
     if (state === 'speaking') {
       let rafId: number;
       let t = 0;
@@ -45,6 +45,7 @@ export function LiquidOrbAgent({
       return () => cancelAnimationFrame(rafId);
     } else {
       setLiveAudioLevel(0.55);
+      return undefined;
     }
   }, [state, overrideAudioLevel]);
 

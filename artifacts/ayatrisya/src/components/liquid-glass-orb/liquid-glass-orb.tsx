@@ -2709,6 +2709,7 @@ export const FluidAgentOrb = forwardRef<FluidAgentOrbHandle, FluidAgentOrbProps>
     useEffect(() => {
       const host = gradient.current?.element;
       if (animateEntrance && host) return createFluidAgentOrbEntrance(host);
+      return undefined;
     }, [animateEntrance]);
     useEffect(() => {
       imperative.current = null;

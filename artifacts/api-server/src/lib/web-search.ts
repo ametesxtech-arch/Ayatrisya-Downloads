@@ -7,7 +7,7 @@ export type SearchResult = {
   link: string;
 };
 
-export async function searchInternet(query: string, maxResults = 4): Promise<SearchResult[]> {
+export async function searchInternet(query: string, maxResults = 5): Promise<SearchResult[]> {
   const cleanQuery = query.trim().slice(0, 150);
   if (!cleanQuery) return [];
 
@@ -19,7 +19,7 @@ export async function searchInternet(query: string, maxResults = 4): Promise<Sea
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
         Accept: "text/html,application/xhtml+xml",
       },
-      signal: AbortSignal.timeout(5000),
+      signal: AbortSignal.timeout(6000),
     });
 
     if (!response.ok) return [];
@@ -57,12 +57,24 @@ export async function searchInternet(query: string, maxResults = 4): Promise<Sea
 }
 
 export function shouldSearchInternet(query: string): boolean {
-  const lower = query.toLowerCase();
+  const lower = query.toLowerCase().trim();
+  if (!lower) return false;
+
+  // Explicit web search commands
+  if (/\b(search(ing|ed)?|google|browse|lookup|look\s*up|find)\s+(the\s+)?(web|internet|online)\b/i.test(lower)) return true;
+  if (/\b(search\s+(for|in\s+web|online|internet|google)|google\s+for)\b/i.test(lower)) return true;
+
+  // Real-time, news, dynamic info
+  if (/\b(latest\s+(news|update|release|information|event|price|development)|breaking\s+news|today('?s)?\s+(news|headline|weather|stock|score))\b/i.test(lower)) return true;
+  if (/\b(current\s+(price|status|weather|stock|events?)|who\s+won|stock\s+price\s+of|weather\s+in)\b/i.test(lower)) return true;
+  if (/\b(what('?s)?\s+happening\s+with|what\s+happened\s+to|what('?s)?\s+the\s+latest)\b/i.test(lower)) return true;
+
   const searchTriggers = [
     "search the web",
     "search internet",
     "search the internet",
     "search for",
+    "search in web",
     "google for",
     "latest news",
     "recent news",
@@ -77,4 +89,23 @@ export function shouldSearchInternet(query: string): boolean {
     "ametesx",
   ];
   return searchTriggers.some((t) => lower.includes(t));
+}
+
+/**
+ * Formats clean, markdown-compliant source references to append at the end of responses.
+ */
+export function formatSourcesSection(sources: SearchResult[]): string {
+  if (!sources.length) return "";
+  const lines = sources.map((s, i) => {
+    let hostname = "";
+    try {
+      hostname = new URL(s.link).hostname.replace(/^www\./, "");
+    } catch {
+      hostname = s.link;
+    }
+    const cleanSnippet = s.snippet.slice(0, 150).trim();
+    return `${i + 1}. [**${s.title}**](${s.link}) - *${hostname}*${cleanSnippet ? ` · "${cleanSnippet}"` : ""}`;
+  });
+
+  return `\n\n---\n### 🌐 Sources & References\n${lines.join("\n")}`;
 }

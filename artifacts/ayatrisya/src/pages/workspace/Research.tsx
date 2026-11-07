@@ -19,6 +19,7 @@ import { KnowledgeBaseManager } from '@/components/KnowledgeBaseManager';
 import { executeDeepResearch, type ResearchReport, type ResearchProgress } from '@/ai/research-engine';
 import { downloadPdf } from '@/lib/pdf-export';
 import { usePrefs } from '@/hooks/use-prefs';
+import { LiquidOrbAgent } from '@/components/voice/LiquidOrbAgent';
 
 export function ResearchPage({ notify }: { notify: (m: string) => void }) {
   const [tab, setTab] = useState<'agent' | 'knowledge' | 'notes'>('agent');
@@ -154,13 +155,17 @@ export function ResearchPage({ notify }: { notify: (m: string) => void }) {
 
             {/* In-Flight Progress */}
             {isResearching && progressState && (
-              <div className="mt-4 rounded-lg border border-teal-500/20 bg-teal-500/5 p-3 text-xs text-teal-300 flex items-center gap-3">
-                <RotateCcw size={14} className="animate-spin text-teal-400 shrink-0" />
-                <div className="flex-1">
-                  <div className="font-semibold uppercase tracking-wide text-[10px] text-teal-400">
-                    Step: {progressState.step}
+              <div className="mt-5 rounded-xl border border-teal-500/25 bg-teal-500/5 p-4 text-xs text-teal-300 flex items-center gap-4 shadow-lg">
+                <LiquidOrbAgent state="searching" size={68} interactive={false} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold uppercase tracking-wide text-[10px] text-teal-400">
+                      Autonomous Web Search · {progressState.step}
+                    </span>
+                    <span className="size-1.5 rounded-full bg-teal-400 animate-ping inline-block" />
                   </div>
-                  <div>{progressState.message}</div>
+                  <div className="mt-1 text-slate-200 text-xs sm:text-sm font-medium">{progressState.message}</div>
+                  <div className="mt-0.5 text-[11px] text-slate-400">Querying live web indexes, verifying sources, and assembling citations</div>
                 </div>
               </div>
             )}

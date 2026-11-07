@@ -16,7 +16,7 @@ import {
 } from "@workspace/api-zod";
 import { verifiedFirebaseUid } from "../lib/firebase-auth";
 import { consumeModelRequest } from "../lib/model-rate-limit";
-import { searchInternet, shouldSearchInternet } from "../lib/web-search";
+import { searchInternet, shouldSearchInternet, formatSourcesSection, type SearchResult } from "../lib/web-search";
 import { validateGlbBuffer } from "../lib/glb-validator";
 import { validateAudioBuffer } from "../lib/audio-validator";
 import { generateCloudflareImage, isCloudflareConfigured } from "../lib/cloudflare-image";
@@ -185,14 +185,17 @@ async function fallbackWithGeminiChat(
 
   const lastUserMsg = [...history].reverse().find((m) => m.role === "user")?.content ?? "";
   let webSearchContext = "";
+  let gatheredSources: SearchResult[] = [];
 
   if (shouldSearchInternet(lastUserMsg)) {
     try {
-      const searchResults = await searchInternet(lastUserMsg, 4);
+      const searchResults = await searchInternet(lastUserMsg, 5);
       if (searchResults.length > 0) {
+        gatheredSources = searchResults;
         webSearchContext = "\n\nLive Internet Search Results:\n" +
           searchResults.map((r, i) => `[${i + 1}] "${r.title}": ${r.snippet} (Source: ${r.link})`).join("\n") +
-          "\nUse the above live web search results to provide accurate, up-to-date answers and cite sources where helpful.";
+          "\n\nCRITICAL INSTRUCTION FOR SOURCES CITATION:\n" +
+          "Use the live web search results above to provide accurate, up-to-date facts. At the very end of your response, you MUST ALWAYS provide a dedicated '### 🌐 Sources & References' section with numbered markdown links to all consulted sources.";
       }
     } catch {}
   }
@@ -408,6 +411,7 @@ Style & Tone: ${toneInstruction}${webSearchContext}`;
       const reader = geminiRes.body.getReader();
       const decoder = new TextDecoder("utf-8");
       let buffer = "";
+      let fullStreamOutput = "";
 
       while (true) {
         const { value, done } = await reader.read();
@@ -424,6 +428,7 @@ Style & Tone: ${toneInstruction}${webSearchContext}`;
             if (Array.isArray(parts)) {
               for (const part of parts) {
                 if (typeof part.text === "string" && part.text) {
+                  fullStreamOutput += part.text;
                   if (isNdjson) {
                     res.write(`${JSON.stringify({ token: part.text })}\n`);
                   } else {
@@ -433,6 +438,20 @@ Style & Tone: ${toneInstruction}${webSearchContext}`;
               }
             }
           } catch {}
+        }
+      }
+
+      // Ensure sources are cited at the end if web search was performed
+      if (gatheredSources.length > 0) {
+        const hasSourcesSection = /###\s*(🌐\s*)?(sources|references)/i.test(fullStreamOutput) ||
+          gatheredSources.some((s) => fullStreamOutput.includes(s.link));
+        if (!hasSourcesSection) {
+          const sourcesBlock = formatSourcesSection(gatheredSources);
+          if (isNdjson) {
+            res.write(`${JSON.stringify({ token: sourcesBlock })}\n`);
+          } else {
+            res.write(`data: ${JSON.stringify({ token: sourcesBlock })}\n\n`);
+          }
         }
       }
 
@@ -446,9 +465,19 @@ Style & Tone: ${toneInstruction}${webSearchContext}`;
     } else {
       const data = (await geminiRes.json()) as any;
       const parts = data?.candidates?.[0]?.content?.parts;
-      const text = Array.isArray(parts)
+      let text = Array.isArray(parts)
         ? parts.map((p: any) => p.text ?? "").join("")
         : "Ayatrisya AI generated response.";
+
+      // Ensure sources are cited at the end if web search was performed
+      if (gatheredSources.length > 0) {
+        const hasSourcesSection = /###\s*(🌐\s*)?(sources|references)/i.test(text) ||
+          gatheredSources.some((s) => text.includes(s.link));
+        if (!hasSourcesSection) {
+          text += formatSourcesSection(gatheredSources);
+        }
+      }
+
       res.status(200).set({
         "Cache-Control": "no-store",
         "x-model-source": "ayatrisya-gemini-fallback",

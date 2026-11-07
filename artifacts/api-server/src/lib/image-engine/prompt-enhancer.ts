@@ -43,3 +43,4 @@ export function enrichImagePrompt(rawPrompt: string, style?: string): string {
 
 export const DEFAULT_NEGATIVE_PROMPT =
   "blurry, deformed, bad anatomy, bad hands, missing fingers, extra fingers, mutated limbs, poorly drawn face, disfigured, distorted, low quality, worst quality, jpeg artifacts, watermark, signature, cropped, out of frame";
+
