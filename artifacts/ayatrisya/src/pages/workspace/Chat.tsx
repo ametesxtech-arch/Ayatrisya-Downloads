@@ -38,6 +38,7 @@ import { detectImageRequest } from '@/lib/image-intent';
 import { MemoryEngine } from '@/storage/memory-engine';
 import { KnowledgeBaseEngine } from '@/storage/knowledge-engine';
 import { AIMemorySummaryEngine } from '@/storage/ai-memory-summary-engine';
+import { ChromaticButton } from '@/components/chromatic-button';
 
 type Turn = Array<{ role: 'user' | 'assistant'; content: string; attachments?: MessageAttachment[] }>;
 
@@ -816,10 +817,34 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
                       <span className="hidden sm:inline">Stop</span>
                     </button>
                   ) : (
-                    <button type="button" onClick={() => void send()} disabled={saving || busy || !!ask || (!text.trim() && !files.length)} aria-label="Send message" className="chat-send-button" data-testid="button-send">
+                    <ChromaticButton
+                      type="button"
+                      onClick={() => void send()}
+                      disabled={saving || busy || !!ask || (!text.trim() && !files.length)}
+                      aria-label="Send message"
+                      data-testid="button-send"
+                      className="chat-chromatic-send"
+                      color="#b126ff"
+                      colorMode="spectrum"
+                      speed={0.7}
+                      paused={false}
+                      phase={0}
+                      feather={100}
+                      projectionScale={174.7}
+                      intensity={1.4}
+                      grain={0.105}
+                      seed={7}
+                      borderRadius={50}
+                      hoverEffect="brighten"
+                      entrance="blur-up"
+                      entranceSpeed={1}
+                      entranceBlur={10}
+                      entranceDistance={20}
+                      entranceScale={0.65}
+                    >
                       <Send size={15} />
                       <span className="hidden sm:inline">Send</span>
-                    </button>
+                    </ChromaticButton>
                   )}
                 </div>
               </div>
