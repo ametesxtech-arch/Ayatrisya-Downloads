@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: ayatrisya-api-server
+    runtime: node
+    plan: free
+    region: oregon
+    branch: main
+    buildCommand: pnpm install --frozen-lockfile && pnpm --filter @workspace/api-server run build
+    startCommand: node artifacts/api-server/dist/index.mjs
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: ALLOWED_ORIGINS
+        value: https://ayatrisya.web.app,https://ayatrisya-ai.web.app
+      - key: FIREBASE_PROJECT_ID
+        value: ayatrisya
+      - key: AYATRISYA_MODEL_ENDPOINT
+        sync: false
+      - key: AYATRISYA_MODEL_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: CLOUDFLARE_ACCOUNT_ID
+        sync: false
+      - key: CLOUDFLARE_API_TOKEN
+        sync: false
+      - key: CLOUDFLARE_IMAGE_MODEL
+        value: "@cf/black-forest-labs/flux-1-schnell"
