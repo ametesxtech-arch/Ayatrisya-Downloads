@@ -27,5 +27,6 @@ export * from './MediaBlockRenderer';
 export * from './ScheduledTaskBlockRenderer';
 export * from './CitationBlockRenderer';
 export * from './ArtifactBlockRenderer';
+export * from './assessment';
 export * from './quiz-detector';
 export * from './interactive-detector';

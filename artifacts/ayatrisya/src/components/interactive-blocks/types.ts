@@ -504,6 +504,20 @@ export interface ArtifactBlock extends BaseInteractiveBlock {
   url?: string;
 }
 
+// 33. Comprehensive Assessment / Mock Test Block
+export interface AssessmentBlock extends BaseInteractiveBlock {
+  type: 'assessment' | 'mock_test' | 'exam';
+  title: string;
+  description?: string;
+  topic?: string;
+  subject?: string;
+  mode?: 'practice' | 'exam';
+  timeLimitMinutes?: number;
+  passingScore?: number;
+  allowReview?: boolean;
+  questions: any[];
+}
+
 // Discriminated union of all interactive blocks
 export type InteractiveBlock =
   | McqBlock
@@ -537,4 +551,5 @@ export type InteractiveBlock =
   | CodeInteractiveBlock
   | MediaBlock
   | ScheduledTaskBlock
-  | ArtifactBlock;
+  | ArtifactBlock
+  | AssessmentBlock;

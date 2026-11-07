@@ -33,6 +33,7 @@ import {
 import { MediaBlockRenderer } from './MediaBlockRenderer';
 import { ScheduledTaskBlockRenderer } from './ScheduledTaskBlockRenderer';
 import { ArtifactBlockRenderer, type ArtifactBlockData } from './ArtifactBlockRenderer';
+import { AssessmentContainer, type AssessmentBlockData } from './assessment';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -100,7 +101,31 @@ export function InteractiveBlockRenderer({
       case 'mcq':
         return <McqBlockRenderer block={block} blockId={resolvedId} />;
       case 'quiz':
-        return <QuizBlockRenderer block={block} blockId={resolvedId} />;
+        return (
+          <AssessmentContainer
+            block={{
+              version: '1.0',
+              type: 'assessment',
+              title: block.title,
+              description: block.description,
+              passingScore: block.passingScore,
+              questions: (block.questions || []).map((q) => ({
+                id: q.id,
+                type: q.multiSelect ? 'multiple_choice' : 'single_choice',
+                question: q.question,
+                options: q.options,
+                correctAnswer: q.correctAnswer,
+                explanation: q.explanation,
+                hint: q.hint,
+              })),
+            }}
+            blockId={resolvedId}
+          />
+        );
+      case 'assessment':
+      case 'mock_test':
+      case 'exam':
+        return <AssessmentContainer block={block as unknown as AssessmentBlockData} blockId={resolvedId} />;
       case 'poll':
         return <PollBlockRenderer block={block} blockId={resolvedId} />;
       case 'flashcard':

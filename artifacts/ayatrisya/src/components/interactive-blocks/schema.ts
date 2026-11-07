@@ -24,25 +24,72 @@ const mcqBlockSchema = z.object({
 });
 
 const quizQuestionSchema = z.object({
-  id: z.string().min(1).max(50),
-  question: z.string().min(1).max(2000),
-  options: z.array(mcqOptionSchema).min(2).max(12),
+  id: z.string().min(1).max(100),
+  question: z.string().min(1).max(5000),
+  type: z.string().optional(),
+  options: z.array(mcqOptionSchema).max(12).optional(),
   multiSelect: z.boolean().optional(),
-  correctAnswer: z.union([z.string().min(1), z.array(z.string().min(1))]),
-  explanation: z.string().max(3000).optional(),
-  hint: z.string().max(1000).optional(),
+  correctAnswer: z.union([z.string().min(1), z.array(z.string().min(1)), z.record(z.string(), z.string())]),
+  explanation: z.string().max(5000).optional(),
+  hint: z.string().max(2000).optional(),
+  topic: z.string().max(300).optional(),
+  difficulty: z.string().max(50).optional(),
+  assertion: z.string().max(3000).optional(),
+  reason: z.string().max(3000).optional(),
+  casePassage: z.string().max(10000).optional(),
+  caseTitle: z.string().max(300).optional(),
+  matchPairs: z.array(z.object({ id: z.string().optional(), left: z.string(), right: z.string() })).optional(),
+  imageUrl: z.string().optional(),
+  isPyq: z.boolean().optional(),
+  pyqSource: z.string().max(200).optional(),
 });
 
 const quizBlockSchema = z.object({
   version: z.literal('1.0'),
   type: z.literal('quiz'),
   id: z.string().max(100).optional(),
-  title: z.string().min(1).max(200),
-  description: z.string().max(1000).optional(),
-  caption: z.string().max(300).optional(),
-  questions: z.array(quizQuestionSchema).min(1).max(25),
+  title: z.string().min(1).max(300),
+  description: z.string().max(3000).optional(),
+  caption: z.string().max(500).optional(),
+  questions: z.array(quizQuestionSchema).min(1).max(100),
+  mode: z.enum(['practice', 'exam']).optional(),
+  timeLimitMinutes: z.number().min(1).max(300).optional(),
   passingScore: z.number().min(0).max(100).optional(),
   allowRetry: z.boolean().optional(),
+  allowReview: z.boolean().optional(),
+  topic: z.string().max(300).optional(),
+  subject: z.string().max(300).optional(),
+});
+
+const assessmentBlockSchema = z.object({
+  version: z.literal('1.0').optional(),
+  type: z.literal('assessment'),
+  id: z.string().max(100).optional(),
+  title: z.string().min(1).max(300),
+  description: z.string().max(3000).optional(),
+  caption: z.string().max(500).optional(),
+  questions: z.array(quizQuestionSchema).min(1).max(100),
+  mode: z.enum(['practice', 'exam']).optional(),
+  timeLimitMinutes: z.number().min(1).max(300).optional(),
+  passingScore: z.number().min(0).max(100).optional(),
+  allowRetry: z.boolean().optional(),
+  allowReview: z.boolean().optional(),
+  topic: z.string().max(300).optional(),
+  subject: z.string().max(300).optional(),
+});
+
+const artifactBlockSchema = z.object({
+  version: z.literal('1.0').optional(),
+  type: z.literal('artifact'),
+  id: z.string().max(100).optional(),
+  title: z.string().max(300).optional(),
+  description: z.string().max(3000).optional(),
+  caption: z.string().max(500).optional(),
+  artifactKind: z.enum(['website', 'document', 'spreadsheet', 'presentation', 'code']),
+  content: z.string(),
+  fileName: z.string().max(200).optional(),
+  language: z.string().max(100).optional(),
+  url: z.string().optional(),
 });
 
 const pollOptionSchema = z.object({
@@ -626,6 +673,8 @@ export const interactiveBlockSchema = z.discriminatedUnion('type', [
   codeInteractiveBlockSchema,
   mediaBlockSchema,
   scheduledTaskBlockSchema,
+  assessmentBlockSchema,
+  artifactBlockSchema,
 ]);
 
 export type ParseInteractiveResult =

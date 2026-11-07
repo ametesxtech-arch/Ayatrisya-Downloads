@@ -202,8 +202,8 @@ export function CodeBlock({ children }: { children?: ReactNode }) {
 
   // Check if this is an interactive block
   if (
-    /^(interactive|interactive-block|ayatrisya-block|ayatrisya-interactive|quiz|mcq)$/i.test(langLower) ||
-    (langLower === 'json' && /"type"\s*:\s*"(quiz|mcq|poll|flashcards|accordion|input_controls|chart)"/.test(text))
+    /^(interactive|interactive-block|ayatrisya-block|ayatrisya-interactive|quiz|mcq|assessment|exam|mock-test)$/i.test(langLower) ||
+    (langLower === 'json' && /"type"\s*:\s*"(quiz|mcq|poll|flashcards|accordion|input_controls|chart|assessment|mock_test|exam)"/.test(text))
   ) {
     const parsed = parseInteractiveBlock(text, { isStreaming });
     if (parsed.status === 'valid') {
