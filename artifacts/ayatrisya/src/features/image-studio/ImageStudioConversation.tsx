@@ -327,30 +327,27 @@ export function ImageStudioConversation({
         description="Generate, refine, and iterate on images through interactive conversation with character consistency and artistic styles."
       />
 
-      {/* Requirement 4 & 5 Status Banner */}
-      <div
-        role="status"
-        className="rounded-xl border border-teal-500/20 bg-teal-500/[.05] p-4 text-sm text-teal-100/90"
-        data-testid="status-image"
-      >
-        {capsLoading ? (
-          'Checking model status…'
-        ) : capable ? (
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="font-semibold text-teal-200">Ayatrisya 4-Stage Image Generation Engine Active</span>
-            <span className="text-xs text-slate-400">Sequence: 1. Proprietary Model → 2. Hugging Face → 3. Gemini → 4. Ayatrisya Vision Engine</span>
-          </div>
-        ) : (
-          <span className="text-rose-200">
-            No image generation model is connected. Configure Ayatrisya Image Model, Hugging Face, Gemini, or Vision Engine credentials on your API server.
-          </span>
-        )}
-        {isLimitedGuest && (
-          <span className="mt-1 block text-xs text-amber-300/80" data-testid="status-guest-image-quota">
-            {guestImagesRemaining} of {GUEST_IMAGE_LIMIT} guest image generations remaining in this browser.
-          </span>
-        )}
-      </div>
+      {/* Status Banner (shown when checking, unavailable, or guest quota) */}
+      {(!capable || isLimitedGuest || capsLoading) && (
+        <div
+          role="status"
+          className="rounded-xl border border-teal-500/20 bg-teal-500/[.05] p-4 text-sm text-teal-100/90"
+          data-testid="status-image"
+        >
+          {capsLoading ? (
+            'Checking model status…'
+          ) : !capable ? (
+            <span className="text-rose-200">
+              No image generation model is connected. Configure Ayatrisya Image Model, Hugging Face, Gemini, or Vision Engine credentials on your API server.
+            </span>
+          ) : null}
+          {isLimitedGuest && (
+            <span className="mt-1 block text-xs text-amber-300/80" data-testid="status-guest-image-quota">
+              {guestImagesRemaining} of {GUEST_IMAGE_LIMIT} guest image generations remaining in this browser.
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Control Bar: Style, Character, Aspect Ratio, Dimensions, Format */}
       <div className="rounded-xl border border-white/[.08] bg-[#15171e] p-4 space-y-4">
@@ -449,13 +446,6 @@ export function ImageStudioConversation({
               <option value="JPEG">JPEG (smaller)</option>
             </select>
           </label>
-
-          <div className="flex items-end">
-            <div className="text-[11px] leading-tight">
-              <span className="font-semibold text-teal-300">4-Stage Pipeline</span>
-              <span className="text-slate-500 block text-[10px]">Proprietary → HF → Gemini → Vision Engine</span>
-            </div>
-          </div>
         </div>
       </div>
 
