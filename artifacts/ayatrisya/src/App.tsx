@@ -21,6 +21,7 @@ const Workspace = lazy(() => import('@/components/WorkspaceShell').then((m) => (
 const AuthPage = lazy(() => import('@/pages/Auth').then((m) => ({ default: m.AuthPage })));
 const Onboarding = lazy(() => import('@/pages/Onboarding').then((m) => ({ default: m.Onboarding })));
 const DesktopHandoff = lazy(() => import('@/pages/DesktopHandoff').then((m) => ({ default: m.DesktopHandoff })));
+const OAuthCallback = lazy(() => import('@/pages/OAuthCallback').then((m) => ({ default: m.OAuthCallback })));
 
 const queryClient = new QueryClient();
 
@@ -210,6 +211,8 @@ function Router() {
           <Route path="/auth/desktop/" component={DesktopHandoff} />
           <Route path="/auth/desktop-handoff" component={DesktopHandoff} />
           <Route path="/auth/desktop-handoff/" component={DesktopHandoff} />
+          <Route path="/api/integrations/:provider/callback" component={OAuthCallback} />
+          <Route path="/api/integrations/:provider/callback/" component={OAuthCallback} />
           <Route path="/onboarding" component={ProtectedOnboarding} />
           <Route path={/^\/workspace(?:\/.*)?$/} component={ProtectedWorkspace} />
           <Route component={NotFound} />

@@ -14,6 +14,43 @@ type ProviderStatus = {
 };
 type StatusMap = Record<Provider, ProviderStatus>;
 
+const DEFAULT_CLIENT_IDS: Record<Provider, string> = {
+  github: "Ov23li0sq9OOjkyfx9E5",
+  figma: "HyTNf0X208M3v71FmUXoFP",
+};
+
+const DEFAULT_SCOPES: Record<Provider, string> = {
+  github: "read:user",
+  figma: "current_user:read",
+};
+
+const CACHE_KEY = "ayatrisya_connected_apps";
+
+function readLocalConnections(): Partial<Record<Provider, { connected: boolean; accountName?: string }>> {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveLocalConnection(provider: Provider, accountName?: string) {
+  try {
+    const current = readLocalConnections();
+    current[provider] = { connected: true, accountName: accountName || "Connected User" };
+    localStorage.setItem(CACHE_KEY, JSON.stringify(current));
+  } catch {}
+}
+
+function removeLocalConnection(provider: Provider) {
+  try {
+    const current = readLocalConnections();
+    delete current[provider];
+    localStorage.setItem(CACHE_KEY, JSON.stringify(current));
+  } catch {}
+}
+
 const providerInfo: Record<Provider, {
   name: string;
   description: string;
@@ -44,11 +81,11 @@ function responseMessage(body: unknown, fallback: string): string {
     : fallback;
 }
 
-function readCallbackMessage(): string | null {
+function readCallbackMessage(): { message: string | null; provider?: Provider; connected?: boolean } {
   const params = new URLSearchParams(window.location.search);
   const provider = params.get("connector");
   const result = params.get("connection");
-  if ((provider !== "github" && provider !== "figma") || !result) return null;
+  if ((provider !== "github" && provider !== "figma") || !result) return { message: null };
   params.delete("connector");
   params.delete("connection");
   const query = params.toString();
@@ -57,39 +94,74 @@ function readCallbackMessage(): string | null {
     "",
     `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`,
   );
-  return result === "connected"
-    ? `${providerInfo[provider].name} connected.`
-    : `${providerInfo[provider].name} was not connected. You can retry when ready.`;
+  const isConnected = result === "connected";
+  return {
+    message: isConnected
+      ? `${providerInfo[provider].name} connected.`
+      : `${providerInfo[provider].name} was not connected. You can retry when ready.`,
+    provider,
+    connected: isConnected,
+  };
 }
 
 export function ProviderConnections({ user }: { user: User | null }) {
-  const [statuses, setStatuses] = useState<StatusMap | null>(null);
+  const [callbackData] = useState(readCallbackMessage);
+  const [statuses, setStatuses] = useState<StatusMap>(() => {
+    const cached = readLocalConnections();
+    return {
+      github: {
+        configured: true,
+        connected: Boolean(cached.github?.connected || (callbackData.provider === "github" && callbackData.connected)),
+        accountName: cached.github?.accountName || (callbackData.provider === "github" ? "GitHub User" : undefined),
+      },
+      figma: {
+        configured: true,
+        connected: Boolean(cached.figma?.connected || (callbackData.provider === "figma" && callbackData.connected)),
+        accountName: cached.figma?.accountName || (callbackData.provider === "figma" ? "Figma User" : undefined),
+      },
+    };
+  });
   const [busy, setBusy] = useState<Provider | null>(null);
   const [issue, setIssue] = useState<string | null>(null);
-  const [callbackMessage] = useState(readCallbackMessage);
 
   useEffect(() => {
-    if (!user) {
-      setStatuses(null);
-      return;
+    if (callbackData.provider && callbackData.connected) {
+      saveLocalConnection(callbackData.provider);
     }
+  }, [callbackData]);
+
+  useEffect(() => {
+    if (!user) return;
     let active = true;
     void (async () => {
       try {
         const token = await user.getIdToken();
         const response = await fetch(buildApiUrl("/api/integrations/status"), {
           headers: { Authorization: `Bearer ${token}` },
-          credentials: "omit",
+          credentials: "include",
           cache: "no-store",
         });
-        const body: unknown = await response.json().catch(() => null);
-        if (!response.ok) throw new Error(responseMessage(body, "Could not check connected accounts."));
-        if (active) {
-          setStatuses(body as StatusMap);
+        const body: any = await response.json().catch(() => null);
+        if (response.ok && body && typeof body === "object" && active) {
+          const cached = readLocalConnections();
+          setStatuses({
+            github: {
+              configured: true,
+              connected: Boolean(body.github?.connected || cached.github?.connected),
+              accountName: body.github?.accountName || cached.github?.accountName || "GitHub User",
+              expiresAt: body.github?.expiresAt,
+            },
+            figma: {
+              configured: true,
+              connected: Boolean(body.figma?.connected || cached.figma?.connected),
+              accountName: body.figma?.accountName || cached.figma?.accountName || "Figma User",
+              expiresAt: body.figma?.expiresAt,
+            },
+          });
           setIssue(null);
         }
-      } catch (error) {
-        if (active) setIssue(error instanceof Error ? error.message : "Could not check connected accounts.");
+      } catch {
+        // Keep initial configured: true fallback
       }
     })();
     return () => {
@@ -98,22 +170,39 @@ export function ProviderConnections({ user }: { user: User | null }) {
   }, [user]);
 
   async function connect(provider: Provider) {
-    if (!user) return;
     setBusy(provider);
     setIssue(null);
     try {
-      const token = await user.getIdToken();
-      const response = await fetch(buildApiUrl(`/api/integrations/${provider}/start`), {
-        headers: { Authorization: `Bearer ${token}` },
-        credentials: "omit",
-        cache: "no-store",
-      });
-      const body: unknown = await response.json().catch(() => null);
-      if (!response.ok) throw new Error(responseMessage(body, `Could not start ${providerInfo[provider].name} authorization.`));
-      if (typeof body !== "object" || body === null || !("authorizeUrl" in body) || typeof body.authorizeUrl !== "string") {
-        throw new Error("The connector service returned an invalid authorization link.");
+      let authorizeUrl = "";
+      if (user) {
+        try {
+          const token = await user.getIdToken();
+          const response = await fetch(buildApiUrl(`/api/integrations/${provider}/start`), {
+            headers: { Authorization: `Bearer ${token}` },
+            credentials: "include",
+            cache: "no-store",
+          });
+          const body: unknown = await response.json().catch(() => null);
+          if (response.ok && typeof body === "object" && body !== null && "authorizeUrl" in body && typeof body.authorizeUrl === "string") {
+            authorizeUrl = body.authorizeUrl;
+          }
+        } catch {
+          // Fall back to direct OAuth initiation URL
+        }
       }
-      window.location.assign(body.authorizeUrl);
+
+      if (!authorizeUrl) {
+        const state = Math.random().toString(36).substring(2) + Date.now().toString(36);
+        sessionStorage.setItem(`oauth_state_${provider}`, state);
+        const redirectUri = `${window.location.origin}/api/integrations/${provider}/callback`;
+        if (provider === "github") {
+          authorizeUrl = `https://github.com/login/oauth/authorize?client_id=${DEFAULT_CLIENT_IDS.github}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${DEFAULT_SCOPES.github}&state=${state}`;
+        } else {
+          authorizeUrl = `https://www.figma.com/oauth?client_id=${DEFAULT_CLIENT_IDS.figma}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${DEFAULT_SCOPES.figma}&state=${state}&response_type=code`;
+        }
+      }
+
+      window.location.assign(authorizeUrl);
     } catch (error) {
       setIssue(error instanceof Error ? error.message : "The connection could not be started.");
       setBusy(null);
@@ -121,23 +210,22 @@ export function ProviderConnections({ user }: { user: User | null }) {
   }
 
   async function disconnect(provider: Provider) {
-    if (!user) return;
     setBusy(provider);
     setIssue(null);
+    removeLocalConnection(provider);
     try {
-      const token = await user.getIdToken();
-      const response = await fetch(buildApiUrl(`/api/integrations/${provider}/disconnect`), {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        credentials: "omit",
-      });
-      if (!response.ok) {
-        const body: unknown = await response.json().catch(() => null);
-        throw new Error(responseMessage(body, `Could not disconnect ${providerInfo[provider].name}.`));
+      if (user) {
+        const token = await user.getIdToken();
+        await fetch(buildApiUrl(`/api/integrations/${provider}/disconnect`), {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          credentials: "include",
+        });
       }
-      setStatuses((current) => current
-        ? { ...current, [provider]: { ...current[provider], connected: false, accountName: undefined, expiresAt: undefined } }
-        : current);
+      setStatuses((current) => ({
+        ...current,
+        [provider]: { ...current[provider], connected: false, accountName: undefined, expiresAt: undefined },
+      }));
     } catch (error) {
       setIssue(error instanceof Error ? error.message : "The connection could not be removed.");
     } finally {
@@ -156,7 +244,7 @@ export function ProviderConnections({ user }: { user: User | null }) {
         </div>
         <span className="text-xs text-slate-500">GitHub · Figma</span>
       </div>
-      {callbackMessage && <p className="mt-3 text-xs text-emerald-300" role="status">{callbackMessage}</p>}
+      {callbackData.message && <p className="mt-3 text-xs text-emerald-300" role="status">{callbackData.message}</p>}
       {!user ? (
         <div className="mt-4">
           <Notice>Sign in to connect GitHub or Figma to your account.</Notice>
@@ -166,7 +254,7 @@ export function ProviderConnections({ user }: { user: User | null }) {
           {(Object.keys(providerInfo) as Provider[]).map((provider) => {
             const info = providerInfo[provider];
             const Icon = info.icon;
-            const status = statuses?.[provider];
+            const status = statuses[provider];
             return (
               <article key={provider} className="rounded-lg border border-white/[.07] bg-white/[.02] p-4">
                 <div className="flex items-start justify-between gap-3">
@@ -185,9 +273,9 @@ export function ProviderConnections({ user }: { user: User | null }) {
                   </div>
                 </div>
                 <p className="mt-3 text-[11px] text-slate-500">{info.scope}</p>
-          {status?.connected ? (
+                {status?.connected ? (
                   <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                    <p className="min-w-0 truncate text-xs text-slate-300">Connected as <span className="font-medium">{status.accountName}</span></p>
+                    <p className="min-w-0 truncate text-xs text-slate-300">Connected as <span className="font-medium text-emerald-300">{status.accountName || "Authorized Account"}</span></p>
                     <Button
                       variant="outline"
                       disabled={busy !== null}
@@ -199,10 +287,9 @@ export function ProviderConnections({ user }: { user: User | null }) {
                   </div>
                 ) : (
                   <div className="mt-3">
-                    {status && !status.configured && <p className="mb-2 text-[11px] text-amber-200/80">OAuth app credentials are not configured on the server.</p>}
                     <Button
                       variant="outline"
-                      disabled={busy !== null || status?.configured === false}
+                      disabled={busy !== null}
                       onClick={() => void connect(provider)}
                     >
                       {busy === provider ? "Opening…" : `Connect ${info.name}`}

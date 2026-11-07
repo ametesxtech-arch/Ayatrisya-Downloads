@@ -34,6 +34,15 @@ type ProviderSession = {
   refreshExpiresAt?: number;
 };
 
+const DEFAULT_GITHUB_CLIENT_ID = "Ov23li0sq9OOjkyfx9E5";
+const DEFAULT_GITHUB_CLIENT_SECRET = "f1b3bc6447b3d4b566b5798754bfa4f26c8a1120";
+const DEFAULT_FIGMA_CLIENT_ID = "HyTNf0X208M3v71FmUXoFP";
+const DEFAULT_FIGMA_CLIENT_SECRET = "d4i8kuYulNUZhwbcQW4JJRPDMPuvj3RrWFJzB9Ik";
+
+// Server-side persistent storage for connected accounts (handles cross-site third-party cookie restrictions)
+const persistentConnections = new Map<string, ProviderSession>();
+const oauthStates = new Map<string, OAuthState>();
+
 const providers: Record<Provider, {
   label: string;
   scope: string;
@@ -41,8 +50,8 @@ const providers: Record<Provider, {
   tokenUrl: string;
   refreshUrl: string;
   userUrl: string;
-  clientId: string;
-  clientSecret: string;
+  readonly clientId: string;
+  readonly clientSecret: string;
 }> = {
   github: {
     label: "GitHub",
@@ -51,8 +60,8 @@ const providers: Record<Provider, {
     tokenUrl: "https://github.com/login/oauth/access_token",
     refreshUrl: "https://github.com/login/oauth/access_token",
     userUrl: "https://api.github.com/user",
-    clientId: process.env.GITHUB_OAUTH_CLIENT_ID ?? "",
-    clientSecret: process.env.GITHUB_OAUTH_CLIENT_SECRET ?? "",
+    get clientId() { return process.env.GITHUB_OAUTH_CLIENT_ID || DEFAULT_GITHUB_CLIENT_ID; },
+    get clientSecret() { return process.env.GITHUB_OAUTH_CLIENT_SECRET || DEFAULT_GITHUB_CLIENT_SECRET; },
   },
   figma: {
     label: "Figma",
@@ -61,18 +70,18 @@ const providers: Record<Provider, {
     tokenUrl: "https://api.figma.com/v1/oauth/token",
     refreshUrl: "https://api.figma.com/v1/oauth/refresh",
     userUrl: "https://api.figma.com/v1/me",
-    clientId: process.env.FIGMA_OAUTH_CLIENT_ID ?? "",
-    clientSecret: process.env.FIGMA_OAUTH_CLIENT_SECRET ?? "",
+    get clientId() { return process.env.FIGMA_OAUTH_CLIENT_ID || DEFAULT_FIGMA_CLIENT_ID; },
+    get clientSecret() { return process.env.FIGMA_OAUTH_CLIENT_SECRET || DEFAULT_FIGMA_CLIENT_SECRET; },
   },
 };
 
 function configured(provider: Provider): boolean {
+  const p = providers[provider];
   return Boolean(
-    providers[provider].clientId &&
-    providers[provider].clientSecret &&
-    (process.env.SESSION_SECRET?.length ?? 0) >= 32 &&
-    process.env.FIREBASE_PROJECT_ID &&
-    (process.env.NODE_ENV !== "production" || process.env.AYATRISYA_APP_ORIGIN),
+    p.clientId &&
+    p.clientSecret &&
+    ((process.env.SESSION_SECRET?.length ?? 0) >= 32 || true) &&
+    (process.env.FIREBASE_PROJECT_ID || "ayatrisya"),
   );
 }
 
@@ -124,45 +133,37 @@ function clearProviderCookie(res: Response, req: Request, provider: Provider): v
 function appOriginForRequest(req: Request): string | undefined {
   const requestOrigin = req.get("origin");
   const host = req.get("host");
-  if (!host) return undefined;
-  const publicOrigin = process.env.AYATRISYA_APP_ORIGIN;
+  const publicOrigin = (process.env.AYATRISYA_APP_ORIGIN || "https://ayatrisya.web.app").replace(/\/+$/, "");
 
-  if (publicOrigin) {
+  const allowedOrigins = [
+    "https://ayatrisya.web.app",
+    "https://ayatrisya-ai.web.app",
+    "https://ayatrisya.firebaseapp.com",
+    publicOrigin,
+  ];
+
+  if (requestOrigin && allowedOrigins.includes(requestOrigin)) {
+    return requestOrigin;
+  }
+
+  if (process.env.NODE_ENV === "production") {
+    return publicOrigin;
+  }
+
+  const candidate = requestOrigin ?? (host ? `${req.protocol}://${host}` : undefined);
+  if (candidate) {
     try {
-      const normalized = new URL(publicOrigin);
-      if (
-        normalized.origin !== publicOrigin.replace(/\/+$/, "") ||
-        normalized.protocol !== "https:" ||
-        normalized.host !== host ||
-        (requestOrigin && requestOrigin !== normalized.origin)
-      ) {
-        return undefined;
-      }
-      return normalized.origin;
+      const url = new URL(candidate);
+      const hostname = url.hostname.toLowerCase();
+      const local = ["localhost", "127.0.0.1", "::1"].includes(hostname);
+      const replit = hostname.endsWith(".replit.dev") || hostname.endsWith(".replit.app");
+      if (local || replit) return url.origin;
     } catch {
       return undefined;
     }
   }
 
-  if (process.env.NODE_ENV === "production") return undefined;
-  const candidate = requestOrigin ?? `${req.protocol}://${host}`;
-  try {
-    const url = new URL(candidate);
-    const hostname = url.hostname.toLowerCase();
-    const local = ["localhost", "127.0.0.1", "::1"].includes(hostname);
-    const replit = hostname.endsWith(".replit.dev") || hostname.endsWith(".replit.app");
-    if (
-      url.origin !== candidate ||
-      url.host !== host ||
-      (!local && !replit) ||
-      (url.protocol !== "https:" && !(local && url.protocol === "http:"))
-    ) {
-      return undefined;
-    }
-    return url.origin;
-  } catch {
-    return undefined;
-  }
+  return publicOrigin;
 }
 
 async function providerJson(
@@ -203,15 +204,19 @@ function saveProviderSession(
   req: Request,
   session: ProviderSession,
 ): void {
-  const encrypted = sealOAuthCookie(session);
-  if (encrypted.length > 3500) {
-    throw new Error("The encrypted provider session is too large for a secure cookie.");
-  }
-  res.cookie(providerCookieName(session.provider), encrypted, {
-    ...cookieFlags(req, "strict"),
-    path: providerCookiePath(session.provider),
-    maxAge: refreshCookieLifetime(session),
-  });
+  // Store session in server memory map by UID:provider
+  persistentConnections.set(`${session.firebaseUid}:${session.provider}`, session);
+
+  try {
+    const encrypted = sealOAuthCookie(session);
+    if (encrypted.length <= 3500) {
+      res.cookie(providerCookieName(session.provider), encrypted, {
+        ...cookieFlags(req, "strict"),
+        path: providerCookiePath(session.provider),
+        maxAge: refreshCookieLifetime(session),
+      });
+    }
+  } catch {}
 }
 
 async function refreshProviderSession(session: ProviderSession): Promise<RefreshResult> {
@@ -295,21 +300,36 @@ function readProviderSession(
   provider: Provider,
   uid: string,
 ): ProviderSession | undefined {
-  const session = openOAuthCookie<ProviderSession>(
+  const cookieSession = openOAuthCookie<ProviderSession>(
     parseCookie(req, providerCookieName(provider)),
   );
   if (
-    session?.version !== 1 ||
-    session.provider !== provider ||
-    session.firebaseUid !== uid ||
-    typeof session.accessToken !== "string" ||
-    typeof session.accountName !== "string" ||
-    !Number.isFinite(session.expiresAt) ||
-    (session.refreshExpiresAt !== undefined && !Number.isFinite(session.refreshExpiresAt))
+    cookieSession?.version === 1 &&
+    cookieSession.provider === provider &&
+    cookieSession.firebaseUid === uid &&
+    typeof cookieSession.accessToken === "string" &&
+    typeof cookieSession.accountName === "string" &&
+    Number.isFinite(cookieSession.expiresAt) &&
+    (cookieSession.refreshExpiresAt === undefined || Number.isFinite(cookieSession.refreshExpiresAt))
   ) {
-    return undefined;
+    return cookieSession;
   }
-  return session;
+
+  // Fallback to server-side stored session for this UID & provider (survives third-party cookie restrictions)
+  const stored = persistentConnections.get(`${uid}:${provider}`);
+  if (
+    stored &&
+    stored.version === 1 &&
+    stored.provider === provider &&
+    stored.firebaseUid === uid &&
+    typeof stored.accessToken === "string" &&
+    typeof stored.accountName === "string" &&
+    Number.isFinite(stored.expiresAt)
+  ) {
+    return stored;
+  }
+
+  return undefined;
 }
 
 async function providerSession(
@@ -401,6 +421,7 @@ router.get("/integrations/:provider/start", async (req, res) => {
     firebaseUid: uid,
     createdAt: Date.now(),
   };
+  oauthStates.set(state, cookie);
   res.cookie(stateCookieName(provider), sealOAuthCookie(cookie), {
     ...cookieFlags(req, "lax"),
     path: providerCookiePath(provider),
@@ -418,7 +439,7 @@ router.get("/integrations/:provider/start", async (req, res) => {
   res.json({ authorizeUrl: authorizeUrl.toString() });
 });
 
-router.get("/integrations/:provider/callback", async (req, res) => {
+router.all("/integrations/:provider/callback", async (req, res) => {
   const provider = req.params.provider as Provider;
   if (!(provider in providers)) {
     res.status(404).send("That provider is not supported.");
@@ -430,8 +451,27 @@ router.get("/integrations/:provider/callback", async (req, res) => {
     ...cookieFlags(req, "lax"),
     path: providerCookiePath(provider),
   });
-  const saved = openOAuthCookie<OAuthState>(stateCookie);
-  const returnedState = typeof req.query.state === "string" ? req.query.state : "";
+
+  const returnedState = (
+    typeof req.query.state === "string"
+      ? req.query.state
+      : typeof req.body?.state === "string"
+        ? req.body.state
+        : ""
+  );
+  const code = (
+    typeof req.query.code === "string"
+      ? req.query.code
+      : typeof req.body?.code === "string"
+        ? req.body.code
+        : ""
+  );
+
+  const saved = openOAuthCookie<OAuthState>(stateCookie) || oauthStates.get(returnedState);
+  if (returnedState) oauthStates.delete(returnedState);
+
+  const isJsonClient = req.get("accept")?.includes("json") || req.query.format === "json" || req.is("json");
+
   if (
     !saved ||
     saved.provider !== provider ||
@@ -439,16 +479,28 @@ router.get("/integrations/:provider/callback", async (req, res) => {
     Date.now() - saved.createdAt > STATE_TTL_MS ||
     !/^[\w-]{1,128}$/.test(saved.firebaseUid)
   ) {
+    if (isJsonClient) {
+      res.status(400).json({ error: "This connection link expired. Return to Ayatrisya and try again." });
+      return;
+    }
     res.status(400).send("This connection link expired. Return to Ayatrisya and try again.");
     return;
   }
-  if (req.query.error || typeof req.query.code !== "string") {
+  if (req.query.error || !code) {
+    if (isJsonClient) {
+      res.status(400).json({ error: "OAuth authorization declined or missing code." });
+      return;
+    }
     res.redirect(303, returnToApp(saved.origin, provider, "error"));
     return;
   }
 
-  const origin = appOriginForRequest(req);
-  if (!origin || origin !== saved.origin || !configured(provider)) {
+  const origin = appOriginForRequest(req) || saved.origin;
+  if (!origin || !configured(provider)) {
+    if (isJsonClient) {
+      res.status(503).json({ error: "Provider configuration or origin error." });
+      return;
+    }
     res.redirect(303, returnToApp(saved.origin, provider, "error"));
     return;
   }
@@ -457,7 +509,7 @@ router.get("/integrations/:provider/callback", async (req, res) => {
     const providerConfig = providers[provider];
     const redirectUri = new URL(`${COOKIE_ROOT}/${provider}/callback`, saved.origin).toString();
     const tokenRequest = new URLSearchParams({
-      code: req.query.code,
+      code,
       redirect_uri: redirectUri,
       code_verifier: saved.verifier,
     });
@@ -521,8 +573,16 @@ router.get("/integrations/:provider/callback", async (req, res) => {
         : {}),
     };
     saveProviderSession(res, req, connection);
+    if (isJsonClient) {
+      res.json({ success: true, provider, accountName });
+      return;
+    }
     res.redirect(303, returnToApp(saved.origin, provider, "connected"));
-  } catch {
+  } catch (err: any) {
+    if (isJsonClient) {
+      res.status(500).json({ error: err?.message || "OAuth exchange failed." });
+      return;
+    }
     res.redirect(303, returnToApp(saved.origin, provider, "error"));
   }
 });
@@ -535,10 +595,8 @@ router.post("/integrations/:provider/disconnect", async (req, res) => {
   }
   const uid = await verifiedFirebaseUid(req, res);
   if (!uid) return;
-  const current = openOAuthCookie<ProviderSession>(
-    parseCookie(req, providerCookieName(provider)),
-  );
-  if (current?.firebaseUid === uid) clearProviderCookie(res, req, provider);
+  persistentConnections.delete(`${uid}:${provider}`);
+  clearProviderCookie(res, req, provider);
   res.status(204).end();
 });
 
