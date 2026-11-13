@@ -17,6 +17,23 @@ export interface CanvasDiff {
   proposed: string;
 }
 
+export type ProcessState = 'idle' | 'installing' | 'building' | 'running' | 'failed' | 'stopped';
+
+export interface ActiveProcess {
+  pid: number;
+  name: string;
+  command: string;
+  port?: number;
+  startedAt: number;
+}
+
+export interface TerminalLogEntry {
+  id: string;
+  type: 'cmd' | 'stdout' | 'stderr' | 'system' | 'exit';
+  text: string;
+  timestamp: number;
+}
+
 export interface CanvasExecutionResult {
   output: string;
   error?: string;

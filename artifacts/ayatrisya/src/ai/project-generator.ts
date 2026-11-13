@@ -203,3 +203,92 @@ Output the complete, updated source code for "${filePath}". Do NOT use placehold
   return updatedSource.replace(/^```[\w-]*\n/, '').replace(/\n```$/, '').trim();
 }
 
+export interface ProjectValidationIssue {
+  filePath: string;
+  line?: number;
+  severity: 'error' | 'warning';
+  message: string;
+}
+
+export interface ProjectValidationResult {
+  valid: boolean;
+  issues: ProjectValidationIssue[];
+}
+
+/**
+ * Validates generated project files and configurations (Requirement 1.4)
+ * - Checks JSON structure of configuration files like package.json
+ * - Checks balanced brackets and syntax closures in source files
+ * - Flags missing entrypoints
+ */
+export function validateProjectFiles(files: Array<{ path: string; content: string }>): ProjectValidationResult {
+  const issues: ProjectValidationIssue[] = [];
+
+  const pkg = files.find((f) => f.path.toLowerCase() === 'package.json');
+  if (pkg) {
+    try {
+      JSON.parse(pkg.content);
+    } catch (e: any) {
+      issues.push({
+        filePath: pkg.path,
+        severity: 'error',
+        message: `Invalid package.json syntax: ${e.message}`,
+      });
+    }
+  }
+
+  for (const f of files) {
+    if (f.path.endsWith('.js') || f.path.endsWith('.ts') || f.path.endsWith('.jsx') || f.path.endsWith('.tsx') || f.path.endsWith('.json')) {
+      let openBraces = 0;
+      let openParens = 0;
+      let openBrackets = 0;
+      const lines = f.content.split('\n');
+
+      for (let idx = 0; idx < lines.length; idx++) {
+        const line = lines[idx];
+        // Strip string literals and comments to avoid false-positives
+        const sanitized = line
+          .replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, '')
+          .replace(/"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`(?:[^`\\]|\\.)*`/g, '""');
+
+        for (const char of sanitized) {
+          if (char === '{') openBraces++;
+          else if (char === '}') openBraces--;
+          else if (char === '(') openParens++;
+          else if (char === ')') openParens--;
+          else if (char === '[') openBrackets++;
+          else if (char === ']') openBrackets--;
+        }
+      }
+
+      if (openBraces !== 0) {
+        issues.push({
+          filePath: f.path,
+          severity: 'error',
+          message: `Unbalanced curly braces in ${f.path} (delta: ${openBraces})`,
+        });
+      }
+      if (openParens !== 0) {
+        issues.push({
+          filePath: f.path,
+          severity: 'error',
+          message: `Unbalanced parentheses in ${f.path} (delta: ${openParens})`,
+        });
+      }
+      if (openBrackets !== 0) {
+        issues.push({
+          filePath: f.path,
+          severity: 'error',
+          message: `Unbalanced square brackets in ${f.path} (delta: ${openBrackets})`,
+        });
+      }
+    }
+  }
+
+  return {
+    valid: issues.filter((i) => i.severity === 'error').length === 0,
+    issues,
+  };
+}
+
+

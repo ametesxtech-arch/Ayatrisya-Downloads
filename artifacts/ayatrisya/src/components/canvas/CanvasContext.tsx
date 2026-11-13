@@ -287,6 +287,220 @@ python3 main.py
       },
     ],
   },
+  'vite-react': {
+    name: 'Vite + React SPA',
+    files: [
+      {
+        name: 'package.json',
+        language: 'json',
+        content: `{
+  "name": "ayatrisya-vite-react",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "vite": "^5.4.1",
+    "@vitejs/plugin-react": "^4.3.1"
+  }
+}
+`,
+      },
+      {
+        name: 'index.html',
+        language: 'html',
+        content: `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vite + React</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
+`,
+      },
+      {
+        name: 'src/main.jsx',
+        language: 'javascript',
+        content: `import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from './App.jsx';
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
+`,
+      },
+      {
+        name: 'src/App.jsx',
+        language: 'javascript',
+        content: `import React, { useState } from 'react';
+
+export default function App() {
+  const [count, setCount] = useState(0);
+
+  return (
+    <div style={{
+      fontFamily: 'system-ui, sans-serif',
+      background: '#09080e',
+      color: '#f8fafc',
+      minHeight: '100vh',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '2rem'
+    }}>
+      <div style={{
+        background: '#141320',
+        border: '1px solid rgba(139, 92, 246, 0.25)',
+        borderRadius: '16px',
+        padding: '32px',
+        maxWidth: '480px',
+        textAlign: 'center',
+        boxShadow: '0 20px 40px rgba(0,0,0,0.5)'
+      }}>
+        <h1 style={{ color: '#a78bfa', margin: '0 0 12px 0' }}>⚡ Vite + React 18</h1>
+        <p style={{ color: '#94a3b8', fontSize: '14px', lineHeight: 1.6 }}>
+          High-performance modern single page application with instant hot module reloading and component state isolation.
+        </p>
+        <button
+          onClick={() => setCount((c) => c + 1)}
+          style={{
+            background: 'linear-gradient(135deg, #8b5cf6, #6366f1)',
+            color: 'white',
+            border: 'none',
+            borderRadius: '8px',
+            padding: '12px 24px',
+            fontSize: '14px',
+            fontWeight: 600,
+            cursor: 'pointer',
+            marginTop: '16px',
+            boxShadow: '0 4px 12px rgba(139, 92, 246, 0.4)'
+          }}
+        >
+          Count is: {count}
+        </button>
+      </div>
+    </div>
+  );
+}
+`,
+      },
+      {
+        name: 'vite.config.js',
+        language: 'javascript',
+        content: `import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    port: 5173
+  }
+});
+`,
+      },
+    ],
+  },
+  'nextjs-app': {
+    name: 'Next.js App',
+    files: [
+      {
+        name: 'package.json',
+        language: 'json',
+        content: `{
+  "name": "ayatrisya-nextjs",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "next": "14.2.5",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  }
+}
+`,
+      },
+      {
+        name: 'app/page.tsx',
+        language: 'typescript',
+        content: `export default function Page() {
+  return (
+    <main style={{ padding: '2rem', fontFamily: 'system-ui', color: '#fff', background: '#0b0a11', minHeight: '100vh' }}>
+      <h1 style={{ color: '#8b5cf6' }}>Next.js 14 App Router</h1>
+      <p style={{ color: '#94a3b8' }}>Production React Framework running in Ayatrisya Canvas.</p>
+    </main>
+  );
+}
+`,
+      },
+    ],
+  },
+  'nodejs-api': {
+    name: 'Node.js Express API',
+    files: [
+      {
+        name: 'package.json',
+        language: 'json',
+        content: `{
+  "name": "ayatrisya-node-api",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
+`,
+      },
+      {
+        name: 'server.js',
+        language: 'javascript',
+        content: `import express from 'express';
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.use(express.json());
+
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    runtime: 'Ayatrisya Web Sandbox / Desktop Native'
+  });
+});
+
+app.listen(PORT, () => {
+  console.log(\`[Server] Listening on http://localhost:\${PORT}\`);
+});
+`,
+      },
+    ],
+  },
 };
 
 function loadPersistedState(): {
