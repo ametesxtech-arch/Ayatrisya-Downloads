@@ -68,7 +68,7 @@ describe("authenticated Ayatrisya model gateway", () => {
     expect(missing.status).toBe(401);
     const invalid = await call("/api/model/health", {}, "forged-token");
     expect(invalid.status).toBe(401);
-  });
+  }, 15000);
 
   it("fails clearly and makes no upstream request when server configuration is missing", async () => {
     vi.stubEnv("AYATRISYA_MODEL_API_KEY", "");

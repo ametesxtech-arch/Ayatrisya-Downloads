@@ -60,6 +60,41 @@ describe("Conversational Orchestrator 2.0", () => {
       expect(res.tags).toContain("docx");
     });
 
+    it("classifies project planning requests for Planner Agent", () => {
+      const res = classifyConversationIntent("Act as a planner agent and create a multi-phase architecture roadmap for our real-time collaboration app");
+      expect(res.intent).toBe("project_planning");
+      expect(res.tags).toContain("planner");
+      expect(res.tags).toContain("architecture");
+    });
+
+    it("classifies code generation and refactoring for Coder Agent", () => {
+      const res = classifyConversationIntent("Write a TypeScript function to implement a debounced search with unit tests");
+      expect(res.intent).toBe("code_generation");
+      expect(res.tags).toContain("code");
+      expect(res.suggestedBlockType).toBe("code");
+    });
+
+    it("classifies security audit and vulnerability requests", () => {
+      const res = classifyConversationIntent("Perform a security audit on our login endpoint to prevent SQL injection and OWASP vulnerabilities");
+      expect(res.intent).toBe("security_audit");
+      expect(res.tags).toContain("security");
+      expect(res.tags).toContain("audit");
+    });
+
+    it("classifies database schema design requests", () => {
+      const res = classifyConversationIntent("Design a PostgreSQL database schema for multi-tenant accounts with index optimization");
+      expect(res.intent).toBe("database_design");
+      expect(res.tags).toContain("database");
+      expect(res.tags).toContain("schema");
+    });
+
+    it("classifies algorithmic problem solving and time complexity requests", () => {
+      const res = classifyConversationIntent("What is the time complexity and Big O of Dijkstra's algorithm using a min-heap?");
+      expect(res.intent).toBe("algorithm_design");
+      expect(res.tags).toContain("algorithm");
+      expect(res.tags).toContain("complexity");
+    });
+
     it("classifies general conversation naturally", () => {
       const res = classifyConversationIntent("Hello! Good evening, how are you doing?");
       expect(res.intent).toBe("general_conversation");

@@ -2,6 +2,10 @@ export type ConversationIntent =
   | "general_conversation"
   | "assessment_request"
   | "code_generation"
+  | "project_planning"
+  | "security_audit"
+  | "database_design"
+  | "algorithm_design"
   | "technical_explanation"
   | "data_visualization"
   | "comparison_request"
@@ -141,12 +145,52 @@ export function classifyConversationIntent(
     };
   }
 
-  // 9. Code Generation
-  if (/\b(write\s+code|implement|function|algorithm|typescript|python|javascript|react|rust|golang|sql|bug|fix\s+code)\b/i.test(p)) {
+  // 9. Project Planning / Architecture Roadmap (Planner Agent)
+  if (/\b(plan\s*(this|a)?\s*project|roadmap|architecture|system\s*design|milestones?|planner\s*agent|breakdown|wbs|spec(ification)?)\b/i.test(p)) {
+    return {
+      intent: "project_planning",
+      confidence: 0.92,
+      tags: ["planner", "architecture", "roadmap"],
+      suggestedBlockType: "steps",
+    };
+  }
+
+  // 10. Security Audit & Vulnerability Assessment
+  if (/\b(security|vulnerabilit(y|ies)|owasp|xss|csrf|sqli|penetration|audit|threat|hardening|auth\s*bypass|sanitize)\b/i.test(p)) {
+    return {
+      intent: "security_audit",
+      confidence: 0.9,
+      tags: ["security", "audit", "hardening"],
+      suggestedBlockType: "checklist",
+    };
+  }
+
+  // 11. Database Modeling & SQL Architecture
+  if (/\b(database|schema|sql|postgres|mysql|sqlite|migration|table\s*design|indexing|foreign\s*key|acid|normalization)\b/i.test(p)) {
+    return {
+      intent: "database_design",
+      confidence: 0.88,
+      tags: ["database", "sql", "schema"],
+      suggestedBlockType: "table",
+    };
+  }
+
+  // 12. Algorithmic Problem Solving & Complexity
+  if (/\b(algorithm|time\s*complexity|space\s*complexity|big\s*o|dynamic\s*programming|binary\s*search|dijkstra|graph\s*traversal|sorting\s*algorithm)\b/i.test(p)) {
+    return {
+      intent: "algorithm_design",
+      confidence: 0.88,
+      tags: ["algorithm", "complexity", "data_structures"],
+      suggestedBlockType: "code",
+    };
+  }
+
+  // 13. Code Generation (Coder Agent)
+  if (/\b(write\s+code|implement|function|algorithm|typescript|python|javascript|react|rust|golang|sql|bug|fix\s+code|coder\s*agent|refactor|unit\s*test)\b/i.test(p)) {
     return {
       intent: "code_generation",
-      confidence: 0.85,
-      tags: ["code"],
+      confidence: 0.88,
+      tags: ["code", "coder_agent"],
       suggestedBlockType: "code",
     };
   }

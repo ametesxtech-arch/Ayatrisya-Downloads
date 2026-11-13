@@ -27,3 +27,4 @@ services:
         sync: false
       - key: CLOUDFLARE_IMAGE_MODEL
         value: "@cf/black-forest-labs/flux-1-schnell"
+

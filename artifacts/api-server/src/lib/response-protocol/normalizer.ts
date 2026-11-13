@@ -66,7 +66,10 @@ export function normalizeUniversalResponse(params: {
               : [];
 
           const validated = validateAndSanitizeQuestions(rawQuestions);
-          const questions: AssessmentQuestion[] = validated.sanitizedQuestions;
+          const questions: AssessmentQuestion[] = validated.sanitizedQuestions.map((q) => ({
+            ...q,
+            isPyq: Boolean(q.isPyq),
+          }));
 
           const assessmentId = parsed.id || `${messageId}-assessment-${blocks.length + 1}`;
           const assessmentMode: "practice" | "examination" = parsed.mode === "examination" ? "examination" : "practice";

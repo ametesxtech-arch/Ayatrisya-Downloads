@@ -64,7 +64,7 @@ export function isHuggingFaceSpaceUrl(rawUrl: string): boolean {
  */
 export async function callHfGradioApi(
   config: HfSpaceConfig,
-  apiName: "predict" | "health" | "capabilities",
+  apiName: "predict" | "health" | "capabilities" | "synthesize_speech" | "transcribe_audio",
   dataArray: unknown[] = [],
 ): Promise<unknown> {
   const baseUrl = normalizeHfSpaceBaseUrl(config.spaceUrl);
@@ -159,4 +159,45 @@ export async function callHfGradioApi(
   } finally {
     clearTimeout(timer);
   }
+}
+
+export interface HfSpeechSynthesisPayload {
+  text: string;
+  voice?: "balanced" | "female" | "male";
+  speed?: number;
+}
+
+export interface HfSpeechSynthesisResult {
+  mimeType: string;
+  dataBase64: string;
+  sampleRate: number;
+  bytes: number;
+}
+
+export async function synthesizeSpeechViaHf(
+  config: HfSpaceConfig,
+  payload: HfSpeechSynthesisPayload,
+): Promise<Buffer> {
+  const res = (await callHfGradioApi(config, "synthesize_speech", [JSON.stringify(payload)])) as any;
+  if (!res || !res.dataBase64) {
+    throw new Error("Invalid speech synthesis response from Hugging Face Space.");
+  }
+  return Buffer.from(res.dataBase64, "base64");
+}
+
+export interface HfTranscriptionResult {
+  text: string;
+  engine?: string;
+  success: boolean;
+}
+
+export async function transcribeAudioViaHf(
+  config: HfSpaceConfig,
+  audioBase64: string,
+): Promise<HfTranscriptionResult> {
+  const res = (await callHfGradioApi(config, "transcribe_audio", [JSON.stringify({ audioBase64 })])) as any;
+  if (!res || typeof res.text !== "string") {
+    throw new Error("Invalid transcription response from Hugging Face Space.");
+  }
+  return res as HfTranscriptionResult;
 }

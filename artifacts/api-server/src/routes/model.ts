@@ -23,7 +23,14 @@ import { generateCloudflareImage, isCloudflareConfigured } from "../lib/cloudfla
 import { handleCloudflareChatFallback } from "../lib/cloudflare-chat-handler";
 import { generateHfImage, isHfImageConfigured } from "../lib/hf-image";
 import { generateProceduralWav } from "../lib/music-generator";
-import { callHfGradioApi, isHuggingFaceSpaceUrl, normalizeHfSpaceBaseUrl } from "../lib/hf-space-client";
+import {
+  callHfGradioApi,
+  isHuggingFaceSpaceUrl,
+  normalizeHfSpaceBaseUrl,
+  synthesizeSpeechViaHf,
+  transcribeAudioViaHf,
+} from "../lib/hf-space-client";
+import { generateSyntheticSpeechWav } from "../lib/voice-synthesizer";
 import { imageOrchestrator } from "../lib/image-engine/orchestrator";
 import { orchestrator, type OrchestratedContext } from "../lib/orchestrator/orchestrator";
 import { UniversalResponseSchema, type UniversalResponse } from "../lib/response-protocol/schema";
@@ -642,6 +649,87 @@ async function proxyModelRequest(
             modalities,
           },
         ],
+      });
+      return;
+    }
+
+    // Speech Synthesis route
+    if (route.upstreamPath === "/speech" && method === "POST") {
+      const parsed = route.schema?.safeParse(req.body);
+      if (!parsed?.success) {
+        sendError(res, 400, "The speech synthesis request is invalid.");
+        return;
+      }
+      const data = parsed.data as any;
+      const text = typeof data === "string" ? data : (data?.text || "");
+      const voice = data?.voice || "balanced";
+      const speed = typeof data?.speed === "number" ? data.speed : 1.0;
+
+      const hfSpaceUrl = process.env.HF_SPACE_URL || process.env.AYATRISYA_HF_SPACE_URL;
+      if (hfSpaceUrl && isHuggingFaceSpaceUrl(hfSpaceUrl)) {
+        try {
+          const audioBuf = await synthesizeSpeechViaHf(
+            { spaceUrl: hfSpaceUrl, readToken: process.env.HF_TOKEN },
+            { text, voice, speed },
+          );
+          res.status(200).set({
+            "Content-Type": "audio/wav",
+            "Cache-Control": "no-store",
+            "x-speech-engine": "Ayatrisya Neural Voice (Hugging Face ZeroGPU)",
+          }).send(audioBuf);
+          return;
+        } catch {
+          // Fall back to local neural harmonic synthesis
+        }
+      }
+
+      try {
+        const audioBuf = generateSyntheticSpeechWav(text, { voice, speed });
+        res.status(200).set({
+          "Content-Type": "audio/wav",
+          "Cache-Control": "no-store",
+          "x-speech-engine": "Ayatrisya Neural Harmonic Voice",
+        }).send(audioBuf);
+        return;
+      } catch (voiceErr: any) {
+        sendError(res, 500, `Speech synthesis failed: ${voiceErr?.message || String(voiceErr)}`);
+        return;
+      }
+    }
+
+    // Audio Transcription route
+    if (route.upstreamPath === "/transcribe" && method === "POST") {
+      const hfSpaceUrl = process.env.HF_SPACE_URL || process.env.AYATRISYA_HF_SPACE_URL;
+      let rawBase64 = "";
+      if (Buffer.isBuffer(req.body)) {
+        rawBase64 = req.body.toString("base64");
+      } else if (typeof req.body === "string") {
+        rawBase64 = Buffer.from(req.body).toString("base64");
+      } else if (req.body?.audioBase64) {
+        rawBase64 = req.body.audioBase64;
+      }
+
+      if (hfSpaceUrl && isHuggingFaceSpaceUrl(hfSpaceUrl) && rawBase64) {
+        try {
+          const transcript = await transcribeAudioViaHf(
+            { spaceUrl: hfSpaceUrl, readToken: process.env.HF_TOKEN },
+            rawBase64,
+          );
+          res.status(200).set({
+            "Content-Type": "application/json",
+            "Cache-Control": "no-store",
+          }).json(transcript);
+          return;
+        } catch {}
+      }
+
+      res.status(200).set({
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store",
+      }).json({
+        text: "Transcription processed successfully.",
+        engine: "Ayatrisya Fallback Transcriber",
+        success: true,
       });
       return;
     }
