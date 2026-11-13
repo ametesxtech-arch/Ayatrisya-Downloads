@@ -1,5 +1,56 @@
 import { downloadBlob } from '@/storage/backup';
-import type { Slide } from '@/components/ItemEditors';
+
+export type SlideLayout =
+  | 'title'
+  | 'section-header'
+  | 'two-column'
+  | 'metrics'
+  | 'timeline'
+  | 'process'
+  | 'comparison'
+  | 'table'
+  | 'image-focus'
+  | 'card-grid'
+  | 'conclusion'
+  | 'references'
+  | 'bullets'
+  | 'quote';
+
+export interface SlideMetric {
+  value: string;
+  label: string;
+  trend?: string;
+}
+
+export interface SlideTimelineStep {
+  step: string;
+  title: string;
+  description: string;
+}
+
+export interface SlideTable {
+  headers: string[];
+  rows: string[][];
+}
+
+export interface Slide {
+  id: string;
+  title: string;
+  subtitle?: string;
+  body: string;
+  layout: SlideLayout;
+  category?: string;
+  metrics?: SlideMetric[];
+  timeline?: SlideTimelineStep[];
+  columns?: {
+    leftTitle?: string;
+    leftBody: string;
+    rightTitle?: string;
+    rightBody: string;
+  };
+  table?: SlideTable;
+  notes?: string;
+}
 
 /**
  * Basic CRC32 table & calculator for ZIP checksums.
@@ -192,7 +243,8 @@ const THEMES: Record<PresentationTheme, ThemeDef> = {
 
 /**
  * Builds a PowerPoint presentation (.pptx) adhering to Microsoft Office OpenXML PresentationML specifications.
- * Supports SmartArt cards, multi-column metric blocks, quotes, and diverse modern palettes.
+ * Implements 12 distinct professional slide layouts:
+ * Title, Section Divider, Two-Column, Metrics/KPI, Timeline, Process, Comparison, Table, Image-Focus, Card Grid, Conclusion, References.
  */
 export function generatePptx(
   title: string,
@@ -226,32 +278,41 @@ export function generatePptx(
   addXml('[Content_Types].xml', contentTypes);
 
   // 2. _rels/.rels
-  addXml('_rels/.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+  addXml(
+    '_rels/.rels',
+    `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/>
   <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>
   <Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/>
-</Relationships>`);
+</Relationships>`
+  );
 
   // 3. docProps/core.xml & app.xml
   const dateIso = new Date().toISOString();
-  addXml('docProps/core.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+  addXml(
+    'docProps/core.xml',
+    `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:dcmitype="http://purl.org/dc/dcmitype/">
   <dc:title>${escapeXml(title)}</dc:title>
-  <dc:creator>Ayatrisya Presentation Suite</dc:creator>
+  <dc:creator>Ayatrisya Presentation Engine</dc:creator>
   <cp:lastModifiedBy>Ayatrisya AI</cp:lastModifiedBy>
   <dcterms:created>${dateIso}</dcterms:created>
   <dcterms:modified>${dateIso}</dcterms:modified>
-</cp:coreProperties>`);
+</cp:coreProperties>`
+  );
 
-  addXml('docProps/app.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+  addXml(
+    'docProps/app.xml',
+    `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes">
   <TotalTime>0</TotalTime>
   <Words>0</Words>
   <Application>Ayatrisya AI Presentation Engine</Application>
   <PresentationFormat>On-screen Show (16:9)</PresentationFormat>
   <Slides>${slides.length}</Slides>
-</Properties>`);
+</Properties>`
+  );
 
   // 4. ppt/presentation.xml & ppt/_rels/presentation.xml.rels
   let sldIdList = '';
@@ -268,7 +329,9 @@ export function generatePptx(
 
   addXml('ppt/_rels/presentation.xml.rels', presRels);
 
-  addXml('ppt/presentation.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+  addXml(
+    'ppt/presentation.xml',
+    `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
   <p:sldMasterIdLst>
     <p:sldMasterId id="2147483648" r:id="rId1"/>
@@ -277,10 +340,13 @@ export function generatePptx(
   </p:sldIdLst>
   <p:sldSz cx="12192000" cy="6858000" type="screen16x9"/>
   <p:notesSz cx="6858000" cy="9144000"/>
-</p:presentation>`);
+</p:presentation>`
+  );
 
   // 5. Theme
-  addXml('ppt/theme/theme1.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+  addXml(
+    'ppt/theme/theme1.xml',
+    `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="Ayatrisya ${options.theme || 'Dark'}">
   <a:themeElements>
     <a:clrScheme name="AyatrisyaPalette">
@@ -303,187 +369,218 @@ export function generatePptx(
     </a:fontScheme>
     <a:fmtScheme name="Office"><a:fillStyleLst/><a:lnStyleLst/><a:effectStyleLst/><a:bgFillStyleLst/></a:fmtScheme>
   </a:themeElements>
-</a:theme>`);
+</a:theme>`
+  );
 
   // 6. SlideMaster & SlideLayout
-  addXml('ppt/slideMasters/_rels/slideMaster1.xml.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+  addXml(
+    'ppt/slideMasters/_rels/slideMaster1.xml.rels',
+    `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/>
   <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="../theme/theme1.xml"/>
-</Relationships>`);
+</Relationships>`
+  );
 
-  addXml('ppt/slideMasters/slideMaster1.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+  addXml(
+    'ppt/slideMasters/slideMaster1.xml',
+    `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:sldMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
   <p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/></p:spTree></p:cSld>
   <p:clrMap bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink"/>
   <p:sldLayoutIdLst><p:sldLayoutId id="2147483649" r:id="rId1"/></p:sldLayoutIdLst>
-</p:sldMaster>`);
+</p:sldMaster>`
+  );
 
-  addXml('ppt/slideLayouts/_rels/slideLayout1.xml.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+  addXml(
+    'ppt/slideLayouts/_rels/slideLayout1.xml.rels',
+    `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="../slideMasters/slideMaster1.xml"/>
-</Relationships>`);
+</Relationships>`
+  );
 
-  addXml('ppt/slideLayouts/slideLayout1.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+  addXml(
+    'ppt/slideLayouts/slideLayout1.xml',
+    `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:sldLayout xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" type="blank">
   <p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/></p:spTree></p:cSld>
-</p:sldLayout>`);
+</p:sldLayout>`
+  );
 
-  // 7. Individual slides with SmartArt card styling
+  // Helper for Slide Header Accent + Title
+  const renderSlideHeader = (slideTitle: string, categoryText: string = 'AYATRISYA') => `
+    <!-- Top Accent Category Bar -->
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="AccentLine"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="1000000" y="800000"/><a:ext cx="800000" cy="50000"/></a:xfrm>
+        <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
+        <a:solidFill><a:srgbClr val="${theme.accent}"/></a:solidFill>
+      </p:spPr>
+    </p:sp>
+    <!-- Slide Title Headline -->
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="3" name="Title"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="1000000" y="1000000"/><a:ext cx="10200000" cy="1100000"/></a:xfrm>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:lstStyle/>
+        <a:p>
+          <a:r>
+            <a:rPr lang="en-US" sz="3000" b="1">
+              <a:solidFill><a:srgbClr val="${theme.titleColor}"/></a:solidFill>
+            </a:rPr>
+            <a:t>${escapeXml(slideTitle)}</a:t>
+          </a:r>
+        </a:p>
+      </p:txBody>
+    </p:sp>`;
+
+  // 7. Individual slides with specific layout OpenXML
   slides.forEach((slide, idx) => {
     const slideNum = idx + 1;
-    addXml(`ppt/slides/_rels/slide${slideNum}.xml.rels`, `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    addXml(
+      `ppt/slides/_rels/slide${slideNum}.xml.rels`,
+      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/>
-</Relationships>`);
+</Relationships>`
+    );
 
-    const isTitleSlide = slide.layout === 'title' || idx === 0;
-    const isQuoteSlide = slide.layout === 'quote';
+    const layout = slide.layout || 'card-grid';
+    let shapesXml = '';
 
-    let shapesXml: string;
-
-    if (isTitleSlide) {
-      // Gamma / Keynote Style Title Deck
-      shapesXml = `
-      <!-- Accent Category Pill Badge -->
-      <p:sp>
-        <p:nvSpPr><p:cNvPr id="2" name="Badge"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
-        <p:spPr>
-          <a:xfrm><a:off x="1000000" y="1600000"/><a:ext cx="2600000" cy="420000"/></a:xfrm>
-          <a:prstGeom prst="roundRect"><a:avLst><a:gd name="adj" fmla="val 25000"/></a:avLst></a:prstGeom>
-          <a:solidFill><a:srgbClr val="${theme.badgeBg}"/></a:solidFill>
-        </p:spPr>
-        <p:txBody>
-          <a:bodyPr anchor="ctr"/>
-          <a:lstStyle/>
-          <a:p>
-            <a:pPr algn="ctr"/>
-            <a:r>
-              <a:rPr lang="en-US" sz="1300" b="1">
-                <a:solidFill><a:srgbClr val="${theme.badgeColor}"/></a:solidFill>
-              </a:rPr>
-              <a:t>AYATRISYA DECK</a:t>
-            </a:r>
-          </a:p>
-        </p:txBody>
-      </p:sp>
-
-      <!-- Main Deck Headline -->
-      <p:sp>
-        <p:nvSpPr><p:cNvPr id="3" name="DeckTitle"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
-        <p:spPr>
-          <a:xfrm><a:off x="1000000" y="2200000"/><a:ext cx="10200000" cy="1800000"/></a:xfrm>
-        </p:spPr>
-        <p:txBody>
-          <a:bodyPr anchor="t"/>
-          <a:lstStyle/>
-          <a:p>
-            <a:r>
-              <a:rPr lang="en-US" sz="4400" b="1">
-                <a:solidFill><a:srgbClr val="${theme.titleColor}"/></a:solidFill>
-              </a:rPr>
-              <a:t>${escapeXml(slide.title)}</a:t>
-            </a:r>
-          </a:p>
-        </p:txBody>
-      </p:sp>
-
-      <!-- Subtitle Body Tagline -->
-      <p:sp>
-        <p:nvSpPr><p:cNvPr id="4" name="Subtitle"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
-        <p:spPr>
-          <a:xfrm><a:off x="1000000" y="4200000"/><a:ext cx="10200000" cy="1400000"/></a:xfrm>
-        </p:spPr>
-        <p:txBody>
-          <a:bodyPr/>
-          <a:lstStyle/>
-          <a:p>
-            <a:r>
-              <a:rPr lang="en-US" sz="2000">
-                <a:solidFill><a:srgbClr val="${theme.bodyColor}"/></a:solidFill>
-              </a:rPr>
-              <a:t>${escapeXml(slide.body)}</a:t>
-            </a:r>
-          </a:p>
-        </p:txBody>
-      </p:sp>`;
-    } else if (isQuoteSlide) {
-      // Big Callout Quote Layout
-      shapesXml = `
-      <!-- Accent Top Border -->
-      <p:sp>
-        <p:nvSpPr><p:cNvPr id="2" name="AccentLine"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
-        <p:spPr>
-          <a:xfrm><a:off x="1000000" y="1000000"/><a:ext cx="1000000" cy="60000"/></a:xfrm>
-          <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
-          <a:solidFill><a:srgbClr val="${theme.accent}"/></a:solidFill>
-        </p:spPr>
-      </p:sp>
-
-      <!-- Section Title -->
-      <p:sp>
-        <p:nvSpPr><p:cNvPr id="3" name="QuoteTitle"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
-        <p:spPr>
-          <a:xfrm><a:off x="1000000" y="1200000"/><a:ext cx="10200000" cy="800000"/></a:xfrm>
-        </p:spPr>
-        <p:txBody>
-          <a:bodyPr/>
-          <a:lstStyle/>
-          <a:p>
-            <a:r>
-              <a:rPr lang="en-US" sz="2800" b="1">
-                <a:solidFill><a:srgbClr val="${theme.titleColor}"/></a:solidFill>
-              </a:rPr>
-              <a:t>${escapeXml(slide.title)}</a:t>
-            </a:r>
-          </a:p>
-        </p:txBody>
-      </p:sp>
-
-      <!-- Card container for Quote -->
-      <p:sp>
-        <p:nvSpPr><p:cNvPr id="4" name="QuoteCard"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
-        <p:spPr>
-          <a:xfrm><a:off x="1000000" y="2200000"/><a:ext cx="10200000" cy="3600000"/></a:xfrm>
-          <a:prstGeom prst="roundRect"><a:avLst><a:gd name="adj" fmla="val 15000"/></a:avLst></a:prstGeom>
-          <a:solidFill><a:srgbClr val="${theme.cardBg}"/></a:solidFill>
-          <a:ln w="19050"><a:solidFill><a:srgbClr val="${theme.cardBorder}"/></a:solidFill></a:ln>
-        </p:spPr>
-        <p:txBody>
-          <a:bodyPr anchor="ctr"/>
-          <a:lstStyle/>
-          <a:p>
-            <a:pPr algn="ctr"/>
-            <a:r>
-              <a:rPr lang="en-US" sz="2600" i="1" b="1">
-                <a:solidFill><a:srgbClr val="${theme.titleColor}"/></a:solidFill>
-              </a:rPr>
-              <a:t>“${escapeXml(slide.body.replace(/^"|"$/g, ''))}”</a:t>
-            </a:r>
-          </a:p>
-        </p:txBody>
-      </p:sp>`;
-    } else {
-      // SmartArt Multi-Card Layout
-      const rawPoints = slide.body
-        .split('\n')
-        .map((p) => p.replace(/^[•\-*]\s*/, '').trim())
-        .filter(Boolean);
-
-      const points = rawPoints.length > 0 ? rawPoints : ['Key insight and structured analysis.'];
-      const cardCount = Math.min(points.length, 3);
-      const totalWidth = 10200000;
-      const gap = 300000;
-      const cardWidth = Math.floor((totalWidth - (cardCount - 1) * gap) / cardCount);
-
-      const cardsXml = points.slice(0, cardCount).map((pt, pIdx) => {
-        const xPos = 1000000 + pIdx * (cardWidth + gap);
-        return `
-        <!-- SmartArt Item Card ${pIdx + 1} -->
+    switch (layout) {
+      case 'title': {
+        // Layout 1: Title Deck
+        shapesXml = `
         <p:sp>
-          <p:nvSpPr><p:cNvPr id="${10 + pIdx}" name="Card_${pIdx + 1}"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+          <p:nvSpPr><p:cNvPr id="2" name="Badge"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
           <p:spPr>
-            <a:xfrm><a:off x="${xPos}" y="2400000"/><a:ext cx="${cardWidth}" cy="3400000"/></a:xfrm>
+            <a:xfrm><a:off x="1000000" y="1600000"/><a:ext cx="2600000" cy="420000"/></a:xfrm>
+            <a:prstGeom prst="roundRect"><a:avLst><a:gd name="adj" fmla="val 25000"/></a:avLst></a:prstGeom>
+            <a:solidFill><a:srgbClr val="${theme.badgeBg}"/></a:solidFill>
+          </p:spPr>
+          <p:txBody>
+            <a:bodyPr anchor="ctr"/>
+            <a:lstStyle/>
+            <a:p>
+              <a:pPr algn="ctr"/>
+              <a:r>
+                <a:rPr lang="en-US" sz="1300" b="1">
+                  <a:solidFill><a:srgbClr val="${theme.badgeColor}"/></a:solidFill>
+                </a:rPr>
+                <a:t>${escapeXml(slide.category || 'AYATRISYA DECK')}</a:t>
+              </a:r>
+            </a:p>
+          </p:txBody>
+        </p:sp>
+
+        <p:sp>
+          <p:nvSpPr><p:cNvPr id="3" name="DeckTitle"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+          <p:spPr>
+            <a:xfrm><a:off x="1000000" y="2200000"/><a:ext cx="10200000" cy="1800000"/></a:xfrm>
+          </p:spPr>
+          <p:txBody>
+            <a:bodyPr anchor="t"/>
+            <a:lstStyle/>
+            <a:p>
+              <a:r>
+                <a:rPr lang="en-US" sz="4400" b="1">
+                  <a:solidFill><a:srgbClr val="${theme.titleColor}"/></a:solidFill>
+                </a:rPr>
+                <a:t>${escapeXml(slide.title)}</a:t>
+              </a:r>
+            </a:p>
+          </p:txBody>
+        </p:sp>
+
+        <p:sp>
+          <p:nvSpPr><p:cNvPr id="4" name="Subtitle"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+          <p:spPr>
+            <a:xfrm><a:off x="1000000" y="4200000"/><a:ext cx="10200000" cy="1400000"/></a:xfrm>
+          </p:spPr>
+          <p:txBody>
+            <a:bodyPr/>
+            <a:lstStyle/>
+            <a:p>
+              <a:r>
+                <a:rPr lang="en-US" sz="2000">
+                  <a:solidFill><a:srgbClr val="${theme.bodyColor}"/></a:solidFill>
+                </a:rPr>
+                <a:t>${escapeXml(slide.body || slide.subtitle || '')}</a:t>
+              </a:r>
+            </a:p>
+          </p:txBody>
+        </p:sp>`;
+        break;
+      }
+
+      case 'quote':
+      case 'section-header': {
+        // Layout 2: Section Divider / Quote Callout
+        shapesXml = `
+        <p:sp>
+          <p:nvSpPr><p:cNvPr id="2" name="SectionCard"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+          <p:spPr>
+            <a:xfrm><a:off x="1000000" y="1800000"/><a:ext cx="10200000" cy="3600000"/></a:xfrm>
+            <a:prstGeom prst="roundRect"><a:avLst><a:gd name="adj" fmla="val 15000"/></a:avLst></a:prstGeom>
+            <a:solidFill><a:srgbClr val="${theme.cardBg}"/></a:solidFill>
+            <a:ln w="19050"><a:solidFill><a:srgbClr val="${theme.cardBorder}"/></a:solidFill></a:ln>
+          </p:spPr>
+          <p:txBody>
+            <a:bodyPr anchor="ctr"/>
+            <a:lstStyle/>
+            <a:p>
+              <a:pPr algn="ctr"/>
+              <a:r>
+                <a:rPr lang="en-US" sz="1400" b="1">
+                  <a:solidFill><a:srgbClr val="${theme.accent}"/></a:solidFill>
+                </a:rPr>
+                <a:t>${escapeXml(slide.category || 'SECTION BREAK')}</a:t>
+              </a:r>
+            </a:p>
+            <a:p>
+              <a:pPr algn="ctr"><a:spcBfr><a:spcPts val="1400"/></a:spcBfr></a:pPr>
+              <a:r>
+                <a:rPr lang="en-US" sz="3800" b="1">
+                  <a:solidFill><a:srgbClr val="${theme.titleColor}"/></a:solidFill>
+                </a:rPr>
+                <a:t>${escapeXml(slide.title)}</a:t>
+              </a:r>
+            </a:p>
+            <a:p>
+              <a:pPr algn="ctr"><a:spcBfr><a:spcPts val="1200"/></a:spcBfr></a:pPr>
+              <a:r>
+                <a:rPr lang="en-US" sz="1800">
+                  <a:solidFill><a:srgbClr val="${theme.bodyColor}"/></a:solidFill>
+                </a:rPr>
+                <a:t>${escapeXml(slide.body)}</a:t>
+              </a:r>
+            </a:p>
+          </p:txBody>
+        </p:sp>`;
+        break;
+      }
+
+      case 'two-column': {
+        // Layout 3: Two-Column Split
+        const leftTitle = slide.columns?.leftTitle || 'Primary Dimension';
+        const leftBody = slide.columns?.leftBody || slide.body.split('\n')[0] || '';
+        const rightTitle = slide.columns?.rightTitle || 'Secondary Dimension';
+        const rightBody = slide.columns?.rightBody || slide.body.split('\n').slice(1).join('\n') || '';
+
+        shapesXml = `
+        ${renderSlideHeader(slide.title)}
+
+        <!-- Left Column Card -->
+        <p:sp>
+          <p:nvSpPr><p:cNvPr id="10" name="ColLeft"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+          <p:spPr>
+            <a:xfrm><a:off x="1000000" y="2400000"/><a:ext cx="4950000" cy="3500000"/></a:xfrm>
             <a:prstGeom prst="roundRect"><a:avLst><a:gd name="adj" fmla="val 15000"/></a:avLst></a:prstGeom>
             <a:solidFill><a:srgbClr val="${theme.cardBg}"/></a:solidFill>
             <a:ln w="19050"><a:solidFill><a:srgbClr val="${theme.cardBorder}"/></a:solidFill></a:ln>
@@ -493,57 +590,463 @@ export function generatePptx(
             <a:lstStyle/>
             <a:p>
               <a:r>
-                <a:rPr lang="en-US" sz="1400" b="1">
-                  <a:solidFill><a:srgbClr val="${theme.accent}"/></a:solidFill>
-                </a:rPr>
-                <a:t>POINT 0${pIdx + 1}</a:t>
+                <a:rPr lang="en-US" sz="2000" b="1"><a:solidFill><a:srgbClr val="${theme.titleColor}"/></a:solidFill></a:rPr>
+                <a:t>${escapeXml(leftTitle)}</a:t>
               </a:r>
             </a:p>
             <a:p>
               <a:pPr><a:spcBfr><a:spcPts val="1200"/></a:spcBfr></a:pPr>
               <a:r>
-                <a:rPr lang="en-US" sz="1800">
-                  <a:solidFill><a:srgbClr val="${theme.titleColor}"/></a:solidFill>
-                </a:rPr>
-                <a:t>${escapeXml(pt)}</a:t>
+                <a:rPr lang="en-US" sz="1600"><a:solidFill><a:srgbClr val="${theme.bodyColor}"/></a:solidFill></a:rPr>
+                <a:t>${escapeXml(leftBody)}</a:t>
+              </a:r>
+            </a:p>
+          </p:txBody>
+        </p:sp>
+
+        <!-- Right Column Card -->
+        <p:sp>
+          <p:nvSpPr><p:cNvPr id="11" name="ColRight"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+          <p:spPr>
+            <a:xfrm><a:off x="6250000" y="2400000"/><a:ext cx="4950000" cy="3500000"/></a:xfrm>
+            <a:prstGeom prst="roundRect"><a:avLst><a:gd name="adj" fmla="val 15000"/></a:avLst></a:prstGeom>
+            <a:solidFill><a:srgbClr val="${theme.cardBg}"/></a:solidFill>
+            <a:ln w="19050"><a:solidFill><a:srgbClr val="${theme.cardBorder}"/></a:solidFill></a:ln>
+          </p:spPr>
+          <p:txBody>
+            <a:bodyPr anchor="t"/>
+            <a:lstStyle/>
+            <a:p>
+              <a:r>
+                <a:rPr lang="en-US" sz="2000" b="1"><a:solidFill><a:srgbClr val="${theme.titleColor}"/></a:solidFill></a:rPr>
+                <a:t>${escapeXml(rightTitle)}</a:t>
+              </a:r>
+            </a:p>
+            <a:p>
+              <a:pPr><a:spcBfr><a:spcPts val="1200"/></a:spcBfr></a:pPr>
+              <a:r>
+                <a:rPr lang="en-US" sz="1600"><a:solidFill><a:srgbClr val="${theme.bodyColor}"/></a:solidFill></a:rPr>
+                <a:t>${escapeXml(rightBody)}</a:t>
               </a:r>
             </a:p>
           </p:txBody>
         </p:sp>`;
-      }).join('\n');
+        break;
+      }
 
-      shapesXml = `
-      <!-- Slide Category Accent -->
-      <p:sp>
-        <p:nvSpPr><p:cNvPr id="2" name="AccentLine"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
-        <p:spPr>
-          <a:xfrm><a:off x="1000000" y="800000"/><a:ext cx="800000" cy="50000"/></a:xfrm>
-          <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
-          <a:solidFill><a:srgbClr val="${theme.accent}"/></a:solidFill>
-        </p:spPr>
-      </p:sp>
+      case 'metrics': {
+        // Layout 4: Metrics / KPI Callouts
+        const metrics = slide.metrics && slide.metrics.length > 0
+          ? slide.metrics
+          : [
+              { value: '99.98%', label: 'System Reliability', trend: '+4.2% YoY' },
+              { value: '<15ms', label: 'Processing Latency', trend: 'Sub-second' },
+              { value: '10x', label: 'Developer Velocity', trend: 'Accelerated' },
+            ];
 
-      <!-- Slide Title Headline -->
-      <p:sp>
-        <p:nvSpPr><p:cNvPr id="3" name="Title"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
-        <p:spPr>
-          <a:xfrm><a:off x="1000000" y="1000000"/><a:ext cx="10200000" cy="1100000"/></a:xfrm>
-        </p:spPr>
-        <p:txBody>
-          <a:bodyPr/>
-          <a:lstStyle/>
-          <a:p>
-            <a:r>
-              <a:rPr lang="en-US" sz="3000" b="1">
-                <a:solidFill><a:srgbClr val="${theme.titleColor}"/></a:solidFill>
-              </a:rPr>
-              <a:t>${escapeXml(slide.title)}</a:t>
-            </a:r>
-          </a:p>
-        </p:txBody>
-      </p:sp>
+        const cardCount = Math.min(metrics.length, 3);
+        const cardWidth = Math.floor((10200000 - (cardCount - 1) * 300000) / cardCount);
 
-      ${cardsXml}`;
+        const metricCardsXml = metrics.slice(0, cardCount).map((m, mIdx) => {
+          const xPos = 1000000 + mIdx * (cardWidth + 300000);
+          return `
+          <p:sp>
+            <p:nvSpPr><p:cNvPr id="${20 + mIdx}" name="MetricCard_${mIdx}"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+            <p:spPr>
+              <a:xfrm><a:off x="${xPos}" y="2400000"/><a:ext cx="${cardWidth}" cy="3400000"/></a:xfrm>
+              <a:prstGeom prst="roundRect"><a:avLst><a:gd name="adj" fmla="val 15000"/></a:avLst></a:prstGeom>
+              <a:solidFill><a:srgbClr val="${theme.cardBg}"/></a:solidFill>
+              <a:ln w="19050"><a:solidFill><a:srgbClr val="${theme.cardBorder}"/></a:solidFill></a:ln>
+            </p:spPr>
+            <p:txBody>
+              <a:bodyPr anchor="ctr"/>
+              <a:lstStyle/>
+              <a:p>
+                <a:pPr algn="ctr"/>
+                <a:r>
+                  <a:rPr lang="en-US" sz="4000" b="1"><a:solidFill><a:srgbClr val="${theme.accent}"/></a:solidFill></a:rPr>
+                  <a:t>${escapeXml(m.value)}</a:t>
+                </a:r>
+              </a:p>
+              <a:p>
+                <a:pPr algn="ctr"><a:spcBfr><a:spcPts val="1200"/></a:spcBfr></a:pPr>
+                <a:r>
+                  <a:rPr lang="en-US" sz="1800" b="1"><a:solidFill><a:srgbClr val="${theme.titleColor}"/></a:solidFill></a:rPr>
+                  <a:t>${escapeXml(m.label)}</a:t>
+                </a:r>
+              </a:p>
+              ${m.trend ? `
+              <a:p>
+                <a:pPr algn="ctr"><a:spcBfr><a:spcPts val="800"/></a:spcBfr></a:pPr>
+                <a:r>
+                  <a:rPr lang="en-US" sz="1300"><a:solidFill><a:srgbClr val="10B981"/></a:solidFill></a:rPr>
+                  <a:t>${escapeXml(m.trend)}</a:t>
+                </a:r>
+              </a:p>` : ''}
+            </p:txBody>
+          </p:sp>`;
+        }).join('\n');
+
+        shapesXml = `${renderSlideHeader(slide.title)}\n${metricCardsXml}`;
+        break;
+      }
+
+      case 'timeline':
+      case 'process': {
+        // Layout 5 & 6: Timeline & Process
+        const steps = slide.timeline && slide.timeline.length > 0
+          ? slide.timeline
+          : [
+              { step: '01', title: 'Phase 1: Architecture', description: 'Domain model and zero-latency kernel' },
+              { step: '02', title: 'Phase 2: Validation', description: 'Strict OpenXML format compatibility' },
+              { step: '03', title: 'Phase 3: Production', description: 'Distributed multi-cloud execution' },
+            ];
+
+        const stepCount = Math.min(steps.length, 3);
+        const cardWidth = Math.floor((10200000 - (stepCount - 1) * 300000) / stepCount);
+
+        const stepsXml = steps.slice(0, stepCount).map((s, sIdx) => {
+          const xPos = 1000000 + sIdx * (cardWidth + 300000);
+          return `
+          <p:sp>
+            <p:nvSpPr><p:cNvPr id="${30 + sIdx}" name="StepCard_${sIdx}"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+            <p:spPr>
+              <a:xfrm><a:off x="${xPos}" y="2400000"/><a:ext cx="${cardWidth}" cy="3400000"/></a:xfrm>
+              <a:prstGeom prst="roundRect"><a:avLst><a:gd name="adj" fmla="val 15000"/></a:avLst></a:prstGeom>
+              <a:solidFill><a:srgbClr val="${theme.cardBg}"/></a:solidFill>
+              <a:ln w="19050"><a:solidFill><a:srgbClr val="${theme.cardBorder}"/></a:solidFill></a:ln>
+            </p:spPr>
+            <p:txBody>
+              <a:bodyPr anchor="t"/>
+              <a:lstStyle/>
+              <a:p>
+                <a:r>
+                  <a:rPr lang="en-US" sz="1500" b="1"><a:solidFill><a:srgbClr val="${theme.accent}"/></a:solidFill></a:rPr>
+                  <a:t>${escapeXml(s.step || `STEP 0${sIdx + 1}`)}</a:t>
+                </a:r>
+              </a:p>
+              <a:p>
+                <a:pPr><a:spcBfr><a:spcPts val="1000"/></a:spcBfr></a:pPr>
+                <a:r>
+                  <a:rPr lang="en-US" sz="1800" b="1"><a:solidFill><a:srgbClr val="${theme.titleColor}"/></a:solidFill></a:rPr>
+                  <a:t>${escapeXml(s.title)}</a:t>
+                </a:r>
+              </a:p>
+              <a:p>
+                <a:pPr><a:spcBfr><a:spcPts val="800"/></a:spcBfr></a:pPr>
+                <a:r>
+                  <a:rPr lang="en-US" sz="1400"><a:solidFill><a:srgbClr val="${theme.bodyColor}"/></a:solidFill></a:rPr>
+                  <a:t>${escapeXml(s.description)}</a:t>
+                </a:r>
+              </a:p>
+            </p:txBody>
+          </p:sp>`;
+        }).join('\n');
+
+        shapesXml = `${renderSlideHeader(slide.title)}\n${stepsXml}`;
+        break;
+      }
+
+      case 'comparison': {
+        // Layout 7: Comparison Side-by-Side
+        const compLines = slide.body.split('\n').filter(Boolean);
+        const leftText = compLines[0] || 'Standard Industry Approach';
+        const rightText = compLines[1] || 'Ayatrisya Optimized Pipeline';
+
+        shapesXml = `
+        ${renderSlideHeader(slide.title)}
+
+        <!-- Left Comparison Card -->
+        <p:sp>
+          <p:nvSpPr><p:cNvPr id="40" name="CompLeft"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+          <p:spPr>
+            <a:xfrm><a:off x="1000000" y="2400000"/><a:ext cx="4950000" cy="3500000"/></a:xfrm>
+            <a:prstGeom prst="roundRect"><a:avLst><a:gd name="adj" fmla="val 15000"/></a:avLst></a:prstGeom>
+            <a:solidFill><a:srgbClr val="${theme.cardBg}"/></a:solidFill>
+            <a:ln w="19050"><a:solidFill><a:srgbClr val="${theme.cardBorder}"/></a:solidFill></a:ln>
+          </p:spPr>
+          <p:txBody>
+            <a:bodyPr anchor="t"/>
+            <a:lstStyle/>
+            <a:p>
+              <a:r>
+                <a:rPr lang="en-US" sz="1500" b="1"><a:solidFill><a:srgbClr val="94A3B8"/></a:solidFill></a:rPr>
+                <a:t>BASELINE / CONVENTIONAL</a:t>
+              </a:r>
+            </a:p>
+            <a:p>
+              <a:pPr><a:spcBfr><a:spcPts val="1200"/></a:spcBfr></a:pPr>
+              <a:r>
+                <a:rPr lang="en-US" sz="1700"><a:solidFill><a:srgbClr val="${theme.bodyColor}"/></a:solidFill></a:rPr>
+                <a:t>${escapeXml(leftText)}</a:t>
+              </a:r>
+            </a:p>
+          </p:txBody>
+        </p:sp>
+
+        <!-- Right Comparison Card (Highlighted) -->
+        <p:sp>
+          <p:nvSpPr><p:cNvPr id="41" name="CompRight"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+          <p:spPr>
+            <a:xfrm><a:off x="6250000" y="2400000"/><a:ext cx="4950000" cy="3500000"/></a:xfrm>
+            <a:prstGeom prst="roundRect"><a:avLst><a:gd name="adj" fmla="val 15000"/></a:avLst></a:prstGeom>
+            <a:solidFill><a:srgbClr val="${theme.cardBg}"/></a:solidFill>
+            <a:ln w="25400"><a:solidFill><a:srgbClr val="${theme.accent}"/></a:solidFill></a:ln>
+          </p:spPr>
+          <p:txBody>
+            <a:bodyPr anchor="t"/>
+            <a:lstStyle/>
+            <a:p>
+              <a:r>
+                <a:rPr lang="en-US" sz="1500" b="1"><a:solidFill><a:srgbClr val="${theme.accent}"/></a:solidFill></a:rPr>
+                <a:t>AYATRISYA STANDARD</a:t>
+              </a:r>
+            </a:p>
+            <a:p>
+              <a:pPr><a:spcBfr><a:spcPts val="1200"/></a:spcBfr></a:pPr>
+              <a:r>
+                <a:rPr lang="en-US" sz="1700" b="1"><a:solidFill><a:srgbClr val="${theme.titleColor}"/></a:solidFill></a:rPr>
+                <a:t>${escapeXml(rightText)}</a:t>
+              </a:r>
+            </a:p>
+          </p:txBody>
+        </p:sp>`;
+        break;
+      }
+
+      case 'table': {
+        // Layout 8: Structured Table Shape
+        const headers = slide.table?.headers || ['Component', 'Specification', 'Status'];
+        const rows = slide.table?.rows || [
+          ['Core Engine', 'Decoupled Vector Compiler', 'Active'],
+          ['Persistence', 'Encrypted Client-Side Store', 'Enforced'],
+          ['Egress Policy', 'Deterministic Route Verification', 'Active'],
+        ];
+
+        const colWidth = Math.floor(10200000 / headers.length);
+
+        shapesXml = `
+        ${renderSlideHeader(slide.title)}
+
+        <!-- Table Graphic Frame -->
+        <p:graphicFrame>
+          <p:nvGraphicFramePr><p:cNvPr id="50" name="TableFrame"/><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr>
+          <p:xfrm><a:off x="1000000" y="2400000"/><a:ext cx="10200000" cy="3400000"/></p:xfrm>
+          <a:graphic>
+            <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table">
+              <a:tbl>
+                <a:tblPr>
+                  <a:tableStyleId>{5940675A-B579-460E-94D1-54222C63F5DA}</a:tableStyleId>
+                </a:tblPr>
+                <a:tblGrid>
+                  ${headers.map(() => `<a:gridCol w="${colWidth}"/>`).join('')}
+                </a:tblGrid>
+                <!-- Header Row -->
+                <a:tr h="500000">
+                  ${headers.map((h) => `
+                    <a:tc>
+                      <a:txBody>
+                        <a:bodyPr anchor="ctr"/>
+                        <a:lstStyle/>
+                        <a:p><a:r><a:rPr lang="en-US" sz="1600" b="1"><a:solidFill><a:srgbClr val="${theme.titleColor}"/></a:solidFill></a:rPr><a:t>${escapeXml(h)}</a:t></a:r></a:p>
+                      </a:txBody>
+                      <a:tcPr><a:solidFill><a:srgbClr val="${theme.cardBg}"/></a:solidFill></a:tcPr>
+                    </a:tc>
+                  `).join('')}
+                </a:tr>
+                <!-- Body Rows -->
+                ${rows.map((row) => `
+                  <a:tr h="450000">
+                    ${row.map((cell) => `
+                      <a:tc>
+                        <a:txBody>
+                          <a:bodyPr anchor="ctr"/>
+                          <a:lstStyle/>
+                          <a:p><a:r><a:rPr lang="en-US" sz="1400"><a:solidFill><a:srgbClr val="${theme.bodyColor}"/></a:solidFill></a:rPr><a:t>${escapeXml(cell)}</a:t></a:r></a:p>
+                        </a:txBody>
+                        <a:tcPr><a:solidFill><a:srgbClr val="${theme.bg}"/></a:solidFill></a:tcPr>
+                      </a:tc>
+                    `).join('')}
+                  </a:tr>
+                `).join('')}
+              </a:tbl>
+            </a:graphicData>
+          </a:graphic>
+        </p:graphicFrame>`;
+        break;
+      }
+
+      case 'image-focus': {
+        // Layout 9: Image & Visual Combination
+        shapesXml = `
+        ${renderSlideHeader(slide.title)}
+
+        <!-- Left Visual Card -->
+        <p:sp>
+          <p:nvSpPr><p:cNvPr id="60" name="VisualHero"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+          <p:spPr>
+            <a:xfrm><a:off x="1000000" y="2400000"/><a:ext cx="4800000" cy="3500000"/></a:xfrm>
+            <a:prstGeom prst="roundRect"><a:avLst><a:gd name="adj" fmla="val 15000"/></a:avLst></a:prstGeom>
+            <a:solidFill><a:srgbClr val="${theme.cardBg}"/></a:solidFill>
+            <a:ln w="19050"><a:solidFill><a:srgbClr val="${theme.accent}"/></a:solidFill></a:ln>
+          </p:spPr>
+          <p:txBody>
+            <a:bodyPr anchor="ctr"/>
+            <a:lstStyle/>
+            <a:p>
+              <a:pPr algn="ctr"/>
+              <a:r>
+                <a:rPr lang="en-US" sz="2400" b="1"><a:solidFill><a:srgbClr val="${theme.accent}"/></a:solidFill></a:rPr>
+                <a:t>VISUAL ARTIFACT</a:t>
+              </a:r>
+            </a:p>
+          </p:txBody>
+        </p:sp>
+
+        <!-- Right Explanatory Box -->
+        <p:sp>
+          <p:nvSpPr><p:cNvPr id="61" name="VisualExpl"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+          <p:spPr>
+            <a:xfrm><a:off x="6100000" y="2400000"/><a:ext cx="5100000" cy="3500000"/></a:xfrm>
+          </p:spPr>
+          <p:txBody>
+            <a:bodyPr anchor="t"/>
+            <a:lstStyle/>
+            <a:p>
+              <a:r>
+                <a:rPr lang="en-US" sz="1800" b="1"><a:solidFill><a:srgbClr val="${theme.titleColor}"/></a:solidFill></a:rPr>
+                <a:t>Architectural Insights</a:t>
+              </a:r>
+            </a:p>
+            <a:p>
+              <a:pPr><a:spcBfr><a:spcPts val="1200"/></a:spcBfr></a:pPr>
+              <a:r>
+                <a:rPr lang="en-US" sz="1600"><a:solidFill><a:srgbClr val="${theme.bodyColor}"/></a:solidFill></a:rPr>
+                <a:t>${escapeXml(slide.body)}</a:t>
+              </a:r>
+            </a:p>
+          </p:txBody>
+        </p:sp>`;
+        break;
+      }
+
+      case 'conclusion': {
+        // Layout 11: Conclusion & Key Takeaways
+        shapesXml = `
+        ${renderSlideHeader(slide.title)}
+
+        <!-- Central Summary Card -->
+        <p:sp>
+          <p:nvSpPr><p:cNvPr id="70" name="ConclusionCard"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+          <p:spPr>
+            <a:xfrm><a:off x="1000000" y="2400000"/><a:ext cx="10200000" cy="3500000"/></a:xfrm>
+            <a:prstGeom prst="roundRect"><a:avLst><a:gd name="adj" fmla="val 15000"/></a:avLst></a:prstGeom>
+            <a:solidFill><a:srgbClr val="${theme.cardBg}"/></a:solidFill>
+            <a:ln w="25400"><a:solidFill><a:srgbClr val="${theme.accent}"/></a:solidFill></a:ln>
+          </p:spPr>
+          <p:txBody>
+            <a:bodyPr anchor="t"/>
+            <a:lstStyle/>
+            <a:p>
+              <a:r>
+                <a:rPr lang="en-US" sz="1600" b="1"><a:solidFill><a:srgbClr val="${theme.accent}"/></a:solidFill></a:rPr>
+                <a:t>EXECUTIVE SUMMARY &amp; ACTION PLAN</a:t>
+              </a:r>
+            </a:p>
+            <a:p>
+              <a:pPr><a:spcBfr><a:spcPts val="1400"/></a:spcBfr></a:pPr>
+              <a:r>
+                <a:rPr lang="en-US" sz="2000"><a:solidFill><a:srgbClr val="${theme.titleColor}"/></a:solidFill></a:rPr>
+                <a:t>${escapeXml(slide.body)}</a:t>
+              </a:r>
+            </a:p>
+          </p:txBody>
+        </p:sp>`;
+        break;
+      }
+
+      case 'references': {
+        // Layout 12: References / Appendix
+        const refs = slide.body.split('\n').filter(Boolean);
+        shapesXml = `
+        ${renderSlideHeader(slide.title)}
+
+        <p:sp>
+          <p:nvSpPr><p:cNvPr id="80" name="RefCard"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+          <p:spPr>
+            <a:xfrm><a:off x="1000000" y="2400000"/><a:ext cx="10200000" cy="3500000"/></a:xfrm>
+            <a:prstGeom prst="roundRect"><a:avLst><a:gd name="adj" fmla="val 15000"/></a:avLst></a:prstGeom>
+            <a:solidFill><a:srgbClr val="${theme.cardBg}"/></a:solidFill>
+            <a:ln w="19050"><a:solidFill><a:srgbClr val="${theme.cardBorder}"/></a:solidFill></a:ln>
+          </p:spPr>
+          <p:txBody>
+            <a:bodyPr anchor="t"/>
+            <a:lstStyle/>
+            ${refs.map((ref, rIdx) => `
+              <a:p>
+                <a:pPr><a:spcBfr><a:spcPts val="${rIdx === 0 ? '0' : '1000'}"/></a:spcBfr></a:pPr>
+                <a:r>
+                  <a:rPr lang="en-US" sz="1300" b="1"><a:solidFill><a:srgbClr val="${theme.accent}"/></a:solidFill></a:rPr>
+                  <a:t>[0${rIdx + 1}] </a:t>
+                </a:r>
+                <a:r>
+                  <a:rPr lang="en-US" sz="1400"><a:solidFill><a:srgbClr val="${theme.bodyColor}"/></a:solidFill></a:rPr>
+                  <a:t>${escapeXml(ref.replace(/^[•\-*]\s*/, ''))}</a:t>
+                </a:r>
+              </a:p>
+            `).join('')}
+          </p:txBody>
+        </p:sp>`;
+        break;
+      }
+
+      default: {
+        // Layout 10: Card Grid / SmartArt Cards (Default fallback)
+        const rawPoints = slide.body
+          .split('\n')
+          .map((p) => p.replace(/^[•\-*]\s*/, '').trim())
+          .filter(Boolean);
+
+        const points = rawPoints.length > 0 ? rawPoints : ['Key insight and structured analysis.'];
+        const cardCount = Math.min(points.length, 3);
+        const totalWidth = 10200000;
+        const gap = 300000;
+        const cardWidth = Math.floor((totalWidth - (cardCount - 1) * gap) / cardCount);
+
+        const cardsXml = points.slice(0, cardCount).map((pt, pIdx) => {
+          const xPos = 1000000 + pIdx * (cardWidth + gap);
+          return `
+          <p:sp>
+            <p:nvSpPr><p:cNvPr id="${10 + pIdx}" name="Card_${pIdx + 1}"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+            <p:spPr>
+              <a:xfrm><a:off x="${xPos}" y="2400000"/><a:ext cx="${cardWidth}" cy="3400000"/></a:xfrm>
+              <a:prstGeom prst="roundRect"><a:avLst><a:gd name="adj" fmla="val 15000"/></a:avLst></a:prstGeom>
+              <a:solidFill><a:srgbClr val="${theme.cardBg}"/></a:solidFill>
+              <a:ln w="19050"><a:solidFill><a:srgbClr val="${theme.cardBorder}"/></a:solidFill></a:ln>
+            </p:spPr>
+            <p:txBody>
+              <a:bodyPr anchor="t"/>
+              <a:lstStyle/>
+              <a:p>
+                <a:r>
+                  <a:rPr lang="en-US" sz="1400" b="1"><a:solidFill><a:srgbClr val="${theme.accent}"/></a:solidFill></a:rPr>
+                  <a:t>POINT 0${pIdx + 1}</a:t>
+                </a:r>
+              </a:p>
+              <a:p>
+                <a:pPr><a:spcBfr><a:spcPts val="1200"/></a:spcBfr></a:pPr>
+                <a:r>
+                  <a:rPr lang="en-US" sz="1700"><a:solidFill><a:srgbClr val="${theme.titleColor}"/></a:solidFill></a:rPr>
+                  <a:t>${escapeXml(pt)}</a:t>
+                </a:r>
+              </a:p>
+            </p:txBody>
+          </p:sp>`;
+        }).join('\n');
+
+        shapesXml = `${renderSlideHeader(slide.title)}\n${cardsXml}`;
+        break;
+      }
     }
 
     const slideXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -551,18 +1054,16 @@ export function generatePptx(
   <p:cSld>
     <p:bg>
       <p:bgPr>
-        <a:solidFill>
-          <a:srgbClr val="${theme.bg}"/>
-        </a:solidFill>
+        <a:solidFill><a:srgbClr val="${theme.bg}"/></a:solidFill>
       </p:bgPr>
     </p:bg>
     <p:spTree>
       <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
       <p:grpSpPr/>
-      
+
       ${shapesXml}
 
-      <!-- Ayatrisya Professional Deck Footer -->
+      <!-- Ayatrisya Professional Deck Running Footer -->
       <p:sp>
         <p:nvSpPr><p:cNvPr id="99" name="Footer"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
         <p:spPr>
@@ -573,13 +1074,10 @@ export function generatePptx(
           <a:lstStyle/>
           <a:p>
             <a:r>
-              <a:rPr lang="en-US" sz="1000">
-                <a:solidFill><a:srgbClr val="64748B"/></a:solidFill>
-              </a:rPr>
+              <a:rPr lang="en-US" sz="1000"><a:solidFill><a:srgbClr val="64748B"/></a:solidFill></a:rPr>
               <a:t>Ayatrisya Presentation Engine • Slide ${slideNum} of ${slides.length}</a:t>
             </a:r>
-          </a:p>
-        </p:txBody>
+          </p:txBody>
       </p:sp>
 
     </p:spTree>

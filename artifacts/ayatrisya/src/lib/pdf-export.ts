@@ -51,6 +51,14 @@ function wrapText(text: string, maxCharsPerLine: number): string[] {
   return wrapped;
 }
 
+interface PageItem {
+  type: 'title' | 'heading1' | 'heading2' | 'heading3' | 'paragraph' | 'bullet' | 'callout' | 'table-row' | 'table-sep' | 'spacer';
+  text?: string;
+  cells?: string[];
+  isHeader?: boolean;
+  height: number;
+}
+
 /**
  * Generates a standard conforming PDF document (PDF-1.4) directly without external dependencies.
  * Produces clean vector typography, header branding, pagination, and timestamps.
@@ -68,34 +76,142 @@ export function generatePdfDocument(content: string, options: PDFExportOptions):
   const marginX = 54; // 0.75 in
   const marginTop = 60;
   const marginBottom = 50;
-
-  const titleFontSize = 18;
-  const headerFontSize = 9;
-  const bodyFontSize = 10;
-  const bodyLineHeight = 14;
-
   const printableHeight = pageHeight - marginTop - marginBottom;
-  const linesPerPage = Math.max(10, Math.floor((printableHeight - 40) / bodyLineHeight));
-  const maxCharsPerLine = Math.floor((pageWidth - marginX * 2) / 5.2);
+  const contentWidth = pageWidth - marginX * 2;
+  const maxCharsPerLine = Math.floor(contentWidth / 5.2);
 
-  const lines = wrapText(content, maxCharsPerLine);
-  const totalPages = Math.max(1, Math.ceil(lines.length / linesPerPage));
+  // Convert markdown content into printable layout items with measured heights
+  const rawLines = content.split(/\r?\n/);
+  const layoutItems: PageItem[] = [];
 
-  // Objects to build:
-  // 1: Catalog
-  // 2: Outlines
-  // 3: Pages
-  // 4: Font Helvetica
-  // 5: Font Helvetica-Bold
-  // For each page:
-  // Page object, Content stream object
+  let inTable = false;
+  let tableHeaderCols: string[] = [];
+
+  for (let i = 0; i < rawLines.length; i++) {
+    const rawLine = rawLines[i];
+    const line = rawLine.trim();
+
+    // Table parsing
+    if (line.startsWith('|') && line.endsWith('|')) {
+      if (!inTable) {
+        inTable = true;
+        tableHeaderCols = line.slice(1, -1).split('|').map((c) => c.trim());
+        layoutItems.push({
+          type: 'table-row',
+          cells: tableHeaderCols,
+          isHeader: true,
+          height: 22,
+        });
+      } else if (line.replace(/[\s|:-]/g, '').length === 0) {
+        // Table separator row
+        layoutItems.push({
+          type: 'table-sep',
+          height: 4,
+        });
+      } else {
+        const cells = line.slice(1, -1).split('|').map((c) => c.trim());
+        layoutItems.push({
+          type: 'table-row',
+          cells,
+          isHeader: false,
+          height: 18,
+        });
+      }
+      continue;
+    } else if (inTable) {
+      inTable = false;
+      layoutItems.push({ type: 'spacer', height: 8 });
+    }
+
+    if (!line) {
+      layoutItems.push({ type: 'spacer', height: 10 });
+      continue;
+    }
+
+    // Callout
+    if (/^>\s*\[!(NOTE|TIP|WARNING|IMPORTANT)\]/i.test(line)) {
+      const match = line.match(/^>\s*\[!(NOTE|TIP|WARNING|IMPORTANT)\]\s*(.*)$/i);
+      const tag = match ? match[1].toUpperCase() : 'NOTE';
+      const text = match && match[2] ? match[2] : '';
+      const wrapped = wrapText(`[${tag}] ${text}`, maxCharsPerLine - 4);
+      for (const w of wrapped) {
+        layoutItems.push({
+          type: 'callout',
+          text: w,
+          height: 15,
+        });
+      }
+      continue;
+    }
+
+    // Headings
+    if (line.startsWith('# ')) {
+      layoutItems.push({
+        type: 'heading1',
+        text: line.slice(2).trim(),
+        height: 28,
+      });
+    } else if (line.startsWith('## ')) {
+      layoutItems.push({
+        type: 'heading2',
+        text: line.slice(3).trim(),
+        height: 22,
+      });
+    } else if (line.startsWith('### ')) {
+      layoutItems.push({
+        type: 'heading3',
+        text: line.slice(4).trim(),
+        height: 18,
+      });
+    } else if (line.startsWith('- ') || line.startsWith('* ')) {
+      const wrapped = wrapText(line.slice(2).trim(), maxCharsPerLine - 4);
+      for (let j = 0; j < wrapped.length; j++) {
+        layoutItems.push({
+          type: 'bullet',
+          text: (j === 0 ? '• ' : '  ') + wrapped[j],
+          height: 14,
+        });
+      }
+    } else {
+      const wrapped = wrapText(line, maxCharsPerLine);
+      for (const w of wrapped) {
+        layoutItems.push({
+          type: 'paragraph',
+          text: w,
+          height: 14,
+        });
+      }
+    }
+  }
+
+  // Paginate layoutItems into pages
+  const pages: PageItem[][] = [];
+  let currentPage: PageItem[] = [];
+  let currentYUsed = 0;
+
+  // Page 1 header title takes ~45pt
+  currentYUsed += 45;
+
+  for (const item of layoutItems) {
+    if (currentYUsed + item.height > printableHeight - 20) {
+      pages.push(currentPage);
+      currentPage = [];
+      currentYUsed = 0;
+    }
+    currentPage.push(item);
+    currentYUsed += item.height;
+  }
+  if (currentPage.length > 0) {
+    pages.push(currentPage);
+  }
+  if (pages.length === 0) {
+    pages.push([]);
+  }
+
+  const totalPages = pages.length;
 
   const objects: string[] = [];
   const pageObjectIds: number[] = [];
-
-  // Placeholder indices
-  // Catalog = 1, Outlines = 2, Pages = 3, Font1 = 4, Font2 = 5
-  // Page 1 = 6, Stream 1 = 7, etc.
   const baseObjCount = 5;
 
   for (let p = 0; p < totalPages; p++) {
@@ -119,18 +235,14 @@ export function generatePdfDocument(content: string, options: PDFExportOptions):
   // Object 5: Font Helvetica-Bold
   objects[5] = `5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>\nendobj`;
 
-  // Now create pages and streams
   const dateStr = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 
   for (let p = 0; p < totalPages; p++) {
     const pageNum = p + 1;
     const pageObjId = baseObjCount + p * 2 + 1;
     const streamObjId = pageObjId + 1;
+    const pageItems = pages[p];
 
-    // Slice content for this page
-    const pageLines = lines.slice(p * linesPerPage, (p + 1) * linesPerPage);
-
-    // Build PDF stream commands
     const streamCommands: string[] = [];
 
     // Header divider rule
@@ -139,48 +251,120 @@ export function generatePdfDocument(content: string, options: PDFExportOptions):
 
     // Top Header Text (Ayatrisya Branding + Date)
     streamCommands.push(`BT`);
-    streamCommands.push(`/F1 ${headerFontSize} Tf`);
+    streamCommands.push(`/F1 9 Tf`);
     streamCommands.push(`0.45 0.45 0.50 rg`);
     streamCommands.push(`1 0 0 1 ${marginX} ${pageHeight - marginTop + 18} Tm`);
-    streamCommands.push(`(${escapePdfText(title.slice(0, 40))} | Ayatrisya Workspace) Tj`);
+    streamCommands.push(`(${escapePdfText(title.slice(0, 45))} | Ayatrisya Workspace) Tj`);
     streamCommands.push(`ET`);
 
     streamCommands.push(`BT`);
-    streamCommands.push(`/F1 ${headerFontSize} Tf`);
+    streamCommands.push(`/F1 9 Tf`);
     streamCommands.push(`0.45 0.45 0.50 rg`);
     streamCommands.push(`1 0 0 1 ${pageWidth - marginX - 60} ${pageHeight - marginTop + 18} Tm`);
     streamCommands.push(`(${escapePdfText(dateStr)}) Tj`);
     streamCommands.push(`ET`);
 
-    let currentY = pageHeight - marginTop - 20;
+    let currentY = pageHeight - marginTop - 15;
 
-    // If first page, draw document title
+    // First page document title
     if (pageNum === 1) {
       streamCommands.push(`BT`);
-      streamCommands.push(`/F2 ${titleFontSize} Tf`);
+      streamCommands.push(`/F2 20 Tf`);
       streamCommands.push(`0.08 0.08 0.12 rg`);
       streamCommands.push(`1 0 0 1 ${marginX} ${currentY} Tm`);
       streamCommands.push(`(${escapePdfText(title)}) Tj`);
       streamCommands.push(`ET`);
-      currentY -= 30;
+      currentY -= 35;
     }
 
-    // Body lines
-    streamCommands.push(`BT`);
-    streamCommands.push(`/F1 ${bodyFontSize} Tf`);
-    streamCommands.push(`0.15 0.15 0.20 rg`);
-    streamCommands.push(`1 0 0 1 ${marginX} ${currentY} Tm`);
-    streamCommands.push(`${bodyLineHeight} TL`);
+    // Render items on this page
+    for (const item of pageItems) {
+      if (item.type === 'spacer') {
+        currentY -= item.height;
+        continue;
+      }
 
-    for (let i = 0; i < pageLines.length; i++) {
-      const line = pageLines[i];
-      if (i === 0) {
-        streamCommands.push(`(${escapePdfText(line)}) Tj`);
+      if (item.type === 'heading1') {
+        currentY -= 6;
+        streamCommands.push(`BT`);
+        streamCommands.push(`/F2 15 Tf`);
+        streamCommands.push(`0.08 0.08 0.15 rg`);
+        streamCommands.push(`1 0 0 1 ${marginX} ${currentY} Tm`);
+        streamCommands.push(`(${escapePdfText(item.text || '')}) Tj`);
+        streamCommands.push(`ET`);
+        currentY -= item.height;
+      } else if (item.type === 'heading2') {
+        currentY -= 4;
+        streamCommands.push(`BT`);
+        streamCommands.push(`/F2 12 Tf`);
+        streamCommands.push(`0.15 0.18 0.25 rg`);
+        streamCommands.push(`1 0 0 1 ${marginX} ${currentY} Tm`);
+        streamCommands.push(`(${escapePdfText(item.text || '')}) Tj`);
+        streamCommands.push(`ET`);
+        currentY -= item.height;
+      } else if (item.type === 'heading3') {
+        streamCommands.push(`BT`);
+        streamCommands.push(`/F2 10.5 Tf`);
+        streamCommands.push(`0.20 0.22 0.30 rg`);
+        streamCommands.push(`1 0 0 1 ${marginX} ${currentY} Tm`);
+        streamCommands.push(`(${escapePdfText(item.text || '')}) Tj`);
+        streamCommands.push(`ET`);
+        currentY -= item.height;
+      } else if (item.type === 'callout') {
+        // Draw light background and left border
+        streamCommands.push(`0.93 0.94 0.98 rg`);
+        streamCommands.push(`${marginX} ${currentY - 3} ${contentWidth} 16 re f`);
+        streamCommands.push(`0.40 0.35 0.85 RG 2 w`);
+        streamCommands.push(`${marginX} ${currentY - 3} m ${marginX} ${currentY + 13} l S`);
+
+        streamCommands.push(`BT`);
+        streamCommands.push(`/F1 9.5 Tf`);
+        streamCommands.push(`0.20 0.20 0.40 rg`);
+        streamCommands.push(`1 0 0 1 ${marginX + 8} ${currentY} Tm`);
+        streamCommands.push(`(${escapePdfText(item.text || '')}) Tj`);
+        streamCommands.push(`ET`);
+        currentY -= item.height;
+      } else if (item.type === 'table-row') {
+        const cells = item.cells || [];
+        const colWidth = contentWidth / Math.max(cells.length, 1);
+
+        if (item.isHeader) {
+          streamCommands.push(`0.95 0.95 0.97 rg`);
+          streamCommands.push(`${marginX} ${currentY - 3} ${contentWidth} 18 re f`);
+        }
+
+        for (let c = 0; c < cells.length; c++) {
+          const cellX = marginX + c * colWidth + 4;
+          streamCommands.push(`BT`);
+          streamCommands.push(`/${item.isHeader ? 'F2' : 'F1'} 9.5 Tf`);
+          streamCommands.push(`${item.isHeader ? '0.10 0.12 0.18' : '0.25 0.25 0.30'} rg`);
+          streamCommands.push(`1 0 0 1 ${cellX} ${currentY} Tm`);
+          streamCommands.push(`(${escapePdfText(cells[c].slice(0, 30))}) Tj`);
+          streamCommands.push(`ET`);
+        }
+        currentY -= item.height;
+      } else if (item.type === 'table-sep') {
+        streamCommands.push(`0.5 w 0.80 0.80 0.85 RG`);
+        streamCommands.push(`${marginX} ${currentY} m ${pageWidth - marginX} ${currentY} l S`);
+        currentY -= item.height;
+      } else if (item.type === 'bullet') {
+        streamCommands.push(`BT`);
+        streamCommands.push(`/F1 10 Tf`);
+        streamCommands.push(`0.20 0.20 0.25 rg`);
+        streamCommands.push(`1 0 0 1 ${marginX + 6} ${currentY} Tm`);
+        streamCommands.push(`(${escapePdfText(item.text || '')}) Tj`);
+        streamCommands.push(`ET`);
+        currentY -= item.height;
       } else {
-        streamCommands.push(`T* (${escapePdfText(line)}) Tj`);
+        streamCommands.push(`BT`);
+        streamCommands.push(`/F1 10 Tf`);
+        streamCommands.push(`0.20 0.20 0.25 rg`);
+        streamCommands.push(`1 0 0 1 ${marginX} ${currentY} Tm`);
+        streamCommands.push(`(${escapePdfText(item.text || '')}) Tj`);
+        streamCommands.push(`ET`);
+        currentY -= item.height;
       }
     }
-    streamCommands.push(`ET`);
 
     // Footer divider rule
     streamCommands.push(`0.5 w 0.88 0.88 0.90 RG`);
@@ -189,9 +373,9 @@ export function generatePdfDocument(content: string, options: PDFExportOptions):
     // Footer page number
     const footerText = `Page ${pageNum} of ${totalPages}`;
     streamCommands.push(`BT`);
-    streamCommands.push(`/F1 ${headerFontSize} Tf`);
+    streamCommands.push(`/F1 9 Tf`);
     streamCommands.push(`0.50 0.50 0.55 rg`);
-    streamCommands.push(`1 0 0 1 ${pageWidth / 2 - 20} ${marginBottom} Tm`);
+    streamCommands.push(`1 0 0 1 ${pageWidth / 2 - 25} ${marginBottom} Tm`);
     streamCommands.push(`(${escapePdfText(footerText)}) Tj`);
     streamCommands.push(`ET`);
 
