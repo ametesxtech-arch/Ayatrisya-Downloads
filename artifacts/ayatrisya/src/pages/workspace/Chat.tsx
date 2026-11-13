@@ -338,7 +338,7 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
       }
       if (finalOut.trim() && !ac.signal.aborted) {
         await repository.addMessage(cid, finalOut, 'assistant');
-        if (prefs.personalization.enabled && prefs.personalization.useMemory && latestTurn?.content) {
+        if (prefs.personalization.enabled && prefs.personalization.useMemory && prefs.personalization.autoMemoryCollection !== false && latestTurn?.content) {
           void (async () => {
             try {
               const memoryContextManager = new IntelligentMemoryContextManager(repository);

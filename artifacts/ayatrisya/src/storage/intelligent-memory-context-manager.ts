@@ -369,6 +369,22 @@ export class IntelligentMemoryContextManager {
   // =========================================================================
 
   /**
+   * Identifies passwords, API keys, JWT tokens, private keys, or secrets.
+   * Ensures confidential credentials are NEVER persisted as memories.
+   */
+  containsSecrets(text: string): boolean {
+    if (!text || typeof text !== "string") return false;
+    const secretPatterns = [
+      /\b(?:password|passwd|pwd)\s*[:=]\s*\S+/i,
+      /\b(?:api[_-]?key|secret[_-]?key|client[_-]?secret|auth[_-]?token|bearer[_-]?token|access[_-]?token)\s*[:=]\s*\S+/i,
+      /\b(?:sk-[a-zA-Z0-9_-]{15,}|ghp_[a-zA-Z0-9]{20,}|gho_[a-zA-Z0-9]{20,}|xox[baprs]-[a-zA-Z0-9]{10,}|AIzaSy[a-zA-Z0-9_-]{30,})\b/,
+      /\b(?:BEGIN (?:RSA|OPENSSH|EC|PGP) PRIVATE KEY)\b/i,
+      /\beyJ[a-zA-Z0-9_-]{10,}\.eyJ[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,}\b/, // JWT tokens
+    ];
+    return secretPatterns.some((pattern) => pattern.test(text));
+  }
+
+  /**
    * Post-turn extraction pipeline:
    * 1. Detect candidate memories from the user turn.
    * 2. Classify type, confidence, and importance.
@@ -393,15 +409,15 @@ export class IntelligentMemoryContextManager {
     };
 
     // Filter non-actionable or trivial messages
-    if (text.length < 12 || text.startsWith("/")) {
+    if (text.length < 10 || text.startsWith("/")) {
       return result;
     }
 
-    // Explicit memory correction check (e.g. "Actually I use X now", "Correction: ...")
-    const isExplicitCorrection = /\b(actually|correction:|changed to|switched to|update memory|no longer use|instead of|replace .* with)\b/i.test(text);
+    // Explicit memory correction check (e.g. "Actually I use X now", "Correction: ...", "Switched from X to Y")
+    const isExplicitCorrection = /\b(actually|correction:|changed to|switched to|update memory|no longer use|instead of|replace .* with|stop using|switch(?:ed)? from|switched our)\b/i.test(text);
 
-    // Extraction pattern matching
-    const candidateClues = /\b(i prefer|i want|i always|always use|never use|my name is|i am working on|i am building|my project is|our stack is|we use|my goal is|i decided to|settled on|timezone is|my email is|prefer .* over|switched from)\b/i;
+    // Extraction pattern matching across preferences, technical stack, projects, and work styles
+    const candidateClues = /\b(i prefer|we prefer|i want|we want|i like|i always|we always|always use|never use|i never|my name is|i am a|we are a|i am working on|we are working on|i am building|we are building|my project is|our project is|our repo is|our app is|our stack is|we use|i use|my goal is|our goal is|i decided to|we decided to|decided to|settled on|we settled on|we chose|i chose|timezone is|my email is|prefer .* over|switched from|my working hours|i work remotely|working on)\b/i;
 
     if (!isExplicitCorrection && !candidateClues.test(text)) {
       return result;
@@ -414,6 +430,11 @@ export class IntelligentMemoryContextManager {
       if (sentence.length < 8) continue;
       if (!isExplicitCorrection && !candidateClues.test(sentence)) continue;
 
+      // Privacy & Security Guard: Never store passwords, API keys or secret credentials
+      if (this.containsSecrets(sentence)) {
+        continue;
+      }
+
       const normalized = sentence.toLowerCase().replace(/[^\w\s]/g, "");
 
       // Classify Category
@@ -422,7 +443,7 @@ export class IntelligentMemoryContextManager {
         category = "project_context";
       } else if (/decided|chosen|architect|settled on|switch(?:ed)?|changed|database|stack|we use|framework|library/i.test(sentence)) {
         category = "technical_decision";
-      } else if (/schedule|work|team|hours|calendar|daily|weekly/i.test(sentence)) {
+      } else if (/schedule|work|team|hours|calendar|daily|weekly|remote/i.test(sentence)) {
         category = "work_preference";
       }
 
@@ -434,16 +455,21 @@ export class IntelligentMemoryContextManager {
       const existing = await this.memoryEngine.listMemories();
       const sentenceTokens = this.tokenize(sentence);
 
+      // Check if a specific target being superseded is named: e.g. "switched from X", "stop using X", "instead of X"
+      const targetMatch = sentence.match(/(?:switch(?:ed)? from|instead of|no longer use|stop using)\s+([a-zA-Z0-9_#-]+)/i);
+      const supersededTarget = targetMatch ? targetMatch[1].toLowerCase() : null;
+
       for (const oldMem of existing) {
+        const oldContentLower = oldMem.content.toLowerCase();
         const oldTokens = this.tokenize(oldMem.content);
         const overlap = this.calculateOverlap(sentenceTokens, oldTokens);
 
-        // Check if old memory is contradictory (shares domain keywords like framework, timezone, stack, style but differs in target)
+        const targetMatchesDirectly = supersededTarget && oldContentLower.includes(supersededTarget);
         const sharesDomain =
           (oldMem.category === category || oldMem.category === "technical_decision" || oldMem.category === "user_preference") &&
-          overlap >= 0.4;
+          (overlap >= 0.35 || targetMatchesDirectly);
 
-        if (sharesDomain && isExplicitCorrection) {
+        if ((sharesDomain && isExplicitCorrection) || targetMatchesDirectly) {
           result.contradictionsDetected++;
           try {
             await this.memoryEngine.deleteMemory(oldMem.id);
@@ -452,6 +478,11 @@ export class IntelligentMemoryContextManager {
             console.warn("[IntelligentMemory] Could not delete superseded memory:", e);
           }
         }
+      }
+
+      // If the sentence was purely a negative directive (e.g. "Stop using X") without declaring what to use instead, do not persist it
+      if (/\b(stop using|no longer use|don't use|do not use)\b/i.test(sentence) && !/\b(instead|prefer|switch(?:ed)? to|we use|now)\b/i.test(sentence)) {
+        continue;
       }
 
       // Deduplication Check
@@ -484,7 +515,7 @@ export class IntelligentMemoryContextManager {
       }
     }
 
-    // Trigger Layer B Summary update if new memories or corrections occurred
+    // Trigger Layer B Summary update automatically whenever memories or corrections occur
     if (result.added.length > 0 || result.superseded.length > 0) {
       try {
         await this.summaryEngine.generateSummary();
@@ -599,6 +630,81 @@ export class IntelligentMemoryContextManager {
     }
 
     return lines.join("\n");
+  }
+
+  /**
+   * Imports discrete memories and summary from structured JSON.
+   * Cleanses incoming entries of any secret credentials, deduplicates,
+   * stores memories, and updates the memory summary atomically.
+   */
+  async importMemoriesFromJson(jsonString: string): Promise<{ count: number; summaryUpdated: boolean }> {
+    let parsed: any;
+    try {
+      parsed = JSON.parse(jsonString);
+    } catch {
+      throw new Error("Invalid JSON format for memory import.");
+    }
+
+    const rawMemories: any[] = Array.isArray(parsed)
+      ? parsed
+      : Array.isArray(parsed?.memories)
+        ? parsed.memories
+        : [];
+
+    let count = 0;
+    const existing = await this.memoryEngine.listMemories();
+
+    for (const item of rawMemories) {
+      if (!item || typeof item.content !== "string" || !item.content.trim()) continue;
+      const content = item.content.trim();
+
+      // Privacy guard: scrub secrets prior to import
+      if (this.containsSecrets(content)) continue;
+
+      const category: MemoryCategory = [
+        "user_preference",
+        "project_context",
+        "technical_decision",
+        "work_preference",
+        "interaction_pattern",
+      ].includes(item.category)
+        ? item.category
+        : "user_preference";
+
+      const tags = Array.isArray(item.tags) ? item.tags.map(String) : [];
+      const pinned = Boolean(item.pinned);
+      const projectId = item.projectId ? String(item.projectId) : null;
+
+      // Duplicate check
+      const normContent = content.toLowerCase().replace(/[^\w\s]/g, "");
+      const isDup = existing.some((m) => {
+        const norm = m.content.toLowerCase().replace(/[^\w\s]/g, "");
+        return norm === normContent;
+      });
+
+      if (!isDup) {
+        const created = await this.safeCreateMemory({
+          category,
+          content,
+          tags,
+          pinned,
+          projectId,
+        });
+        existing.push(created);
+        count++;
+      }
+    }
+
+    let summaryUpdated = false;
+    if (parsed?.aiMemorySummary && typeof parsed.aiMemorySummary === "object") {
+      await this.summaryEngine.saveSummary(parsed.aiMemorySummary);
+      summaryUpdated = true;
+    } else if (count > 0) {
+      await this.summaryEngine.generateSummary();
+      summaryUpdated = true;
+    }
+
+    return { count, summaryUpdated };
   }
 
   // =========================================================================

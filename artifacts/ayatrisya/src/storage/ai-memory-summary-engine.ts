@@ -209,6 +209,9 @@ Respond with ONLY valid JSON adhering strictly to this schema:
         if (/task|todo|bug|fix|pending|wip|ongoing/.test(lower)) {
           if (!tasks.includes(text)) tasks.push(text);
         }
+        if (/name is|timezone|live in|located in|role is|background|i am a/.test(lower)) {
+          if (!bg.includes(text)) bg.push(text);
+        }
 
         if (m.category === 'user_preference' || m.category === 'work_preference') {
           if (!prefs.includes(text)) prefs.push(text);
@@ -266,6 +269,19 @@ Respond with ONLY valid JSON adhering strictly to this schema:
     for (const rawSentence of sentences) {
       const sentence = rawSentence.trim().replace(/^[-*•\s]+/, '');
       if (sentence.length < 10 || !preferenceClues.test(sentence)) continue;
+
+      // Privacy guard: never store credentials or secrets
+      const secretPatterns = [
+        /\b(?:password|passwd|pwd)\s*[:=]\s*\S+/i,
+        /\b(?:api[_-]?key|secret[_-]?key|client[_-]?secret|auth[_-]?token|bearer[_-]?token|access[_-]?token)\s*[:=]\s*\S+/i,
+        /\b(?:sk-[a-zA-Z0-9_-]{15,}|ghp_[a-zA-Z0-9]{20,}|gho_[a-zA-Z0-9]{20,}|xox[baprs]-[a-zA-Z0-9]{10,}|AIzaSy[a-zA-Z0-9_-]{30,})\b/,
+        /\b(?:BEGIN (?:RSA|OPENSSH|EC|PGP) PRIVATE KEY)\b/i,
+        /\beyJ[a-zA-Z0-9_-]{10,}\.eyJ[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,}\b/,
+      ];
+      if (secretPatterns.some((pattern) => pattern.test(sentence))) {
+        continue;
+      }
+
       const normalizedSentence = sentence.toLowerCase().replace(/[^\w\s]/g, '');
 
       let category: MemoryCategory = 'user_preference';

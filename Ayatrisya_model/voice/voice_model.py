@@ -213,3 +213,4 @@ class AyatrisyaVoiceTransformer(nn.Module):
             wav_file.writeframes(pcm_data.tobytes())
             
         return buffer.getvalue()
+

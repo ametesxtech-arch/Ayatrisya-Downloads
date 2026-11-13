@@ -39,7 +39,15 @@ export function AIMemorySummaryCard({ notify }: AIMemorySummaryCardProps) {
   const loadSummary = async () => {
     try {
       setLoading(true);
-      const res = await engine.getSummary();
+      let res = await engine.getSummary();
+      if (!res) {
+        // Automatically synthesize initial summary if memories exist
+        const memEngine = new MemoryEngine(repository);
+        const existingMemories = await memEngine.listMemories();
+        if (existingMemories.length > 0) {
+          res = await engine.generateSummary();
+        }
+      }
       setSummary(res);
       if (res?.overview) {
         setOverviewDraft(res.overview);
@@ -182,6 +190,9 @@ export function AIMemorySummaryCard({ notify }: AIMemorySummaryCardProps) {
               <span className="rounded-full border border-violet-400/30 bg-violet-400/10 px-2 py-0.5 text-[10px] font-medium text-violet-300">
                 Layer B
               </span>
+              <span className="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[10px] font-medium text-emerald-300">
+                Auto-Maintained
+              </span>
               {summary?.version ? (
                 <span className="rounded border border-white/10 bg-white/5 px-1.5 py-0.5 text-[10px] text-slate-400">
                   v{summary.version}
@@ -203,7 +214,7 @@ export function AIMemorySummaryCard({ notify }: AIMemorySummaryCardProps) {
             title="Consolidate all detailed memories and conversation milestones into this summary"
           >
             <RefreshCw size={13} className={generating ? 'animate-spin' : ''} />
-            {generating ? 'Synthesizing…' : 'Synthesize with AI'}
+            {generating ? 'Refreshing…' : 'Refresh Summary (Optional)'}
           </button>
 
           {summary && (
@@ -225,20 +236,25 @@ export function AIMemorySummaryCard({ notify }: AIMemorySummaryCardProps) {
       ) : !summary ? (
         <div className="my-6 rounded-xl border border-dashed border-white/10 bg-white/[.015] p-6 text-center">
           <Sparkles className="mx-auto size-8 text-violet-400/60" />
-          <h4 className="mt-2 text-sm font-medium text-slate-300">No AI Memory Summary yet</h4>
+          <h4 className="mt-2 text-sm font-medium text-slate-300">AI Memory Summary (Maintained Automatically)</h4>
           <p className="mt-1 text-xs text-slate-500 max-w-md mx-auto">
-            Ayatrisya continuously learns your style, tech stack, and goals from chats, or you can click
-            &ldquo;Synthesize with AI&rdquo; to build your first summary right now.
+            Ayatrisya automatically identifies your preferences, project context, and decisions from your conversations and keeps this summary continuously updated in the background. No manual summary building is required.
           </p>
-          <button
-            type="button"
-            disabled={generating}
-            onClick={() => void handleSynthesize()}
-            className="mt-4 inline-flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-xs font-semibold text-white hover:bg-violet-500 disabled:opacity-50"
-          >
-            <Sparkles size={14} />
-            {generating ? 'Synthesizing…' : 'Build Summary Now'}
-          </button>
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
+            <span className="inline-flex items-center gap-1.5 text-xs text-emerald-400/90 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full">
+              <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              Automatic Maintenance Active
+            </span>
+            <button
+              type="button"
+              disabled={generating}
+              onClick={() => void handleSynthesize()}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[.04] px-3 py-1.5 text-xs text-slate-300 hover:text-white hover:bg-white/[.08] disabled:opacity-50"
+            >
+              <RefreshCw size={12} className={generating ? 'animate-spin' : ''} />
+              {generating ? 'Refreshing…' : 'Refresh Summary (Optional)'}
+            </button>
+          </div>
         </div>
       ) : (
         <div className="mt-5 space-y-5">

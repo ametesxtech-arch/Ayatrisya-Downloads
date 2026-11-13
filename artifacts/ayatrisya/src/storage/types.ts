@@ -11,6 +11,7 @@ export type PersonalizationTechnicality = "accessible" | "balanced" | "technical
 export interface PersonalizationPreferences {
   enabled: boolean;
   useMemory: boolean;
+  autoMemoryCollection?: boolean;
   memorySummary: string;
   instructions: string;
   avoid: string;
@@ -107,7 +108,7 @@ export const defaultPreferences: Preferences = {
   enterToSend:true,historySort:"newest",historyPinnedFirst:true,animationIntensity:"full",logoIdle:false,projectView:"grid",
   workspaceMode:"standard",homeDensity:"comfortable",homeSections:{projects:true,conversations:true,items:true},recentCommands:[],
   wallpaper:"none",customWallpaperData:"",syncAcrossDevices:false,
-  personalization:{enabled:true,useMemory:true,memorySummary:"",instructions:"",avoid:"",tone:"balanced",length:"balanced",format:"automatic",examples:"when-useful",clarifying:"when-needed",technicality:"balanced"},
+  personalization:{enabled:true,useMemory:true,autoMemoryCollection:true,memorySummary:"",instructions:"",avoid:"",tone:"balanced",length:"balanced",format:"automatic",examples:"when-useful",clarifying:"when-needed",technicality:"balanced"},
   answerStyle: "detailed",
   modelDataConsent: "allowed",
 };

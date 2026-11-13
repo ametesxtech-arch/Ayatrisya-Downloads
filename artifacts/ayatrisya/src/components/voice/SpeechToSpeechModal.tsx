@@ -267,7 +267,7 @@ export function SpeechToSpeechModal({
       const response = await job.result;
       if (ac.signal.aborted) return;
 
-      if (prefs.personalization.enabled && prefs.personalization.useMemory) {
+      if (prefs.personalization.enabled && prefs.personalization.useMemory && prefs.personalization.autoMemoryCollection !== false) {
         void (async () => {
           try {
             const memoryMgr = new IntelligentMemoryContextManager(repository);

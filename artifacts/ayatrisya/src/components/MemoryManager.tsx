@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Brain, Plus, Trash2, Pin, Sparkles, AlertCircle, Edit2, Check, X, Tag, Download, FileText } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Brain, Plus, Trash2, Pin, Sparkles, AlertCircle, Edit2, Check, X, Tag, Download, FileText, Upload } from 'lucide-react';
 import { MemoryEngine } from '@/storage/memory-engine';
 import { repository } from '@/storage/repository';
 import { IntelligentMemoryContextManager } from '@/storage/intelligent-memory-context-manager';
@@ -11,6 +11,8 @@ export function MemoryManager({ notify }: { notify?: (msg: string) => void }) {
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [search, setSearch] = useState('');
+  const [autoCollection, setAutoCollection] = useState(true);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // New Memory Modal / Form
   const [isAdding, setIsAdding] = useState(false);
@@ -41,7 +43,47 @@ export function MemoryManager({ notify }: { notify?: (msg: string) => void }) {
 
   useEffect(() => {
     void loadMemories();
+    void (async () => {
+      try {
+        const prefs = await repository.getPreferences();
+        setAutoCollection(prefs.personalization.autoMemoryCollection !== false);
+      } catch {}
+    })();
   }, [selectedCategory, search]);
+
+  const handleToggleAutoCollection = async () => {
+    try {
+      const nextVal = !autoCollection;
+      const current = await repository.getPreferences();
+      await repository.savePreferences({
+        ...current,
+        personalization: {
+          ...current.personalization,
+          autoMemoryCollection: nextVal,
+        },
+      });
+      setAutoCollection(nextVal);
+      notify?.(nextVal ? 'Automatic AI memory collection enabled.' : 'Automatic AI memory collection disabled.');
+    } catch {
+      notify?.('Could not update memory collection setting.');
+    }
+  };
+
+  const handleImportJson = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const mgr = new IntelligentMemoryContextManager(repository);
+      const result = await mgr.importMemoriesFromJson(text);
+      notify?.(`Imported ${result.count} memories successfully.`);
+      void loadMemories();
+    } catch (err: any) {
+      notify?.(err?.message || 'Failed to import memories.');
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   const handleCreate = async () => {
     if (!newContent.trim()) return;
@@ -158,7 +200,43 @@ export function MemoryManager({ notify }: { notify?: (msg: string) => void }) {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Automatic Collection Toggle */}
+          <button
+            type="button"
+            onClick={handleToggleAutoCollection}
+            className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs transition-colors ${
+              autoCollection
+                ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20'
+                : 'border-white/10 bg-white/[.04] text-slate-400 hover:text-slate-200'
+            }`}
+            title="Toggle automatic memory extraction from chats"
+            data-testid="toggle-auto-memory-collection"
+          >
+            <Sparkles size={12} className={autoCollection ? 'text-emerald-400' : 'text-slate-500'} />
+            <span>Auto-Collection: {autoCollection ? 'Active' : 'Disabled'}</span>
+          </button>
+
+          {/* Import JSON Memory */}
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleImportJson}
+            accept=".json,application/json"
+            className="hidden"
+            data-testid="input-import-memories-file"
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            title="Import memories from JSON backup"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[.04] px-2.5 py-1.5 text-xs text-slate-300 hover:text-white hover:bg-white/[.08]"
+            data-testid="button-import-memories-json"
+          >
+            <Upload size={13} />
+            Import
+          </button>
+
           {memories.length > 0 && (
             <>
               <button
