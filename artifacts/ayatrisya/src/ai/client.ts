@@ -458,6 +458,115 @@ export class AyatrisyaModelClient implements ModelTransport {
       }
     }
 
+    const activePolicy = (() => {
+      try {
+        if (typeof window !== "undefined" && window.localStorage) {
+          return window.localStorage.getItem("ayatrisya_inference_routing_policy") || "ask-each-time";
+        }
+      } catch {}
+      return "ask-each-time";
+    })();
+
+    if (activePolicy === "local-only") {
+      throw new Error("Local Only (Offline) inference route is active. Cloud egress is blocked to prevent data transfer.");
+    }
+
+    if (activePolicy === "custom-remote" && path === "/chat") {
+      const remoteProvider = (typeof window !== "undefined" && window.localStorage.getItem("ayatrisya_custom_remote_provider")) || "openai";
+      const remoteApiKey = ((typeof window !== "undefined" && window.localStorage.getItem("ayatrisya_custom_remote_api_key")) || "").trim();
+      const remoteEndpoint = (((typeof window !== "undefined" && window.localStorage.getItem("ayatrisya_custom_remote_endpoint")) || "https://api.openai.com/v1")).trim().replace(/\/+$/, "");
+      const remoteModel = ((typeof window !== "undefined" && window.localStorage.getItem("ayatrisya_custom_remote_model")) || "gpt-4o").trim();
+
+      if (!remoteApiKey && remoteProvider !== "custom") {
+        throw new Error("Custom Remote inference route is active, but no Provider API Key was configured. Please open Models & Engines to enter your API key.");
+      }
+
+      let bodyObj: any = {};
+      try {
+        bodyObj = typeof init.body === "string" ? JSON.parse(init.body) : init.body || {};
+      } catch {}
+
+      const isAnthropic = remoteProvider === "anthropic";
+      const endpointUrl = isAnthropic
+        ? (remoteEndpoint.endsWith("/messages") ? remoteEndpoint : `${remoteEndpoint}/messages`)
+        : (remoteEndpoint.endsWith("/chat/completions") ? remoteEndpoint : `${remoteEndpoint}/chat/completions`);
+
+      const remoteHeaders: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+
+      if (isAnthropic) {
+        remoteHeaders["x-api-key"] = remoteApiKey;
+        remoteHeaders["anthropic-version"] = "2023-06-01";
+        remoteHeaders["dangerously-allow-browser"] = "true";
+      } else if (remoteApiKey) {
+        remoteHeaders["Authorization"] = `Bearer ${remoteApiKey}`;
+      }
+
+      const rawMessages = Array.isArray(bodyObj.messages) ? bodyObj.messages : [];
+      let requestPayload: any;
+
+      if (isAnthropic) {
+        let systemText = "";
+        const converted = [];
+        for (const m of rawMessages) {
+          if (m.role === "system") {
+            systemText += (systemText ? "\n\n" : "") + m.content;
+          } else {
+            converted.push({
+              role: m.role === "assistant" ? "assistant" : "user",
+              content: m.content || "",
+            });
+          }
+        }
+        requestPayload = {
+          model: remoteModel || "claude-3-5-sonnet-20241022",
+          max_tokens: 4096,
+          messages: converted,
+          system: systemText || undefined,
+        };
+      } else {
+        requestPayload = {
+          model: remoteModel || "gpt-4o",
+          messages: rawMessages.map((m: any) => ({
+            role: m.role,
+            content: m.content,
+          })),
+        };
+      }
+
+      const remoteRes = await fetch(endpointUrl, {
+        method: "POST",
+        headers: remoteHeaders,
+        body: JSON.stringify(requestPayload),
+        signal,
+      });
+
+      if (!remoteRes.ok) {
+        let errDetail = "";
+        try {
+          const errJson = await remoteRes.json();
+          errDetail = errJson.error?.message || errJson.message || JSON.stringify(errJson);
+        } catch {}
+        throw new Error(`Custom Remote (${remoteProvider.toUpperCase()}) request failed (${remoteRes.status}): ${errDetail || remoteRes.statusText}`);
+      }
+
+      const remoteData = await remoteRes.json();
+      let textOutput = "";
+      if (isAnthropic) {
+        textOutput = remoteData.content?.map((c: any) => c.text || "").join("") || "";
+      } else {
+        textOutput = remoteData.choices?.[0]?.message?.content || "";
+      }
+
+      const normalizedResponse = new Response(JSON.stringify({ text: textOutput }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+
+      return { response: normalizedResponse, dispose: () => undefined };
+    }
+
     const token = await this.tokenProvider();
     const controller=new AbortController(); const abort=()=>controller.abort(signal?.reason);
     if(signal?.aborted)abort();else signal?.addEventListener("abort",abort,{once:true});

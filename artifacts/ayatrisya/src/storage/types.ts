@@ -28,7 +28,14 @@ export interface BaseRecord {
   createdAt: string;
   updatedAt: string;
 }
-export interface Conversation extends BaseRecord { title: string; pinned:boolean; archived:boolean; mode?: ChatMode }
+export interface Conversation extends BaseRecord {
+  title: string;
+  pinned: boolean;
+  archived: boolean;
+  mode?: ChatMode;
+  autoTitled?: boolean;
+  manualTitle?: boolean;
+}
 export interface ConversationOptions extends ListOptions {
   archived?:boolean; pinned?:boolean; sort?:"newest"|"oldest"|"title"; pinnedFirst?:boolean;
 }

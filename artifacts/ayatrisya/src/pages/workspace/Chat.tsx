@@ -41,6 +41,7 @@ import { KnowledgeBaseEngine } from '@/storage/knowledge-engine';
 import { AIMemorySummaryEngine } from '@/storage/ai-memory-summary-engine';
 import { IntelligentMemoryContextManager, type MemoryContextPackage } from '@/storage/intelligent-memory-context-manager';
 import { ChromaticButton } from '@/components/chromatic-button';
+import { scheduleAutoTitle, generateFallbackTitle } from '@/ai/conversation-title';
 
 type Turn = Array<{ role: 'user' | 'assistant'; content: string; attachments?: MessageAttachment[] }>;
 
@@ -407,7 +408,12 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
     setError('');
     try {
       let cid = id;
-      if (!cid) cid = (await repository.createConversation((body || files[0].name).slice(0, 48), activeMode)).id;
+      const isFirstUserMessage = !cid || list.filter((m) => m.role === 'user').length === 0;
+
+      if (!cid) {
+        const initialTitle = generateFallbackTitle(body, files.map((f) => ({ name: f.name, mimeType: f.type, size: f.size })));
+        cid = (await repository.createConversation(initialTitle, activeMode)).id;
+      }
       const ids: string[] = [];
       const msgAttachments: MessageAttachment[] = [];
 
@@ -481,6 +487,14 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
       ];
       setText(''); setFiles([]);
       if (!id) goto(`/workspace/chat/${cid}`);
+
+      // Asynchronously generate concise descriptive conversation title on first meaningful user message (Requirements 1, 2, 3, 4, 5)
+      if (isFirstUserMessage) {
+        void scheduleAutoTitle(cid, content, {
+          attachments: files.map((f) => ({ name: f.name, mimeType: f.type, size: f.size })),
+          model: prefs.model,
+        });
+      }
 
       // Check if this is an image request (including conversational continuations)
       const imageIntent = detectImageRequest(content, list);
@@ -1008,9 +1022,11 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
           onNewMessage={async (role, content) => {
             let cid = id;
             if (!cid) {
-              const newConv = await repository.createConversation(content.slice(0, 48), activeMode);
+              const initialTitle = generateFallbackTitle(content);
+              const newConv = await repository.createConversation(initialTitle, activeMode);
               cid = newConv.id;
               goto(`/workspace/chat/${cid}`);
+              void scheduleAutoTitle(cid, content);
             }
             await repository.addMessage(cid, content, role);
           }}

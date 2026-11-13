@@ -482,26 +482,25 @@ export function ModelsAndEnginesPage({
 
   // Routing Policy & Custom Remote Handlers
   async function handleSetRoutingPolicy(newPolicy: string) {
+    // Optimistic immediate update for instant UI feedback
+    setRoutingPolicy(newPolicy);
+    try {
+      localStorage.setItem('ayatrisya_inference_routing_policy', newPolicy);
+    } catch {}
+
+    if (newPolicy === 'custom-remote' && !remoteApiKey.trim() && remoteProvider !== 'custom') {
+      notify('Selected Custom Remote. Please enter your provider API key below to enable remote inference.');
+    } else {
+      notify(`Inference route set to: ${newPolicy}`);
+    }
+
     setPolicyBusy(true);
     try {
       if (desktop?.setRoutingPolicy) {
         await desktop.setRoutingPolicy(newPolicy);
       }
-      try {
-        localStorage.setItem('ayatrisya_inference_routing_policy', newPolicy);
-      } catch {}
-      setRoutingPolicy(newPolicy);
-      if (newPolicy === 'custom-remote' && !remoteApiKey.trim() && remoteProvider !== 'custom') {
-        notify('Selected Custom Remote. Please enter your provider API key below to enable remote inference.');
-      } else {
-        notify(`Inference route set to: ${newPolicy}`);
-      }
     } catch (er) {
-      try {
-        localStorage.setItem('ayatrisya_inference_routing_policy', newPolicy);
-      } catch {}
-      setRoutingPolicy(newPolicy);
-      notify(`Inference route set to: ${newPolicy}`);
+      // IPC sync error handled gracefully without breaking state
     } finally {
       setPolicyBusy(false);
     }
@@ -913,7 +912,6 @@ export function ModelsAndEnginesPage({
               <button
                 key={item.id}
                 type="button"
-                disabled={policyBusy}
                 onClick={() => void handleSetRoutingPolicy(item.id)}
                 className={cx(
                   'group flex flex-col justify-between text-left rounded-xl border p-4 transition-all duration-150 cursor-pointer',

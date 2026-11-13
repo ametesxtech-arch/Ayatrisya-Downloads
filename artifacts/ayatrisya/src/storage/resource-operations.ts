@@ -18,7 +18,7 @@ export async function atomic<T>(repo:LocalRepository,names:StoreName[],run:(tx:T
   try{const result=await run(tx,owner);await tx.done;repo.notify();return result;}
   catch(error){try{tx.abort();}catch{/* Already aborted. */}await tx.done.catch(()=>{});throw storageError(error);}
 }
-export async function updateConversation(repo:LocalRepository,id:string,patch:Partial<Pick<Conversation,"title"|"pinned"|"archived"|"mode">>){
+export async function updateConversation(repo:LocalRepository,id:string,patch:Partial<Pick<Conversation,"title"|"pinned"|"archived"|"mode"|"autoTitled"|"manualTitle">>){
   await atomic(repo,["conversations"],async(tx,owner)=>{
     const old=await tx.objectStore("conversations").get([owner,id]);if(!old)throw new Error("Conversation not found.");
     const value={...old,...patch,updatedAt:now()};

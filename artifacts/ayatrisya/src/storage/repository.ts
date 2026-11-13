@@ -4,6 +4,7 @@ import { defaultPreferences, type Attachment, type BaseRecord, type ChatMode, ty
 import { validateFileContent } from "./files";
 import * as operations from "./resource-operations";
 import { searchAll } from "./search";
+import { generateFallbackTitle } from "@/ai/conversation-title-fallback";
 
 export function storageError(error: unknown): Error {
   if (error instanceof DOMException && error.name === "QuotaExceededError")
@@ -107,9 +108,11 @@ export class LocalRepository {
     await this.put("conversations", conversation); return conversation;
   }
   async renameConversation(id: string, title: string) {
-    return this.updateConversation(id,{title:checkedTitle(title)});
+    return this.updateConversation(id, { title: checkedTitle(title), manualTitle: true });
   }
-  updateConversation(id:string,patch:Partial<Pick<Conversation,"title"|"pinned"|"archived"|"mode">>){return operations.updateConversation(this,id,patch);}
+  updateConversation(id: string, patch: Partial<Pick<Conversation, "title" | "pinned" | "archived" | "mode" | "autoTitled" | "manualTitle">>) {
+    return operations.updateConversation(this, id, patch);
+  }
   deleteConversations(ids:string[]){return operations.removeConversations(this,ids);}
   clearConversation(id:string){return operations.removeConversations(this,[id],true);}
   deleteMessage(id:string){return operations.deleteMessage(this,id);}
@@ -132,7 +135,21 @@ export class LocalRepository {
       const time=new Date(Math.max(Date.now(),Date.parse(conversation.updatedAt)+1)).toISOString();
       const message:Message={...this.base(),ownerId:owner,createdAt:time,updatedAt:time,conversationId,role,content,attachmentIds};
       await tx.objectStore("messages").put(message);
-      await tx.objectStore("conversations").put({ ...conversation, title: conversation.title === "New conversation" ? (content.trim().slice(0, 70) || "Conversation with attachment") : conversation.title, updatedAt: message.updatedAt });
+
+      // Derive title ONLY on the first meaningful user message (Requirements 1, 4, 5)
+      const nextTitle =
+        role === "user" &&
+        conversation.title === "New conversation" &&
+        !conversation.autoTitled &&
+        !conversation.manualTitle
+          ? generateFallbackTitle(content.trim())
+          : conversation.title;
+
+      await tx.objectStore("conversations").put({
+        ...conversation,
+        title: nextTitle,
+        updatedAt: message.updatedAt,
+      });
       return message;
     });
   }
