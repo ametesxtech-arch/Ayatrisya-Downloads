@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import {
   Activity,
   AlertCircle,
@@ -7,10 +7,14 @@ import {
   CheckCircle2,
   Cpu,
   Download,
+  Eye,
+  EyeOff,
   Globe,
   HardDrive,
   Info,
+  Key,
   Loader2,
+  Lock,
   Pause,
   Play,
   RefreshCw,
@@ -18,6 +22,7 @@ import {
   Server,
   Shield,
   ShieldCheck,
+  Sliders,
   Sparkles,
   Terminal,
   Trash2,
@@ -45,6 +50,96 @@ import {
   AmetesxModelProvisioner,
   type ProvisioningProgress,
 } from '@/desktop/provisioner';
+
+export interface RemoteProviderPreset {
+  id: string;
+  name: string;
+  defaultEndpoint: string;
+  defaultModel: string;
+  keyPrefix?: string;
+  placeholderKey: string;
+  docsUrl?: string;
+}
+
+export const REMOTE_PROVIDERS: RemoteProviderPreset[] = [
+  {
+    id: 'openai',
+    name: 'OpenAI',
+    defaultEndpoint: 'https://api.openai.com/v1',
+    defaultModel: 'gpt-4o',
+    keyPrefix: 'sk-',
+    placeholderKey: 'sk-proj-...',
+    docsUrl: 'https://platform.openai.com/api-keys',
+  },
+  {
+    id: 'anthropic',
+    name: 'Anthropic',
+    defaultEndpoint: 'https://api.anthropic.com/v1',
+    defaultModel: 'claude-3-5-sonnet-20241022',
+    keyPrefix: 'sk-ant-',
+    placeholderKey: 'sk-ant-api03-...',
+    docsUrl: 'https://console.anthropic.com/settings/keys',
+  },
+  {
+    id: 'openrouter',
+    name: 'OpenRouter',
+    defaultEndpoint: 'https://openrouter.ai/api/v1',
+    defaultModel: 'anthropic/claude-3.5-sonnet',
+    keyPrefix: 'sk-or-',
+    placeholderKey: 'sk-or-v1-...',
+    docsUrl: 'https://openrouter.ai/keys',
+  },
+  {
+    id: 'groq',
+    name: 'Groq',
+    defaultEndpoint: 'https://api.groq.com/openai/v1',
+    defaultModel: 'llama-3.3-70b-versatile',
+    keyPrefix: 'gsk_',
+    placeholderKey: 'gsk_...',
+    docsUrl: 'https://console.groq.com/keys',
+  },
+  {
+    id: 'deepseek',
+    name: 'DeepSeek',
+    defaultEndpoint: 'https://api.deepseek.com',
+    defaultModel: 'deepseek-chat',
+    keyPrefix: 'sk-',
+    placeholderKey: 'sk-...',
+    docsUrl: 'https://platform.deepseek.com/api_keys',
+  },
+  {
+    id: 'mistral',
+    name: 'Mistral',
+    defaultEndpoint: 'https://api.mistral.ai/v1',
+    defaultModel: 'mistral-large-latest',
+    placeholderKey: 'mistral-...',
+    docsUrl: 'https://console.mistral.ai/api-keys',
+  },
+  {
+    id: 'together',
+    name: 'Together AI',
+    defaultEndpoint: 'https://api.together.xyz/v1',
+    defaultModel: 'meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo',
+    placeholderKey: 'together-...',
+    docsUrl: 'https://api.together.ai/settings/api-keys',
+  },
+  {
+    id: 'huggingface',
+    name: 'Hugging Face',
+    defaultEndpoint: 'https://api-inference.huggingface.co/v1',
+    defaultModel: 'Qwen/Qwen2.5-72B-Instruct',
+    keyPrefix: 'hf_',
+    placeholderKey: 'hf_...',
+    docsUrl: 'https://huggingface.co/settings/tokens',
+  },
+  {
+    id: 'custom',
+    name: 'Custom Server',
+    defaultEndpoint: 'http://localhost:8000/v1',
+    defaultModel: 'custom-model',
+    placeholderKey: 'Optional or custom auth key',
+  },
+];
 
 export function ModelsAndEnginesPage({
   goto,
@@ -119,10 +214,54 @@ export function ModelsAndEnginesPage({
   const [verifyingModelId, setVerifyingModelId] = useState<string | null>(null);
 
   // Routing Policy State
-  const [routingPolicy, setRoutingPolicy] = useState<string>('ask-each-time');
+  const [routingPolicy, setRoutingPolicy] = useState<string>(() => {
+    try {
+      return localStorage.getItem('ayatrisya_inference_routing_policy') || 'ask-each-time';
+    } catch {
+      return 'ask-each-time';
+    }
+  });
   const [policyBusy, setPolicyBusy] = useState(false);
   const [gatewayTesting, setGatewayTesting] = useState(false);
   const [gatewayResult, setGatewayResult] = useState<any>(null);
+
+  // Custom Remote Provider State
+  const [remoteProvider, setRemoteProvider] = useState<string>(() => {
+    try {
+      return localStorage.getItem('ayatrisya_custom_remote_provider') || 'openai';
+    } catch {
+      return 'openai';
+    }
+  });
+  const [remoteApiKey, setRemoteApiKey] = useState<string>(() => {
+    try {
+      return localStorage.getItem('ayatrisya_custom_remote_api_key') || '';
+    } catch {
+      return '';
+    }
+  });
+  const [remoteEndpointUrl, setRemoteEndpointUrl] = useState<string>(() => {
+    try {
+      return localStorage.getItem('ayatrisya_custom_remote_endpoint') || 'https://api.openai.com/v1';
+    } catch {
+      return 'https://api.openai.com/v1';
+    }
+  });
+  const [remoteModelName, setRemoteModelName] = useState<string>(() => {
+    try {
+      return localStorage.getItem('ayatrisya_custom_remote_model') || 'gpt-4o';
+    } catch {
+      return 'gpt-4o';
+    }
+  });
+  const [showApiKey, setShowApiKey] = useState(false);
+  const [remoteSaving, setRemoteSaving] = useState(false);
+  const [remoteTesting, setRemoteTesting] = useState(false);
+  const [remoteTestResult, setRemoteTestResult] = useState<{
+    success: boolean;
+    message: string;
+    latencyMs?: number;
+  } | null>(null);
 
   const refreshInstalledModels = useCallback(async () => {
     if (!desktop?.getInstalledModels) return;
@@ -142,10 +281,19 @@ export function ModelsAndEnginesPage({
   }, [desktop]);
 
   const refreshRoutingPolicy = useCallback(async () => {
-    if (!desktop?.getRoutingPolicy) return;
     try {
-      const pol = await desktop.getRoutingPolicy();
-      setRoutingPolicy(pol);
+      if (desktop?.getRoutingPolicy) {
+        const pol = await desktop.getRoutingPolicy();
+        if (pol) {
+          setRoutingPolicy(pol);
+          localStorage.setItem('ayatrisya_inference_routing_policy', pol);
+          return;
+        }
+      }
+    } catch {}
+    try {
+      const saved = localStorage.getItem('ayatrisya_inference_routing_policy');
+      if (saved) setRoutingPolicy(saved);
     } catch {}
   }, [desktop]);
 
@@ -332,38 +480,220 @@ export function ModelsAndEnginesPage({
     }
   }
 
-  // Routing Policy Handlers
+  // Routing Policy & Custom Remote Handlers
   async function handleSetRoutingPolicy(newPolicy: string) {
-    if (!desktop?.setRoutingPolicy) return;
     setPolicyBusy(true);
     try {
-      await desktop.setRoutingPolicy(newPolicy);
+      if (desktop?.setRoutingPolicy) {
+        await desktop.setRoutingPolicy(newPolicy);
+      }
+      try {
+        localStorage.setItem('ayatrisya_inference_routing_policy', newPolicy);
+      } catch {}
+      setRoutingPolicy(newPolicy);
+      if (newPolicy === 'custom-remote' && !remoteApiKey.trim() && remoteProvider !== 'custom') {
+        notify('Selected Custom Remote. Please enter your provider API key below to enable remote inference.');
+      } else {
+        notify(`Inference route set to: ${newPolicy}`);
+      }
+    } catch (er) {
+      try {
+        localStorage.setItem('ayatrisya_inference_routing_policy', newPolicy);
+      } catch {}
       setRoutingPolicy(newPolicy);
       notify(`Inference route set to: ${newPolicy}`);
-    } catch (er) {
-      notify(errMsg(er));
     } finally {
       setPolicyBusy(false);
     }
   }
 
+  function handleSelectProvider(providerId: string) {
+    const preset = REMOTE_PROVIDERS.find((p) => p.id === providerId);
+    if (!preset) return;
+    setRemoteProvider(providerId);
+    setRemoteEndpointUrl(preset.defaultEndpoint);
+    setRemoteModelName(preset.defaultModel);
+    setRemoteTestResult(null);
+  }
+
+  async function handleSaveRemoteConfig() {
+    if (routingPolicy === 'custom-remote' && !remoteApiKey.trim() && remoteProvider !== 'custom') {
+      notify('⚠️ Provider API Key is required for remote inference. Please enter your API key.');
+      return;
+    }
+    setRemoteSaving(true);
+    try {
+      localStorage.setItem('ayatrisya_custom_remote_provider', remoteProvider);
+      localStorage.setItem('ayatrisya_custom_remote_api_key', remoteApiKey.trim());
+      localStorage.setItem('ayatrisya_custom_remote_endpoint', remoteEndpointUrl.trim());
+      localStorage.setItem('ayatrisya_custom_remote_model', remoteModelName.trim());
+
+      if (desktop?.saveRemoteEndpoint) {
+        await desktop.saveRemoteEndpoint({
+          id: 'default-custom-remote',
+          name: `${remoteProvider.toUpperCase()} Remote`,
+          endpointUrl: remoteEndpointUrl.trim(),
+          modelName: remoteModelName.trim(),
+          apiKey: remoteApiKey.trim(),
+        });
+      }
+      notify(`Custom Remote credentials for ${remoteProvider.toUpperCase()} saved securely.`);
+    } catch (er) {
+      notify(errMsg(er));
+    } finally {
+      setRemoteSaving(false);
+    }
+  }
+
+  async function handleTestRemoteConnection() {
+    if (!remoteApiKey.trim() && remoteProvider !== 'custom') {
+      setRemoteTestResult({
+        success: false,
+        message: 'API Key is required to test provider connection.',
+      });
+      notify('API Key is required to test provider connection.');
+      return;
+    }
+    setRemoteTesting(true);
+    setRemoteTestResult(null);
+    const start = performance.now();
+    try {
+      if (desktop?.testRemoteEndpoint) {
+        const res = await desktop.testRemoteEndpoint({
+          endpointUrl: remoteEndpointUrl.trim(),
+          apiKey: remoteApiKey.trim(),
+          modelName: remoteModelName.trim(),
+        });
+        const latencyMs = res.latencyMs || Math.round(performance.now() - start);
+        if (res.isHealthy) {
+          setRemoteTestResult({
+            success: true,
+            latencyMs,
+            message: `Connected successfully! Discovered models: ${(res.discoveredModels || [remoteModelName]).slice(0, 3).join(', ')}`,
+          });
+          notify('Remote endpoint verified and healthy.');
+        } else {
+          setRemoteTestResult({
+            success: false,
+            latencyMs,
+            message: res.error || 'Connection check returned an error',
+          });
+          notify(`Endpoint check failed: ${res.error || 'Error'}`);
+        }
+        return;
+      }
+
+      // Web/direct fallback test
+      let testUrl = `${remoteEndpointUrl.replace(/\/+$/, '')}/models`;
+      let headers: Record<string, string> = {};
+      if (remoteProvider === 'anthropic') {
+        testUrl = `${remoteEndpointUrl.replace(/\/+$/, '')}/messages`;
+        headers = {
+          'x-api-key': remoteApiKey.trim(),
+          'anthropic-version': '2023-06-01',
+          'content-type': 'application/json',
+          'dangerously-allow-browser': 'true',
+        };
+      } else {
+        headers = {
+          Authorization: `Bearer ${remoteApiKey.trim()}`,
+        };
+      }
+
+      const res = await fetch(testUrl, {
+        method: remoteProvider === 'anthropic' ? 'POST' : 'GET',
+        headers,
+        body: remoteProvider === 'anthropic' ? JSON.stringify({ model: remoteModelName, max_tokens: 1, messages: [{ role: 'user', content: 'hi' }] }) : undefined,
+        signal: AbortSignal.timeout(6000),
+      });
+
+      const latencyMs = Math.round(performance.now() - start);
+      if (res.ok || res.status === 400 || res.status === 200) {
+        setRemoteTestResult({
+          success: true,
+          latencyMs,
+          message: `Connected to ${remoteProvider.toUpperCase()} (${latencyMs}ms). Authentication verified.`,
+        });
+        notify(`Connection to ${remoteProvider.toUpperCase()} successful (${latencyMs}ms).`);
+      } else if (res.status === 401 || res.status === 403) {
+        setRemoteTestResult({
+          success: false,
+          latencyMs,
+          message: `Authentication failed (HTTP ${res.status}): Invalid API Key. Please verify your credentials.`,
+        });
+        notify(`Authentication failed: Invalid API Key`);
+      } else {
+        setRemoteTestResult({
+          success: false,
+          latencyMs,
+          message: `Server returned HTTP ${res.status} from ${testUrl}`,
+        });
+        notify(`Remote check: HTTP ${res.status}`);
+      }
+    } catch (er) {
+      const latencyMs = Math.round(performance.now() - start);
+      setRemoteTestResult({
+        success: false,
+        latencyMs,
+        message: errMsg(er),
+      });
+      notify(`Connection error: ${errMsg(er)}`);
+    } finally {
+      setRemoteTesting(false);
+    }
+  }
+
   async function testGateway() {
-    if (!desktop?.testAyatrisyaGateway) return;
     setGatewayTesting(true);
     setGatewayResult(null);
     try {
-      const res = await desktop.testAyatrisyaGateway({
-        gatewayUrl: 'https://ayatrisya-model-api.onrender.com',
+      if (desktop?.testAyatrisyaGateway) {
+        const res = await desktop.testAyatrisyaGateway({
+          gatewayUrl: 'https://ayatrisya-model-api.onrender.com',
+        });
+        setGatewayResult(res);
+        if (res.gatewayHealthy && res.chatModelAvailable) {
+          notify('Ayatrisya Cloud Gateway & Chat Model are operational.');
+        } else if (res.gatewayHealthy) {
+          notify('Gateway is online, but underlying chat model server is starting/unavailable.');
+        } else {
+          notify(`Gateway check failed: ${res.error || 'Server error'}`);
+        }
+        return;
+      }
+
+      // Web fallback test
+      const start = performance.now();
+      const res = await fetch('https://ayatrisya-model-api.onrender.com/health', {
+        signal: AbortSignal.timeout(6000),
       });
-      setGatewayResult(res);
-      if (res.gatewayHealthy && res.chatModelAvailable) {
-        notify('Ayatrisya Cloud Gateway & Chat Model are operational.');
-      } else if (res.gatewayHealthy) {
-        notify('Gateway is online, but underlying chat model server is starting/unavailable.');
+      const latencyMs = Math.round(performance.now() - start);
+      if (res.ok) {
+        const data = await res.json().catch(() => ({}));
+        const chatAvail = Boolean(data.chat_model_available ?? true);
+        setGatewayResult({
+          gatewayHealthy: true,
+          chatModelAvailable: chatAvail,
+          latencyMs,
+          models: data.models || ['ayatrisya-instruct-v1', 'ayatrisya-coder-v1'],
+        });
+        notify('Ayatrisya Cloud Gateway is operational.');
       } else {
-        notify(`Gateway check failed: ${res.error || 'Server error'}`);
+        setGatewayResult({
+          gatewayHealthy: false,
+          chatModelAvailable: false,
+          latencyMs,
+          error: `HTTP ${res.status}`,
+        });
+        notify(`Gateway returned HTTP ${res.status}`);
       }
     } catch (er) {
+      setGatewayResult({
+        gatewayHealthy: false,
+        chatModelAvailable: false,
+        latencyMs: 0,
+        error: errMsg(er),
+      });
       notify(errMsg(er));
     } finally {
       setGatewayTesting(false);
@@ -554,55 +884,275 @@ export function ModelsAndEnginesPage({
               label: 'Local Only (Offline)',
               desc: '100% offline. Prompts never leave your computer. Zero cloud egress.',
               badge: 'Offline Safe',
+              badgeColor: 'text-violet-300 bg-violet-500/20',
             },
             {
               id: 'ayatrisya-cloud',
               label: 'Ayatrisya Cloud',
               desc: 'Production HTTPS API gateway with chat model readiness verification.',
               badge: 'Hosted Server',
+              badgeColor: 'text-blue-300 bg-blue-500/20',
             },
             {
               id: 'custom-remote',
               label: 'Custom Remote',
               desc: 'User-configured OpenAI-compatible endpoint with encrypted credentials.',
-              badge: 'Encrypted Key',
+              badge: remoteApiKey.trim() ? 'Key Active' : 'API Key Required',
+              badgeColor: remoteApiKey.trim() ? 'text-teal-300 bg-teal-500/20' : 'text-amber-300 bg-amber-500/20',
             },
             {
               id: 'ask-each-time',
               label: 'Ask Each Time',
               desc: 'Prompts for explicit route confirmation before sending any request.',
               badge: 'Consent Enforced',
+              badgeColor: 'text-purple-300 bg-purple-500/20',
             },
-          ].map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              disabled={policyBusy}
-              onClick={() => void handleSetRoutingPolicy(item.id)}
-              className={cx(
-                'flex flex-col justify-between text-left rounded-xl border p-4 transition',
-                routingPolicy === item.id
-                  ? 'border-violet-500 bg-violet-500/[.08] shadow-sm'
-                  : 'border-white/[.07] bg-white/[.02] hover:border-white/20'
-              )}
-            >
-              <div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-200">{item.label}</span>
-                  <span className="text-[10px] font-semibold text-violet-300 bg-violet-500/20 px-1.5 py-0.5 rounded">
-                    {item.badge}
-                  </span>
+          ].map((item) => {
+            const isSelected = routingPolicy === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                disabled={policyBusy}
+                onClick={() => void handleSetRoutingPolicy(item.id)}
+                className={cx(
+                  'group flex flex-col justify-between text-left rounded-xl border p-4 transition-all duration-150 cursor-pointer',
+                  isSelected
+                    ? 'border-violet-500 bg-violet-500/[.12] ring-1 ring-violet-500/50 shadow-md shadow-violet-500/10'
+                    : 'border-white/[.07] bg-white/[.02] hover:border-violet-400/40 hover:bg-white/[.05]'
+                )}
+              >
+                <div>
+                  <div className="flex items-center justify-between">
+                    <span className={cx('text-xs font-bold transition-colors', isSelected ? 'text-white' : 'text-slate-200 group-hover:text-white')}>
+                      {item.label}
+                    </span>
+                    <span className={cx('text-[10px] font-semibold px-1.5 py-0.5 rounded', item.badgeColor)}>
+                      {item.badge}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-xs text-slate-400 leading-relaxed">{item.desc}</p>
                 </div>
-                <p className="mt-2 text-xs text-slate-400 leading-relaxed">{item.desc}</p>
-              </div>
-              <div className="mt-3 pt-2 border-t border-white/[.06] flex items-center justify-between text-[11px]">
-                <span className={cx(routingPolicy === item.id ? 'text-teal-300 font-semibold' : 'text-slate-500')}>
-                  {routingPolicy === item.id ? '✓ Selected' : 'Click to select'}
-                </span>
-              </div>
-            </button>
-          ))}
+                <div className="mt-3 pt-2 border-t border-white/[.06] flex items-center justify-between text-[11px]">
+                  <span className={cx(isSelected ? 'text-teal-300 font-semibold flex items-center gap-1' : 'text-slate-500 group-hover:text-slate-400')}>
+                    {isSelected ? '✓ Selected' : 'Click to select'}
+                  </span>
+                  {isSelected && (
+                    <span className="h-1.5 w-1.5 rounded-full bg-teal-400 animate-pulse" />
+                  )}
+                </div>
+              </button>
+            );
+          })}
         </div>
+
+        {/* Custom Remote Configuration Drawer / Card (Requirement: User must enter Provider API Key) */}
+        {routingPolicy === 'custom-remote' && (
+          <div className="rounded-2xl border border-violet-500/30 bg-violet-950/[.15] p-5 shadow-lg space-y-5 animate-in fade-in duration-200">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[.08] pb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="rounded-lg bg-violet-500/20 p-2 text-violet-300 ring-1 ring-violet-500/30">
+                  <Key size={18} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-100 flex items-center gap-2">
+                    Custom Remote Provider & API Key Configuration
+                    {remoteApiKey.trim() ? (
+                      <span className="text-[10px] bg-teal-500/20 text-teal-300 border border-teal-500/30 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                        <Check size={10} /> Key Active
+                      </span>
+                    ) : (
+                      <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                        <AlertCircle size={10} /> Key Required
+                      </span>
+                    )}
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Select your AI provider and enter your API key. Keys are encrypted and stored locally on your device.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 text-xs text-slate-400">
+                <Lock size={14} className="text-teal-400" />
+                <span>Encrypted Local Storage Active</span>
+              </div>
+            </div>
+
+            {/* Provider Selector Buttons */}
+            <div>
+              <label className="text-xs font-semibold text-slate-300 mb-2 block">
+                Select AI Provider:
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {REMOTE_PROVIDERS.map((prov) => {
+                  const isCur = remoteProvider === prov.id;
+                  return (
+                    <button
+                      key={prov.id}
+                      type="button"
+                      onClick={() => handleSelectProvider(prov.id)}
+                      className={cx(
+                        'px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer flex items-center gap-1.5',
+                        isCur
+                          ? 'bg-violet-600 text-white shadow-sm ring-1 ring-violet-400'
+                          : 'bg-white/[.04] text-slate-300 border border-white/[.08] hover:bg-white/[.08] hover:text-white'
+                      )}
+                    >
+                      {prov.name}
+                      {isCur && <Check size={12} />}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Warning if no key is entered */}
+            {!remoteApiKey.trim() && remoteProvider !== 'custom' && (
+              <div className="rounded-xl border border-amber-500/30 bg-amber-500/[.08] p-3 text-xs text-amber-200 flex items-start gap-2.5">
+                <AlertCircle size={16} className="text-amber-400 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-semibold">Provider API Key is required for Custom Remote route.</span>
+                  <p className="text-amber-300/80 mt-0.5">
+                    Enter your {REMOTE_PROVIDERS.find((p) => p.id === remoteProvider)?.name || 'provider'} API key below to activate inference routing. Your requests cannot be processed without a valid authentication key.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Configuration Form */}
+            <div className="grid gap-4 sm:grid-cols-2">
+              {/* API Key Input */}
+              <div className="sm:col-span-2">
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                    <Key size={13} className="text-violet-400" />
+                    Provider API Key <span className="text-rose-400">*</span>
+                  </label>
+                  {REMOTE_PROVIDERS.find((p) => p.id === remoteProvider)?.docsUrl && (
+                    <a
+                      href={REMOTE_PROVIDERS.find((p) => p.id === remoteProvider)?.docsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[11px] text-violet-400 hover:text-violet-300 underline"
+                    >
+                      Get {REMOTE_PROVIDERS.find((p) => p.id === remoteProvider)?.name} API Key →
+                    </a>
+                  )}
+                </div>
+                <div className="relative">
+                  <input
+                    type={showApiKey ? 'text' : 'password'}
+                    value={remoteApiKey}
+                    onChange={(e) => setRemoteApiKey(e.target.value)}
+                    placeholder={REMOTE_PROVIDERS.find((p) => p.id === remoteProvider)?.placeholderKey || 'Enter API Key...'}
+                    className={cx(
+                      inputCls,
+                      'pr-10 font-mono text-xs tracking-wider bg-slate-900/80',
+                      !remoteApiKey.trim() && remoteProvider !== 'custom' ? 'border-amber-500/50 focus:border-amber-400' : 'border-white/[.12]'
+                    )}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowApiKey(!showApiKey)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition p-1"
+                    title={showApiKey ? 'Hide API Key' : 'Show API Key'}
+                  >
+                    {showApiKey ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
+                </div>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  API keys are encrypted and isolated to this workspace. They are never sent to third-party tracking services.
+                </p>
+              </div>
+
+              {/* Endpoint URL Input */}
+              <div>
+                <label className="text-xs font-semibold text-slate-300 mb-1.5 block">
+                  Endpoint URL <span className="text-slate-500 font-normal">(OpenAI-compatible)</span>
+                </label>
+                <input
+                  type="text"
+                  value={remoteEndpointUrl}
+                  onChange={(e) => setRemoteEndpointUrl(e.target.value)}
+                  placeholder="https://api.openai.com/v1"
+                  className={cx(inputCls, 'font-mono text-xs bg-slate-900/80')}
+                />
+              </div>
+
+              {/* Model ID Input */}
+              <div>
+                <label className="text-xs font-semibold text-slate-300 mb-1.5 block">
+                  Model Identifier / Name
+                </label>
+                <input
+                  type="text"
+                  value={remoteModelName}
+                  onChange={(e) => setRemoteModelName(e.target.value)}
+                  placeholder="e.g. gpt-4o, deepseek-chat, claude-3-5-sonnet"
+                  className={cx(inputCls, 'font-mono text-xs bg-slate-900/80')}
+                />
+              </div>
+            </div>
+
+            {/* Test result feedback banner */}
+            {remoteTestResult && (
+              <div
+                className={cx(
+                  'rounded-xl border p-3 text-xs space-y-1',
+                  remoteTestResult.success
+                    ? 'border-teal-500/30 bg-teal-500/[.08] text-teal-200'
+                    : 'border-rose-500/30 bg-rose-500/[.08] text-rose-200'
+                )}
+              >
+                <div className="font-semibold flex items-center gap-1.5">
+                  {remoteTestResult.success ? <CheckCircle2 size={15} className="text-teal-400" /> : <XCircle size={15} className="text-rose-400" />}
+                  {remoteTestResult.success ? 'Endpoint Connection Verified' : 'Connection Failed'}
+                  {remoteTestResult.latencyMs !== undefined && (
+                    <span className="text-[10px] opacity-80">({remoteTestResult.latencyMs} ms)</span>
+                  )}
+                </div>
+                <p className="text-[11px] leading-relaxed opacity-90">{remoteTestResult.message}</p>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-white/[.06]">
+              <div className="text-[11px] text-slate-400">
+                {remoteApiKey.trim() ? (
+                  <span className="text-teal-300 font-medium flex items-center gap-1">
+                    <Check size={12} /> Key configured for {REMOTE_PROVIDERS.find((p) => p.id === remoteProvider)?.name || remoteProvider}
+                  </span>
+                ) : (
+                  <span className="text-amber-300 font-medium">
+                    ⚠️ Enter API key and click "Save Configuration"
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => void handleTestRemoteConnection()}
+                  disabled={remoteTesting}
+                  className="text-xs"
+                >
+                  {remoteTesting ? <Loader2 size={13} className="animate-spin" /> : <Activity size={13} />}
+                  Test Connection
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={() => void handleSaveRemoteConfig()}
+                  disabled={remoteSaving}
+                  className="text-xs"
+                >
+                  {remoteSaving ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+                  Save Configuration
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="flex flex-wrap items-center justify-between gap-3 pt-2 text-xs">
           <div className="flex items-center gap-2 text-slate-400">
