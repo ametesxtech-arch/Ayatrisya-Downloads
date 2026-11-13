@@ -82,6 +82,7 @@ function responseMessage(body: unknown, fallback: string): string {
 }
 
 function readCallbackMessage(): { message: string | null; provider?: Provider; connected?: boolean } {
+  if (typeof window === "undefined") return { message: null };
   const params = new URLSearchParams(window.location.search);
   const provider = params.get("connector");
   const result = params.get("connection");

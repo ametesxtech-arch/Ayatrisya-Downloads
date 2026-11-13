@@ -75,11 +75,11 @@ export function ResearchPage({ notify }: { notify: (m: string) => void }) {
   return (
     <div className="space-y-6 max-w-5xl mx-auto p-4 sm:p-6">
       {/* Tab Navigation */}
-      <div className="flex items-center gap-2 border-b border-white/[.08] pb-3 text-xs font-medium">
+      <div className="flex items-center gap-2 border-b border-white/[.08] pb-3 text-xs font-medium overflow-x-auto scrollbar-none -mx-1 px-1">
         <button
           type="button"
           onClick={() => setTab('agent')}
-          className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 transition-colors ${
+          className={`shrink-0 whitespace-nowrap flex items-center gap-1.5 rounded-lg px-3 py-1.5 transition-colors ${
             tab === 'agent'
               ? 'bg-teal-400/15 text-teal-300 border border-teal-400/30'
               : 'text-slate-400 hover:text-slate-200'
@@ -92,7 +92,7 @@ export function ResearchPage({ notify }: { notify: (m: string) => void }) {
         <button
           type="button"
           onClick={() => setTab('knowledge')}
-          className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 transition-colors ${
+          className={`shrink-0 whitespace-nowrap flex items-center gap-1.5 rounded-lg px-3 py-1.5 transition-colors ${
             tab === 'knowledge'
               ? 'bg-teal-400/15 text-teal-300 border border-teal-400/30'
               : 'text-slate-400 hover:text-slate-200'
@@ -105,7 +105,7 @@ export function ResearchPage({ notify }: { notify: (m: string) => void }) {
         <button
           type="button"
           onClick={() => setTab('notes')}
-          className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 transition-colors ${
+          className={`shrink-0 whitespace-nowrap flex items-center gap-1.5 rounded-lg px-3 py-1.5 transition-colors ${
             tab === 'notes'
               ? 'bg-teal-400/15 text-teal-300 border border-teal-400/30'
               : 'text-slate-400 hover:text-slate-200'

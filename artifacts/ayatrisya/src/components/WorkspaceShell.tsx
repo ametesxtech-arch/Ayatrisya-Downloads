@@ -76,7 +76,20 @@ function WorkspaceContent() {
   }, []);
   const asideRef = useRef<HTMLElement>(null), mainRef = useRef<HTMLDivElement>(null), wasOpen = useRef(false);
   const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 1023px)').matches);
+  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
   const [creating, setCreating] = useState(false);
+
+  // Dynamic visual viewport / virtual keyboard detection
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.visualViewport) return;
+    const onResize = () => {
+      const vh = window.innerHeight;
+      const vv = window.visualViewport?.height ?? vh;
+      setIsKeyboardOpen(vh - vv > 120);
+    };
+    window.visualViewport.addEventListener('resize', onResize);
+    return () => window.visualViewport?.removeEventListener('resize', onResize);
+  }, []);
 
   // Prevent scroll drift / canvas going up on route change
   useEffect(() => {
@@ -331,31 +344,113 @@ function WorkspaceContent() {
             <ActionMenu label="Profile menu" items={profileItems}><UserRound size={16} /></ActionMenu>
           </div>
         </header>
-        <main id="main" tabIndex={-1} className={cx('workspace-main-content min-h-0 flex-1 focus:outline-none overflow-hidden', isFullViewport ? 'flex flex-col h-full' : 'overflow-y-auto')}><div ref={pageRef} className={cx(isFullViewport ? 'flex-1 h-full min-h-0 flex flex-col overflow-hidden' : 'min-h-full')}>
-          {path === '/workspace' ? <WorkspaceHome
-            displayName={user?.displayName || prefs.displayName || ''}
-            projects={homeProjects.data ?? []}
-            conversations={homeConversations.data ?? []}
-            items={homeItems.data ?? []}
-            stats={stats.data ?? null}
-            loading={homeProjects.loading || homeConversations.loading || homeItems.loading}
-            error={homeProjects.error || homeConversations.error || homeItems.error}
-            modelAvailable={anyReady}
-            sections={prefs.homeSections}
-            density={prefs.homeDensity}
-            onAction={homeAction}
-            onOpenProject={(id) => goto(`/workspace/projects/${id}`)}
-            onOpenConversation={(id) => goto(`/workspace/chat/${id}`)}
-            onOpenItem={(id) => {
-              const item = homeItems.data?.find((entry) => entry.id === id);
-              goto(item?.kind === 'document' ? `/workspace/documents/${id}` : `/workspace/library?item=${encodeURIComponent(id)}`);
-            }}
-            onToggleSection={(section) => void save({ homeSections: { ...prefs.homeSections, [section]: !prefs.homeSections[section] } })}
-            onChangeDensity={(density) => void save({ homeDensity: density })}
-            onRetry={() => { homeProjects.refresh(); homeConversations.refresh(); homeItems.refresh(); }}
-          /> : <FeaturePage path={path} goto={goto} notify={notify} />}
-        </div></main>
+        <main
+          id="main"
+          tabIndex={-1}
+          className={cx(
+            'workspace-main-content min-h-0 flex-1 focus:outline-none overflow-hidden',
+            isFullViewport ? 'flex flex-col h-full' : 'overflow-y-auto',
+            isMobile && !isCanvas && !isKeyboardOpen ? (isChat ? 'pb-14 lg:pb-0' : 'pb-16 lg:pb-0') : ''
+          )}
+        >
+          <div ref={pageRef} className={cx(isFullViewport ? 'flex-1 h-full min-h-0 flex flex-col overflow-hidden' : 'min-h-full')}>
+            {path === '/workspace' ? <WorkspaceHome
+              displayName={user?.displayName || prefs.displayName || ''}
+              projects={homeProjects.data ?? []}
+              conversations={homeConversations.data ?? []}
+              items={homeItems.data ?? []}
+              stats={stats.data ?? null}
+              loading={homeProjects.loading || homeConversations.loading || homeItems.loading}
+              error={homeProjects.error || homeConversations.error || homeItems.error}
+              modelAvailable={anyReady}
+              sections={prefs.homeSections}
+              density={prefs.homeDensity}
+              onAction={homeAction}
+              onOpenProject={(id) => goto(`/workspace/projects/${id}`)}
+              onOpenConversation={(id) => goto(`/workspace/chat/${id}`)}
+              onOpenItem={(id) => {
+                const item = homeItems.data?.find((entry) => entry.id === id);
+                goto(item?.kind === 'document' ? `/workspace/documents/${id}` : `/workspace/library?item=${encodeURIComponent(id)}`);
+              }}
+              onToggleSection={(section) => void save({ homeSections: { ...prefs.homeSections, [section]: !prefs.homeSections[section] } })}
+              onChangeDensity={(density) => void save({ homeDensity: density })}
+              onRetry={() => { homeProjects.refresh(); homeConversations.refresh(); homeItems.refresh(); }}
+            /> : <FeaturePage path={path} goto={goto} notify={notify} />}
+          </div>
+        </main>
       </div>
+
+      {/* DEDICATED MOBILE BOTTOM NAVIGATION BAR */}
+      {isMobile && !isCanvas && !isKeyboardOpen && (
+        <nav
+          aria-label="Mobile workspace navigation"
+          data-testid="mobile-bottom-nav"
+          className="safe-b fixed bottom-0 inset-x-0 z-30 flex h-14 items-center justify-around border-t border-white/[.08] bg-[#12141a]/95 backdrop-blur-md px-1 select-none lg:hidden shadow-[0_-8px_24px_rgba(0,0,0,0.5)]"
+        >
+          <button
+            type="button"
+            onClick={() => goto('/workspace')}
+            aria-current={path === '/workspace' ? 'page' : undefined}
+            data-testid="mobile-nav-home"
+            className={cx(
+              'flex flex-1 flex-col items-center justify-center gap-1 py-1 text-[10px] font-medium transition min-h-[44px]',
+              path === '/workspace' ? 'text-violet-300 font-semibold' : 'text-slate-400 hover:text-slate-200'
+            )}
+          >
+            <Home size={18} />
+            <span>Home</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => goto('/workspace/chat')}
+            aria-current={isChat ? 'page' : undefined}
+            data-testid="mobile-nav-chat"
+            className={cx(
+              'flex flex-1 flex-col items-center justify-center gap-1 py-1 text-[10px] font-medium transition min-h-[44px]',
+              isChat ? 'text-violet-300 font-semibold' : 'text-slate-400 hover:text-slate-200'
+            )}
+          >
+            <MessageSquare size={18} />
+            <span>Chat</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => goto('/workspace/canvas')}
+            aria-current={isCanvas ? 'page' : undefined}
+            data-testid="mobile-nav-canvas"
+            className={cx(
+              'flex flex-1 flex-col items-center justify-center gap-1 py-1 text-[10px] font-medium transition min-h-[44px]',
+              isCanvas ? 'text-violet-300 font-semibold' : 'text-slate-400 hover:text-slate-200'
+            )}
+          >
+            <Code2 size={18} />
+            <span>Canvas</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => goto('/workspace/projects')}
+            aria-current={path.startsWith('/workspace/projects') ? 'page' : undefined}
+            data-testid="mobile-nav-projects"
+            className={cx(
+              'flex flex-1 flex-col items-center justify-center gap-1 py-1 text-[10px] font-medium transition min-h-[44px]',
+              path.startsWith('/workspace/projects') ? 'text-violet-300 font-semibold' : 'text-slate-400 hover:text-slate-200'
+            )}
+          >
+            <FolderKanban size={18} />
+            <span>Projects</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setMobileOpen(true)}
+            aria-label="Open full workspace navigation"
+            data-testid="mobile-nav-more"
+            className="flex flex-1 flex-col items-center justify-center gap-1 py-1 text-[10px] font-medium text-slate-400 hover:text-slate-200 transition min-h-[44px]"
+          >
+            <Menu size={18} />
+            <span>More</span>
+          </button>
+        </nav>
+      )}
       {dialog === 'palette' && <Palette commands={commands} goto={goto} notify={notify} onClose={() => setDialog('')} recentCommandIds={prefs.recentCommands} onCommandRun={recordCommand} />}
       {acts.dialogs}{ctx.node}
       <NoticeHost />

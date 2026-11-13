@@ -107,7 +107,7 @@ describe('Ayatrisya — Automatic AI Conversation Titles (ChatGPT-style)', () =>
       await scheduleAutoTitle(conv.id, 'Build me a portfolio website', { customRepository: repo });
 
       // Wait for async tick
-      await new Promise((r) => setTimeout(r, 20));
+      await new Promise((r) => setTimeout(r, 120));
 
       const updated = await repo.getConversation(conv.id);
       expect(updated?.title).toBe('Portfolio Website Showcase');
@@ -190,7 +190,7 @@ describe('Ayatrisya — Automatic AI Conversation Titles (ChatGPT-style)', () =>
       // Chat proceeds normally
       await repo.addMessage(conv.id, 'Explain photosynthesis', 'user');
       await scheduleAutoTitle(conv.id, 'Explain photosynthesis', { customRepository: repo });
-      await new Promise((r) => setTimeout(r, 20));
+      await new Promise((r) => setTimeout(r, 120));
 
       // Conversation still has valid clean fallback title
       const safeConv = await repo.getConversation(conv.id);

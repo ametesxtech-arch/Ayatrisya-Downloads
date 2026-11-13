@@ -13,13 +13,13 @@ export function AccountPage({ notify, goto }: { notify: (m: string) => void; got
   const { prefs, save } = usePrefs();
   const [name, setName] = useState<string | null>(null), [copy, setCopy] = useState(false);
   const act = async (fn: () => Promise<unknown>, ok: string) => { try { await fn(); notify(ok); } catch (e) { notify(errMsg(e)); } };
-  return <div className="mx-auto max-w-[760px] p-4 sm:p-8">
+  return <div className="mx-auto max-w-[760px] p-3.5 sm:p-8">
     <PageHeading eyebrow="Account" title={user ? 'Your account' : 'Sign in required'} description="Your saved work stays in this browser for your account. Signing in does not upload it; optional integrations run only when you connect them." />
-    <section className="mb-5 rounded-xl border border-white/[.075] bg-[#15171e] p-5">
+    <section className="mb-5 rounded-xl border border-white/[.075] bg-[#15171e] p-4 sm:p-5">
       <h2 className="text-sm font-semibold">Profile</h2>
-      <form className="mt-3 flex flex-wrap items-end gap-2" onSubmit={(e) => { e.preventDefault(); void act(() => save({ displayName: (name ?? prefs.displayName).trim() }), 'Display name saved.'); }}>
+      <form className="mt-3 flex flex-col sm:flex-row items-stretch sm:items-end gap-2" onSubmit={(e) => { e.preventDefault(); void act(() => save({ displayName: (name ?? prefs.displayName).trim() }), 'Display name saved.'); }}>
         <label className="min-w-0 flex-1 text-xs text-slate-400">Display name (stored locally)<input value={name ?? prefs.displayName} onChange={(e) => setName(e.target.value)} className={`${inputCls} mt-1.5`} /></label>
-        <Button type="submit">Save</Button>
+        <Button type="submit" className="min-h-[44px]">Save</Button>
       </form>
     </section>
     <ProviderConnections user={user} />
