@@ -33,6 +33,7 @@ import { downloadZip } from '@/lib/zip-export';
 import { downloadPdf } from '@/lib/pdf-export';
 import { downloadDocx } from '@/lib/docx-export';
 import { downloadPptx } from '@/lib/pptx-export';
+import { normalizeMarkdown, isSafeUrl } from '../markdown/markdown-normalizer';
 
 export interface SlideSmartArtItem {
   label: string;
@@ -728,7 +729,19 @@ export function ArtifactBlockRenderer({ block }: { block: ArtifactBlockData }) {
               h1: ({ children }) => <h1 className="mt-4 mb-2 text-xl font-bold font-heading text-white border-b border-white/10 pb-2">{children}</h1>,
               h2: ({ children }) => <h2 className="mt-4 mb-2 text-base font-semibold font-heading text-white">{children}</h2>,
               h3: ({ children }) => <h3 className="mt-3 mb-1 text-sm font-semibold font-heading text-slate-200">{children}</h3>,
+              h4: ({ children }) => <h4 className="mt-2.5 mb-1 text-xs font-semibold text-slate-300 uppercase tracking-wider">{children}</h4>,
+              h5: ({ children }) => <h5 className="mt-2 mb-1 text-xs font-semibold text-slate-300">{children}</h5>,
+              h6: ({ children }) => <h6 className="mt-2 mb-0.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{children}</h6>,
               p: ({ children }) => <p className="my-2 leading-relaxed text-slate-300">{children}</p>,
+              strong: ({ children }) => <strong className="font-bold text-white">{children}</strong>,
+              b: ({ children }) => <b className="font-bold text-white">{children}</b>,
+              em: ({ children }) => <em className="italic text-slate-200">{children}</em>,
+              i: ({ children }) => <i className="italic text-slate-200">{children}</i>,
+              code: ({ children }) => (
+                <code className="rounded border border-white/10 bg-white/[.06] px-1.5 py-0.5 font-mono text-xs text-teal-200/90 font-medium">
+                  {children}
+                </code>
+              ),
               ul: ({ children }) => <ul className="my-2 ml-4 list-disc space-y-1 text-slate-300">{children}</ul>,
               ol: ({ children }) => <ol className="my-2 ml-4 list-decimal space-y-1 text-slate-300">{children}</ol>,
               blockquote: ({ children }) => (
@@ -736,12 +749,15 @@ export function ArtifactBlockRenderer({ block }: { block: ArtifactBlockData }) {
                   {children}
                 </blockquote>
               ),
-              img: ({ src, alt }) => (
-                <div className="my-4 overflow-hidden rounded-xl border border-white/15 bg-black/40">
-                  <img src={src} alt={alt || 'Document Illustration'} className="w-full max-h-72 object-cover" loading="lazy" />
-                  {alt && <div className="bg-[#10121a] px-3 py-1.5 text-xs text-slate-400 italic text-center">{alt}</div>}
-                </div>
-              ),
+              img: ({ src, alt }) => {
+                if (!isSafeUrl(src)) return null;
+                return (
+                  <div className="my-4 overflow-hidden rounded-xl border border-white/15 bg-black/40">
+                    <img src={src} alt={alt || 'Document Illustration'} className="w-full max-h-72 object-cover" loading="lazy" />
+                    {alt && <div className="bg-[#10121a] px-3 py-1.5 text-xs text-slate-400 italic text-center">{alt}</div>}
+                  </div>
+                );
+              },
               table: ({ children }) => (
                 <div className="my-3 overflow-x-auto rounded-lg border border-white/10">
                   <table className="w-full border-collapse text-xs text-slate-300">{children}</table>
@@ -751,7 +767,7 @@ export function ArtifactBlockRenderer({ block }: { block: ArtifactBlockData }) {
               td: ({ children }) => <td className="border-b border-white/[.04] px-3 py-1.5">{children}</td>,
             }}
           >
-            {block.content}
+            {normalizeMarkdown(block.content)}
           </ReactMarkdown>
         </div>
       </div>

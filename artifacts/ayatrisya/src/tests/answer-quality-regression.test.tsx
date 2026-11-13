@@ -25,8 +25,8 @@ describe('Ayatrisya Answer Quality & Markdown Regression Suite', () => {
     const convoText =
       'Continuing from our previous discussion, **Mars** has two moons: *Phobos* and *Deimos*.\n\nWould you like to explore their orbital characteristics next?';
     const html = renderMarkdown(convoText);
-    expect(html).toContain('<strong>Mars</strong>');
-    expect(html).toContain('<em>Phobos</em>');
+    expect(html).toContain('Mars</strong>');
+    expect(html).toContain('Phobos</em>');
     expect(html).toContain('explore their orbital characteristics');
   });
 

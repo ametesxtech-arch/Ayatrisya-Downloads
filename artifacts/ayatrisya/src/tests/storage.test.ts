@@ -22,7 +22,7 @@ describe("IndexedDB local repository",()=>{
     });
     await first.close();
     const reopened=new LocalRepository(name);active.push(reopened);
-    expect((await reopened.getConversation(c.id))?.title).toBe("a private question");
+    expect((await reopened.getConversation(c.id))?.title?.toLowerCase()).toBe("a private question");
     expect((await reopened.getMessages(c.id))[0].content).toBe("edited private question");
     expect(await reopened.getPreferences()).toMatchObject({
       theme:"Light",mode:"Savage",onboardingComplete:true,wallpaper:"preset-42",

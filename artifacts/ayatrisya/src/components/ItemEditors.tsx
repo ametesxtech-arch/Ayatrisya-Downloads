@@ -9,6 +9,7 @@ import { confirmDiscard, setDirty } from '@/lib/dirty';
 import { downloadText, errMsg, safeName } from '@/lib/format';
 import { downloadPdf } from '@/lib/pdf-export';
 import { downloadPptx } from '@/lib/pptx-export';
+import { MarkdownRenderer } from '@/components/MarkdownRenderer';
 
 function useSaver(item: ProjectItem, get: () => { title: string; content: string; tags: string; projectId: string | null }) {
   const [saved, setSaved] = useState(() => JSON.stringify({ ...get() }));
@@ -73,15 +74,64 @@ function useDelete(item: ProjectItem, onClose: () => void, onDeleted?: () => voi
 
 export function TextEditor({ item, onClose, onDeleted }: { item: ProjectItem; onClose: () => void; onDeleted?: () => void }) {
   const [title, setTitle] = useState(item.title), [content, setContent] = useState(item.content), [tags, setTags] = useState(item.tags.join(', ')), [projectId, setProjectId] = useState(item.projectId);
+  const [viewMode, setViewMode] = useState<'edit' | 'preview' | 'split'>('edit');
   const s = useSaver(item, () => ({ title, content, tags, projectId }));
   const del = useDelete(item, onClose, onDeleted);
   const words = content.trim() ? content.trim().split(/\s+/).length : 0;
   const base = safeName(title);
   return <Shell item={item} title={title} setTitle={setTitle} dirty={s.dirty} saving={s.saving} error={s.error} onSave={s.save} onClose={onClose} onDelete={del} projectId={projectId} setProjectId={setProjectId} tags={tags} setTags={setTags}
     exports={[{ label: 'PDF', run: () => downloadPdf(content, `${base}.pdf`, { title }) }, { label: 'Markdown', run: () => downloadText(`# ${title}\n\n${content}`, `${base}.md`, 'text/markdown') }, { label: 'Plain text', run: () => downloadText(`${title}\n\n${content}`, `${base}.txt`) }]}>
-    <label className="sr-only" htmlFor="editor-body">Content</label>
-    <textarea id="editor-body" value={content} onChange={(e) => setContent(e.target.value)} placeholder="Start writing. Markdown is kept as plain text." className={`${areaCls} min-h-[48dvh] resize-y`} data-testid="input-content" />
-    <p className="mt-2 text-xs text-slate-500">{words} words · {content.length} characters · Ctrl or Cmd + S saves</p>
+    
+    <div className="mb-3 flex items-center justify-between border-b border-white/[.08] pb-2">
+      <div className="flex items-center gap-1 bg-white/[.04] p-1 rounded-lg border border-white/10 text-xs">
+        <button
+          type="button"
+          onClick={() => setViewMode('edit')}
+          className={`px-2.5 py-1 rounded-md font-medium transition cursor-pointer ${viewMode === 'edit' ? 'bg-violet-600 text-white' : 'text-slate-400 hover:text-white'}`}
+          data-testid="button-mode-edit"
+        >
+          Edit
+        </button>
+        <button
+          type="button"
+          onClick={() => setViewMode('preview')}
+          className={`px-2.5 py-1 rounded-md font-medium transition cursor-pointer ${viewMode === 'preview' ? 'bg-violet-600 text-white' : 'text-slate-400 hover:text-white'}`}
+          data-testid="button-mode-preview"
+        >
+          Preview
+        </button>
+        <button
+          type="button"
+          onClick={() => setViewMode('split')}
+          className={`hidden sm:inline-block px-2.5 py-1 rounded-md font-medium transition cursor-pointer ${viewMode === 'split' ? 'bg-violet-600 text-white' : 'text-slate-400 hover:text-white'}`}
+          data-testid="button-mode-split"
+        >
+          Split
+        </button>
+      </div>
+      <p className="text-xs text-slate-500">{words} words · {content.length} characters</p>
+    </div>
+
+    {viewMode === 'edit' && (
+      <textarea id="editor-body" value={content} onChange={(e) => setContent(e.target.value)} placeholder="Start writing. Full Markdown formatting supported." className={`${areaCls} min-h-[48dvh] resize-y font-mono text-xs`} data-testid="input-content" />
+    )}
+
+    {viewMode === 'preview' && (
+      <div className="min-h-[48dvh] rounded-xl border border-white/10 bg-[#0c0d12] p-5 sm:p-6 overflow-y-auto" data-testid="document-markdown-preview">
+        <MarkdownRenderer content={content} />
+      </div>
+    )}
+
+    {viewMode === 'split' && (
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <textarea id="editor-body" value={content} onChange={(e) => setContent(e.target.value)} placeholder="Start writing. Full Markdown formatting supported." className={`${areaCls} min-h-[48dvh] resize-y font-mono text-xs`} data-testid="input-content" />
+        <div className="min-h-[48dvh] rounded-xl border border-white/10 bg-[#0c0d12] p-5 sm:p-6 overflow-y-auto" data-testid="document-markdown-split-preview">
+          <MarkdownRenderer content={content} />
+        </div>
+      </div>
+    )}
+
+    <p className="mt-2 text-xs text-slate-500">Ctrl or Cmd + S saves · Export as PDF, Markdown, or Plain Text anytime</p>
   </Shell>;
 }
 

@@ -37,7 +37,7 @@ export interface Conversation extends BaseRecord {
   manualTitle?: boolean;
 }
 export interface ConversationOptions extends ListOptions {
-  archived?:boolean; pinned?:boolean; sort?:"newest"|"oldest"|"title"; pinnedFirst?:boolean;
+  archived?: boolean; pinned?: boolean; sort?: "newest" | "oldest" | "title"; pinnedFirst?: boolean;
 }
 export interface Message extends BaseRecord {
   conversationId: string;
@@ -52,8 +52,8 @@ export interface Project extends BaseRecord {
   tags: string[];
   archived: boolean;
   pinned: boolean;
-  color: "violet"|"cyan"|"rose"|"amber"|"emerald";
-  icon: "folder"|"code"|"book"|"music"|"orbit";
+  color: "violet" | "cyan" | "rose" | "amber" | "emerald";
+  icon: "folder" | "code" | "book" | "music" | "orbit";
 }
 export interface ProjectItem extends BaseRecord {
   projectId: string | null;
@@ -92,12 +92,12 @@ export interface Preferences {
   language: "English";
   mode: ChatMode;
   model: ModelId;
-  enterToSend:boolean;
-  historySort:"newest"|"oldest"|"title";
-  historyPinnedFirst:boolean;
-  animationIntensity:"full"|"subtle"|"none";
-  logoIdle:boolean;
-  projectView:"grid"|"list";
+  enterToSend: boolean;
+  historySort: "newest" | "oldest" | "title";
+  historyPinnedFirst: boolean;
+  animationIntensity: "full" | "subtle" | "none";
+  logoIdle: boolean;
+  projectView: "grid" | "list";
   workspaceMode: WorkspaceMode;
   homeDensity: "comfortable" | "compact";
   homeSections: { projects: boolean; conversations: boolean; items: boolean };
@@ -112,10 +112,10 @@ export interface Preferences {
 export const defaultPreferences: Preferences = {
   theme: "Dark", sidebarCollapsed: false, reducedMotion: false, skipIntro: false,
   onboardingComplete: false, displayName: "", language: "English", mode: "Normal", model: "v1-fast",
-  enterToSend:true,historySort:"newest",historyPinnedFirst:true,animationIntensity:"full",logoIdle:false,projectView:"grid",
-  workspaceMode:"standard",homeDensity:"comfortable",homeSections:{projects:true,conversations:true,items:true},recentCommands:[],
-  wallpaper:"none",customWallpaperData:"",syncAcrossDevices:false,
-  personalization:{enabled:true,useMemory:true,autoMemoryCollection:true,memorySummary:"",instructions:"",avoid:"",tone:"balanced",length:"balanced",format:"automatic",examples:"when-useful",clarifying:"when-needed",technicality:"balanced"},
+  enterToSend: true, historySort: "newest", historyPinnedFirst: true, animationIntensity: "full", logoIdle: false, projectView: "grid",
+  workspaceMode: "standard", homeDensity: "comfortable", homeSections: { projects: true, conversations: true, items: true }, recentCommands: [],
+  wallpaper: "none", customWallpaperData: "", syncAcrossDevices: false,
+  personalization: { enabled: true, useMemory: true, autoMemoryCollection: true, memorySummary: "", instructions: "", avoid: "", tone: "balanced", length: "balanced", format: "automatic", examples: "when-useful", clarifying: "when-needed", technicality: "balanced" },
   answerStyle: "detailed",
   modelDataConsent: "allowed",
 };
@@ -124,7 +124,7 @@ export interface ItemOptions extends ListOptions {
   kind?: ItemKind; projectId?: string | null; sort?: "date" | "name" | "size";
 }
 export interface SyncOperation extends BaseRecord {
-  remoteId?:string;
+  remoteId?: string;
   kind: "upload" | "delete"; state: "pending" | "failed" | "conflict";
   attempts: number; nextAttemptAt: number; error?: string;
 }
@@ -132,8 +132,8 @@ export interface SyncMetadata extends BaseRecord {
   remoteId: string; modifiedTime: string; checksum: string; lastSuccessAt: string;
 }
 export interface SearchResult {
-  id:string;title:string;snippet:string;updatedAt:string;type:string;
-  href:string;resource:"conversation"|"project"|"item";
+  id: string; title: string; snippet: string; updatedAt: string; type: string;
+  href: string; resource: "conversation" | "project" | "item";
 }
 export interface StorageStats {
   conversations: number; projects: number; items: number; attachments: number;

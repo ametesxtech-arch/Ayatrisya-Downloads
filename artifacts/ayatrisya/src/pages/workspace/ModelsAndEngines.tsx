@@ -269,7 +269,7 @@ export function ModelsAndEnginesPage({
       const res = await desktop.getInstalledModels();
       setInstalledModels(res.installedModels || []);
       setStorageSummary(res.storageSummary || null);
-    } catch {}
+    } catch { }
   }, [desktop]);
 
   const refreshActiveStatus = useCallback(async () => {
@@ -277,7 +277,7 @@ export function ModelsAndEnginesPage({
     try {
       const st = await desktop.getActiveModelStatus();
       setActiveModelStatus(st);
-    } catch {}
+    } catch { }
   }, [desktop]);
 
   const refreshRoutingPolicy = useCallback(async () => {
@@ -290,11 +290,11 @@ export function ModelsAndEnginesPage({
           return;
         }
       }
-    } catch {}
+    } catch { }
     try {
       const saved = localStorage.getItem('ayatrisya_inference_routing_policy');
       if (saved) setRoutingPolicy(saved);
-    } catch {}
+    } catch { }
   }, [desktop]);
 
   useEffect(() => {
@@ -324,12 +324,12 @@ export function ModelsAndEnginesPage({
         setActiveEndpoint(ep);
         setCustomEndpoint(ep);
       }
-    }).catch(() => {});
+    }).catch(() => { });
 
     if (typeof desktop.getSeedModelHostStatus === 'function') {
       desktop.getSeedModelHostStatus().then((st: unknown) => {
         if (mounted) setSeedStatus(st as typeof seedStatus);
-      }).catch(() => {});
+      }).catch(() => { });
     }
 
     return () => {
@@ -486,7 +486,7 @@ export function ModelsAndEnginesPage({
     setRoutingPolicy(newPolicy);
     try {
       localStorage.setItem('ayatrisya_inference_routing_policy', newPolicy);
-    } catch {}
+    } catch { }
 
     if (newPolicy === 'custom-remote' && !remoteApiKey.trim() && remoteProvider !== 'custom') {
       notify('Selected Custom Remote. Please enter your provider API key below to enable remote inference.');
@@ -844,16 +844,16 @@ export function ModelsAndEnginesPage({
                 activeModelStatus?.status === 'READY'
                   ? 'border-teal-400/30 bg-teal-400/[.08] text-teal-300'
                   : anyReady
-                  ? 'border-amber-400/30 bg-amber-400/[.08] text-amber-300'
-                  : 'border-rose-400/30 bg-rose-400/[.08] text-rose-300'
+                    ? 'border-amber-400/30 bg-amber-400/[.08] text-amber-300'
+                    : 'border-rose-400/30 bg-rose-400/[.08] text-rose-300'
               )}
             >
               <span className={cx('size-2 rounded-full', activeModelStatus?.status === 'READY' ? 'bg-teal-400 animate-pulse' : anyReady ? 'bg-amber-400' : 'bg-rose-400')} />
               {activeModelStatus?.status === 'READY'
                 ? `Local Model Ready: ${activeModelStatus.activeModelId}`
                 : anyReady
-                ? 'Gateway Online (Model Test Required)'
-                : 'No Engine Loaded'}
+                  ? 'Gateway Online (Model Test Required)'
+                  : 'No Engine Loaded'}
             </span>
           </div>
         </div>
@@ -1171,8 +1171,8 @@ export function ModelsAndEnginesPage({
             gatewayResult.gatewayHealthy && gatewayResult.chatModelAvailable
               ? 'border-teal-500/30 bg-teal-500/[.06] text-teal-200'
               : gatewayResult.gatewayHealthy
-              ? 'border-amber-500/30 bg-amber-500/[.06] text-amber-200'
-              : 'border-rose-500/30 bg-rose-500/[.06] text-rose-200'
+                ? 'border-amber-500/30 bg-amber-500/[.06] text-amber-200'
+                : 'border-rose-500/30 bg-rose-500/[.06] text-rose-200'
           )}>
             <div className="font-semibold">
               Gateway Status: {gatewayResult.gatewayHealthy ? 'Online (HTTP 200)' : 'Unreachable'} | Latency: {gatewayResult.latencyMs} ms
@@ -1634,8 +1634,8 @@ export function ModelsAndEnginesPage({
                   isRecommended
                     ? 'border-violet-500/50 bg-violet-500/[.04]'
                     : isInstalled
-                    ? 'border-white/[.12] bg-white/[.02]'
-                    : 'border-white/[.07] bg-white/[.01] hover:border-white/15'
+                      ? 'border-white/[.12] bg-white/[.02]'
+                      : 'border-white/[.07] bg-white/[.01] hover:border-white/15'
                 )}
               >
                 <div className="space-y-1">

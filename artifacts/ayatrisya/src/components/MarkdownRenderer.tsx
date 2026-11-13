@@ -44,22 +44,15 @@ export const MarkdownContext = createContext<MarkdownContextValue>({
   isStreaming: false,
 });
 
+import { isSafeUrl, normalizeMarkdown, stabilizeStreamingMarkdown } from './markdown/markdown-normalizer';
+export { isSafeUrl, normalizeMarkdown, stabilizeStreamingMarkdown };
+
 /**
  * Normalizes common model math outputs while strictly preserving code blocks and inline code untouched.
+ * Kept for backward compatibility with existing tests.
  */
 export function normalizeMathInMarkdown(raw: string): string {
-  if (!raw) return '';
-  const parts = raw.split(/(```[\s\S]*?```|`[^`\n]*`)/g);
-  return parts
-    .map((part, index) => {
-      if (index % 2 === 1) return part;
-      let text = part;
-      text = text.replace(/\\\[([\s\S]*?)\\\]/g, (_m, math: string) => `$$\n${math.trim()}\n$$`);
-      text = text.replace(/\\\(([\s\S]*?)\\\)/g, (_m, math: string) => `$${math.trim()}$`);
-      text = text.replace(/\\\$([^\s$][^$]*?[^\s$]?)\\\$/g, (_m, math: string) => `$${math.trim()}$`);
-      return text;
-    })
-    .join('');
+  return normalizeMarkdown(raw);
 }
 
 function nodeText(n: ReactNode): string {
@@ -501,17 +494,31 @@ export const mdComponents = {
     }
     return (
       <code
-        className="rounded border border-white/10 bg-white/[.06] px-1.5 py-0.5 font-mono text-[12.5px] text-teal-200/90"
+        className="rounded border border-white/10 bg-white/[.06] px-1.5 py-0.5 font-mono text-[12.5px] text-teal-200/90 font-medium select-text"
         {...props}
       >
         {children}
       </code>
     );
   },
+  strong: ({ children }: { children?: ReactNode }) => (
+    <strong className="font-bold text-white tracking-wide">{children}</strong>
+  ),
+  b: ({ children }: { children?: ReactNode }) => (
+    <b className="font-bold text-white tracking-wide">{children}</b>
+  ),
+  em: ({ children }: { children?: ReactNode }) => (
+    <em className="italic text-slate-200">{children}</em>
+  ),
+  i: ({ children }: { children?: ReactNode }) => (
+    <i className="italic text-slate-200">{children}</i>
+  ),
+  hr: () => (
+    <hr className="my-4 border-t border-white/[.12]" />
+  ),
   a: ({ href, children }: { href?: string; children?: ReactNode }) => {
-    const safe = href && /^(https?:|mailto:|\/|#)/i.test(href);
-    if (!safe) return <span>{children}</span>;
-    const isExt = href.startsWith('http');
+    if (!isSafeUrl(href)) return <span>{children}</span>;
+    const isExt = href?.startsWith('http');
     return (
       <a
         href={href}
@@ -524,18 +531,30 @@ export const mdComponents = {
       </a>
     );
   },
-  img: ({ src, alt }: { src?: string; alt?: string }) => (
-    <img
-      src={src}
-      alt={alt || 'Image'}
-      className="my-2.5 max-h-80 max-w-full rounded-lg border border-white/10 object-contain shadow-sm"
-      loading="lazy"
-    />
-  ),
+  img: ({ src, alt }: { src?: string; alt?: string }) => {
+    if (!isSafeUrl(src)) return null;
+    return (
+      <img
+        src={src}
+        alt={alt || 'Image'}
+        className="my-2.5 max-h-80 max-w-full rounded-lg border border-white/10 object-contain shadow-sm"
+        loading="lazy"
+      />
+    );
+  },
   table: ({ children }: { children?: ReactNode }) => (
-    <div className="chat-table-wrap my-3 overflow-x-auto rounded-lg border border-white/10">
+    <div className="chat-table-wrap my-3 overflow-x-auto rounded-lg border border-white/10 shadow-sm">
       <table className="w-full border-collapse text-left text-xs">{children}</table>
     </div>
+  ),
+  thead: ({ children }: { children?: ReactNode }) => (
+    <thead className="bg-white/[.04] border-b border-white/10">{children}</thead>
+  ),
+  tbody: ({ children }: { children?: ReactNode }) => (
+    <tbody className="divide-y divide-white/[.06]">{children}</tbody>
+  ),
+  tr: ({ children }: { children?: ReactNode }) => (
+    <tr className="hover:bg-white/[.02] transition-colors">{children}</tr>
   ),
   th: ({ children }: { children?: ReactNode }) => (
     <th className="border-b border-white/10 bg-white/[.04] px-3.5 py-2 font-semibold text-slate-200">{children}</th>
@@ -554,7 +573,27 @@ export const mdComponents = {
   ol: ({ children }: { children?: ReactNode }) => (
     <ol className="my-2 list-decimal space-y-1 pl-5 text-slate-200">{children}</ol>
   ),
-  li: ({ children }: { children?: ReactNode }) => <li className="leading-relaxed">{children}</li>,
+  li: ({ children, className }: { children?: ReactNode; className?: string }) => {
+    const isTaskList = className?.includes('task-list-item');
+    if (isTaskList) {
+      return <li className="list-none flex items-start gap-2 leading-relaxed my-0.5 text-slate-200">{children}</li>;
+    }
+    return <li className="leading-relaxed">{children}</li>;
+  },
+  input: (props: any) => {
+    if (props.type === 'checkbox') {
+      return (
+        <input
+          type="checkbox"
+          checked={props.checked}
+          disabled={props.disabled ?? true}
+          readOnly
+          className="mt-1 h-3.5 w-3.5 rounded border border-white/20 bg-white/10 accent-teal-400 focus:ring-0 cursor-default"
+        />
+      );
+    }
+    return <input {...props} />;
+  },
   h1: ({ children }: { children?: ReactNode }) => (
     <h1 className="mt-4 mb-2 text-lg font-bold tracking-tight text-white">{children}</h1>
   ),
@@ -566,6 +605,12 @@ export const mdComponents = {
   ),
   h4: ({ children }: { children?: ReactNode }) => (
     <h4 className="mt-2.5 mb-1 text-xs font-semibold uppercase tracking-wider text-slate-300">{children}</h4>
+  ),
+  h5: ({ children }: { children?: ReactNode }) => (
+    <h5 className="mt-2 mb-1 text-xs font-semibold text-slate-300">{children}</h5>
+  ),
+  h6: ({ children }: { children?: ReactNode }) => (
+    <h6 className="mt-2 mb-0.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{children}</h6>
   ),
   p: ({ children }: { children?: ReactNode }) => <p className="my-1.5 leading-relaxed text-slate-200">{children}</p>,
 };
@@ -618,8 +663,8 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
   // 3. Detect structured interactive content (quizzes, MCQs, or interactive comparison tables)
   const detected = !isStreaming ? detectUniversalInteractiveContent(trimmed) : null;
   if (detected && detected.block) {
-    const intro = detected.beforeText ? normalizeMathInMarkdown(detected.beforeText) : null;
-    const outro = detected.afterText ? normalizeMathInMarkdown(detected.afterText) : null;
+    const intro = detected.beforeText ? normalizeMarkdown(detected.beforeText, { isStreaming }) : null;
+    const outro = detected.afterText ? normalizeMarkdown(detected.afterText, { isStreaming }) : null;
     const blockId = messageId ? `${messageId}:${detected.block.id || detected.block.type}` : detected.block.id;
     return (
       <MarkdownContext.Provider value={{ messageId, isStreaming }}>
@@ -665,7 +710,7 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
     );
   }
 
-  const normalized = normalizeMathInMarkdown(content);
+  const normalized = normalizeMarkdown(content, { isStreaming });
   return (
     <MarkdownContext.Provider value={{ messageId, isStreaming }}>
       <div className={className}>
@@ -695,3 +740,5 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
     </MarkdownContext.Provider>
   );
 });
+
+export const UnifiedMarkdownRenderer = MarkdownRenderer;

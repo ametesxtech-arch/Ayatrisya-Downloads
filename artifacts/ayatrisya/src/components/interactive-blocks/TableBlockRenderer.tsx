@@ -4,6 +4,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
+import { normalizeMarkdown } from '../markdown/markdown-normalizer';
 import type { TableBlock } from './types';
 
 export function TableBlockRenderer({ block }: { block: TableBlock }) {
@@ -101,15 +102,33 @@ export function TableBlockRenderer({ block }: { block: TableBlock }) {
                 <tr key={rIdx} className="hover:bg-white/[.02] transition-colors">
                   {row.map((cell, cIdx) => (
                     <td key={cIdx} className="p-3 text-slate-300">
-                      {typeof cell === 'string' && (cell.includes('$') || cell.includes('\\')) ? (
+                      {typeof cell === 'string' ? (
                         <ReactMarkdown
                           remarkPlugins={[remarkGfm, remarkMath]}
                           rehypePlugins={[[rehypeKatex, { throwOnError: false, strict: false }]]}
                           components={{
                             p: ({ children }) => <span>{children}</span>,
+                            strong: ({ children }) => <strong className="font-bold text-white">{children}</strong>,
+                            b: ({ children }) => <b className="font-bold text-white">{children}</b>,
+                            em: ({ children }) => <em className="italic text-slate-200">{children}</em>,
+                            code: ({ children }) => (
+                              <code className="rounded border border-white/10 bg-white/[.06] px-1 py-0.5 font-mono text-[11.5px] text-teal-200/90 font-medium">
+                                {children}
+                              </code>
+                            ),
+                            a: ({ href, children }) => (
+                              <a
+                                href={href}
+                                target="_blank"
+                                rel="noopener noreferrer nofollow"
+                                className="text-teal-300 underline underline-offset-2 hover:text-teal-200"
+                              >
+                                {children}
+                              </a>
+                            ),
                           }}
                         >
-                          {cell}
+                          {normalizeMarkdown(cell)}
                         </ReactMarkdown>
                       ) : (
                         String(cell)

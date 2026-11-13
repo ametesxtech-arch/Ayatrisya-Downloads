@@ -1,5 +1,5 @@
 import 'fake-indexeddb/auto';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { generateFallbackTitle, generateConversationTitle, scheduleAutoTitle } from '../ai/conversation-title';
 import { LocalRepository } from '../storage/repository';
 import { modelClient } from '../ai/client';
@@ -8,9 +8,13 @@ describe('Ayatrisya — Automatic AI Conversation Titles (ChatGPT-style)', () =>
   let repo: LocalRepository;
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.restoreAllMocks();
     repo = new LocalRepository(`test-titles-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`);
     repo.setOwner('test-user');
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   describe('Fallback Heuristic & Intent Understanding (Requirements 1, 2, 10, 11)', () => {

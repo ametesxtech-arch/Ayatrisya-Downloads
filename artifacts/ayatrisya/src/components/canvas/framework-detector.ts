@@ -188,3 +188,4 @@ function findEntryPoint(files: CanvasFile[], candidates: string[]): string {
   }
   return files[0]?.name || 'index.html';
 }
+

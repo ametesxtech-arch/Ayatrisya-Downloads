@@ -218,7 +218,7 @@ export function CanvasCodeEditor({
         .map((l) => l.trimEnd())
         .join('\n');
       onChangeContent(formatted);
-    } catch {}
+    } catch { }
   };
 
   // Mobile quick characters insert

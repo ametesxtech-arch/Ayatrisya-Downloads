@@ -18,6 +18,7 @@ import { ItemCollection } from '@/components/ItemCollection';
 import { KnowledgeBaseManager } from '@/components/KnowledgeBaseManager';
 import { executeDeepResearch, type ResearchReport, type ResearchProgress } from '@/ai/research-engine';
 import { downloadPdf } from '@/lib/pdf-export';
+import { MarkdownRenderer } from '@/components/MarkdownRenderer';
 import { usePrefs } from '@/hooks/use-prefs';
 import { LiquidOrbAgent } from '@/components/voice/LiquidOrbAgent';
 
@@ -195,7 +196,9 @@ export function ResearchPage({ notify }: { notify: (m: string) => void }) {
               {/* Executive Summary */}
               <div className="rounded-lg bg-white/[.02] border border-white/[.06] p-4">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">Executive Summary</h4>
-                <p className="text-xs leading-relaxed text-slate-300">{activeReport.summary}</p>
+                <div className="text-xs leading-relaxed text-slate-300">
+                  <MarkdownRenderer content={activeReport.summary} />
+                </div>
               </div>
 
               {/* Key Findings */}
@@ -207,7 +210,7 @@ export function ResearchPage({ notify }: { notify: (m: string) => void }) {
                 <div className="grid gap-2 sm:grid-cols-2">
                   {activeReport.keyFindings.map((finding, idx) => (
                     <div key={idx} className="rounded-lg border border-teal-500/20 bg-teal-500/[.03] p-3 text-xs text-slate-200">
-                      {finding}
+                      <MarkdownRenderer content={finding} />
                     </div>
                   ))}
                 </div>
@@ -223,7 +226,7 @@ export function ResearchPage({ notify }: { notify: (m: string) => void }) {
                   <div className="space-y-2">
                     {activeReport.contradictionsAndDebates.map((item, idx) => (
                       <div key={idx} className="rounded-lg border border-amber-500/20 bg-amber-500/[.03] p-3 text-xs text-amber-100">
-                        • {item}
+                        <MarkdownRenderer content={item} />
                       </div>
                     ))}
                   </div>
@@ -236,7 +239,9 @@ export function ResearchPage({ notify }: { notify: (m: string) => void }) {
                 {activeReport.detailedSections.map((sec, idx) => (
                   <div key={idx} className="rounded-lg border border-white/[.06] bg-black/30 p-4 space-y-1.5">
                     <h5 className="text-xs font-bold text-white">{sec.title}</h5>
-                    <p className="text-xs leading-relaxed text-slate-300">{sec.content}</p>
+                    <div className="text-xs leading-relaxed text-slate-300">
+                      <MarkdownRenderer content={sec.content} />
+                    </div>
                   </div>
                 ))}
               </div>
