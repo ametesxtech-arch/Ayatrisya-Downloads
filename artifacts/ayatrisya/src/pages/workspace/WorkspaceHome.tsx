@@ -83,7 +83,7 @@ function EmptyState({ title, detail, actionLabel, onAction }: { title: string; d
 
 function ActionTile({ icon: Icon, label, hint, onClick, accent = false, testId }: { icon: typeof MessageSquare; label: string; hint: string; onClick: () => void; accent?: boolean; testId?: string }) {
   return (
-    <button type="button" data-testid={testId} onClick={onClick} className={`group flex min-h-[70px] items-center gap-3 rounded-xl border px-3.5 py-2.5 text-left transition duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-300 ${accent ? 'border-violet-300/20 bg-violet-300/[.075] hover:border-violet-300/40 hover:bg-violet-300/[.11]' : 'border-white/[.075] bg-[#15171e]/80 hover:border-white/[.14] hover:bg-[#1b1d26]'}`}>
+    <button type="button" data-testid={testId} onClick={onClick} className={`group flex min-h-[66px] items-center gap-3 rounded-xl border px-3.5 py-2.5 text-left transition duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-300 ${accent ? 'border-violet-300/20 bg-violet-300/[.075] hover:border-violet-300/40 hover:bg-violet-300/[.11]' : 'border-white/[.075] bg-[#15171e]/80 hover:border-white/[.14] hover:bg-[#1b1d26]'}`}>
       <span className={`grid size-9 shrink-0 place-items-center rounded-lg border ${accent ? 'border-violet-200/15 bg-violet-200/[.08] text-violet-100' : 'border-white/[.07] bg-white/[.035] text-slate-300 group-hover:text-cyan-100'}`}><Icon size={16} strokeWidth={1.8} /></span>
       <span className="min-w-0 flex-1">
         <span className="block truncate text-[12px] font-semibold text-slate-200">{label}</span>
@@ -112,8 +112,8 @@ export function WorkspaceHome({
         <div className="absolute left-0 top-[335px] h-px w-full bg-gradient-to-r from-transparent via-white/[.035] to-transparent" />
       </div>
 
-      <div className="mx-auto w-full max-w-[1440px] px-4 pb-10 pt-7 sm:px-7 sm:pt-10 lg:px-10">
-        <div className="mb-7 flex flex-wrap items-center justify-between gap-3">
+      <div className="mx-auto w-full max-w-[1440px] px-4 pt-5 pb-28 sm:px-6 sm:pt-7 sm:pb-32 lg:px-10 lg:pt-8 lg:pb-12">
+        <div className="mb-6 sm:mb-7 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[.2em] text-slate-500">
             <span className="h-px w-5 bg-violet-300/65" /> Personal workspace
             <span className="text-slate-700">/</span><span className="text-slate-400">Overview</span>
@@ -129,8 +129,8 @@ export function WorkspaceHome({
           </div>
         </div>
 
-        <section className="relative mb-7 overflow-hidden rounded-2xl border border-white/[.08] bg-[#14161d]/90 px-5 py-6 shadow-[0_20px_80px_rgba(0,0,0,.2)] sm:px-8 sm:py-8">
-          <div aria-hidden className="absolute inset-y-0 right-0 hidden w-[42%] overflow-hidden md:block">
+        <section className="relative mb-6 sm:mb-7 overflow-hidden rounded-2xl border border-white/[.08] bg-[#14161d]/90 px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8 shadow-[0_20px_80px_rgba(0,0,0,.2)]">
+          <div aria-hidden className="absolute inset-y-0 right-0 hidden w-[42%] overflow-hidden lg:block">
             <div className="absolute right-[12%] top-1/2 size-64 -translate-y-1/2 rounded-full border border-violet-200/[.08]" />
             <div className="absolute right-[19%] top-1/2 size-48 -translate-y-1/2 rounded-full border border-indigo-200/[.08]" />
             <div className="absolute right-[26%] top-1/2 size-32 -translate-y-1/2 rounded-full border border-cyan-100/[.12]" />
@@ -138,18 +138,18 @@ export function WorkspaceHome({
             <div className="absolute right-[17%] top-[22%] h-16 w-px rotate-[42deg] bg-gradient-to-b from-transparent via-violet-100/20 to-transparent" />
           </div>
           <div className="relative z-10 max-w-[660px]">
-            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-violet-200/[.12] bg-violet-200/[.045] px-2.5 py-1.5 text-[10px] font-medium tracking-wide text-violet-100/80">
+            <div className="mb-4 sm:mb-5 inline-flex items-center gap-2 rounded-full border border-violet-200/[.12] bg-violet-200/[.045] px-2.5 py-1.5 text-[10px] font-medium tracking-wide text-violet-100/80">
               <Emblem size={18} mode="subtle" />
               {modelAvailable ? 'Model connection available' : 'Workspace ready · model unavailable'}
             </div>
-            <h1 className="display text-[clamp(1.8rem,4vw,2.65rem)] font-semibold leading-[1.08] tracking-[-.055em] text-slate-100">
+            <h1 className="display text-[clamp(1.5rem,3.4vw,2.5rem)] font-semibold leading-[1.12] tracking-[-.04em] text-slate-100">
               <MotionText>{displayName.trim() ? <>Good to see you, <span className="text-violet-200">{displayName.trim()}</span>.</> : <>A clear space<br className="hidden sm:block" /> for what comes next.</>}</MotionText>
             </h1>
-            <p className="mt-3 max-w-lg text-[13px] leading-6 text-slate-400">
+            <p className="mt-2.5 max-w-lg text-[13px] leading-6 text-slate-400">
               Your conversations, research, and projects stay together here—saved locally in this browser.
             </p>
             {!modelAvailable && <p className="mt-2 text-[11px] text-slate-500">AI responses are unavailable right now. Your workspace and saved content remain accessible.</p>}
-            <div className="mt-6 flex flex-wrap gap-2">
+            <div className="mt-5 sm:mt-6 flex flex-wrap gap-2">
               <button type="button" data-testid="button-new-chat" onClick={() => onAction('new-chat')} className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-violet-300 px-4 text-xs font-bold text-[#171523] hover:bg-violet-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-200">
                 <Plus size={15} /> New conversation <span className="ml-1 hidden border-l border-black/15 pl-2 font-mono text-[9px] opacity-65 sm:inline">Ctrl / ⌘ N</span>
               </button>
@@ -161,7 +161,7 @@ export function WorkspaceHome({
               </button>
             </div>
           </div>
-          <div className="relative z-10 mt-7 grid grid-cols-1 min-[420px]:grid-cols-2 sm:grid-cols-4 gap-2 md:max-w-[760px]">
+          <div className="relative z-10 mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3 w-full">
             <ActionTile icon={FileText} label="Create document" hint="Start with a blank page" testId="button-create-document" onClick={() => onAction('create-document')} />
             <ActionTile icon={Image} label="Image studio" hint="Open your visual tools" onClick={() => onAction('image-studio')} />
             <ActionTile icon={Waves} label="Voice studio" hint="Work with audio" onClick={() => onAction('voice-studio')} />
@@ -182,7 +182,7 @@ export function WorkspaceHome({
         )}
 
         {loading ? (
-          <div aria-label="Loading workspace content" role="status" className="grid gap-6 lg:grid-cols-[1.05fr_.95fr]">
+          <div aria-label="Loading workspace content" role="status" className="grid gap-6 md:grid-cols-2 lg:grid-cols-[1.05fr_.95fr]">
             {[0, 1].map((col) => <div key={col} className="space-y-4 rounded-xl border border-white/[.06] bg-[#14161d]/60 p-5">
               <div className="h-4 w-32 animate-pulse rounded bg-white/[.07]" />
               {[0, 1, 2].map((row) => <div key={row} className="h-[62px] animate-pulse rounded-lg bg-white/[.035]" />)}
@@ -191,7 +191,7 @@ export function WorkspaceHome({
         ) : error ? (
           <div className="rounded-xl border border-white/[.07] bg-[#14161d]/65 p-5 text-xs text-slate-500">Saved sections will appear here after the local workspace becomes available.</div>
         ) : (
-          <div className={`grid ${compact ? 'gap-4 lg:grid-cols-[1.1fr_.9fr]' : 'gap-6 lg:grid-cols-[1.05fr_.95fr]'}`}>
+          <div className={`grid ${compact ? 'gap-4 md:grid-cols-2 lg:grid-cols-[1.1fr_.9fr]' : 'gap-6 md:grid-cols-2 lg:grid-cols-[1.05fr_.95fr]'}`}>
             <div className="space-y-7">
               <section aria-labelledby="section-recent-projects">
                 <SectionHeading title="Recent projects" count={recentProjects.length} open={sections.projects} onToggle={() => onToggleSection('projects')} action={<button type="button" onClick={() => onAction('new-project')} className="inline-flex min-h-8 items-center gap-1.5 rounded-md px-2 text-[11px] text-slate-400 hover:bg-white/[.05] hover:text-slate-200"><Plus size={13} />New</button>} />

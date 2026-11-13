@@ -29,6 +29,11 @@ vi.mock('@/hooks/use-prefs', () => ({
 
 vi.mock('@/hooks/use-mobile', () => ({
   useIsMobile: () => false,
+  useIsTablet: () => false,
+  useIsTabletPortrait: () => false,
+  useIsTabletLandscape: () => false,
+  useIsTabbedLayout: () => false,
+  useDeviceType: () => 'desktop',
 }));
 
 vi.mock('@/ai/client', () => ({

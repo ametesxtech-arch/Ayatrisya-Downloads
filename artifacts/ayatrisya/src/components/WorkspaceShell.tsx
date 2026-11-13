@@ -350,7 +350,7 @@ function WorkspaceContent() {
           className={cx(
             'workspace-main-content min-h-0 flex-1 focus:outline-none overflow-hidden',
             isFullViewport ? 'flex flex-col h-full' : 'overflow-y-auto',
-            isMobile && !isCanvas && !isKeyboardOpen ? (isChat ? 'pb-14 lg:pb-0' : 'pb-16 lg:pb-0') : ''
+            isMobile && !isCanvas && !isKeyboardOpen ? (isChat ? 'pb-14 lg:pb-0' : 'pb-24 lg:pb-0') : ''
           )}
         >
           <div ref={pageRef} className={cx(isFullViewport ? 'flex-1 h-full min-h-0 flex flex-col overflow-hidden' : 'min-h-full')}>

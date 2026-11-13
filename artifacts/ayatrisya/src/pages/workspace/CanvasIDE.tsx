@@ -39,6 +39,7 @@ import {
   RefreshCw,
   Hammer,
   CheckCircle2,
+  PanelLeft,
 } from 'lucide-react';
 import { useCanvas, CanvasProvider, useOptionalCanvas, PROJECT_TEMPLATES } from '@/components/canvas/CanvasContext';
 import { CanvasBackground } from '@/components/canvas/CanvasBackground';
@@ -50,7 +51,14 @@ import { CanvasRuntimeAuditModal } from '@/components/canvas/CanvasRuntimeAuditM
 import { SoapBubbleButton } from '@/components/soap-bubble';
 import { usePrefs } from '@/hooks/use-prefs';
 import { useDesktopRuntime } from '@/desktop/use-runtime';
-import { useIsMobile } from '@/hooks/use-mobile';
+import {
+  useIsMobile,
+  useIsTablet,
+  useIsTabletPortrait,
+  useIsTabletLandscape,
+  useIsTabbedLayout,
+  useDeviceType,
+} from '@/hooks/use-mobile';
 import { generateProjectFromPrompt, validateProjectFiles, type ProjectGenerationProgress } from '@/ai/project-generator';
 import { generateGameProjectFromPrompt, createPlayable2DGame, createPlayable3DGame } from '@/ai/game-generator';
 import { modelClient } from '@/ai/client';
@@ -84,6 +92,13 @@ function CanvasIDEInternal() {
   const { prefs } = usePrefs();
   const desktop = useDesktopRuntime();
   const isMobile = useIsMobile();
+  const isTabletPortrait = useIsTabletPortrait();
+  const isTabletLandscape = useIsTabletLandscape();
+  const isTabbedLayout = useIsTabbedLayout();
+  const deviceType = useDeviceType();
+
+  // Desktop / Tablet Landscape collapsible explorer state
+  const [isExplorerOpen, setIsExplorerOpen] = useState(true);
 
   // Desktop View Mode: 'split' | 'editor-only' | 'preview-only' | 'terminal-only'
   const [viewMode, setViewMode] = useState<'split' | 'editor-only' | 'preview-only' | 'terminal-only'>('split');
@@ -219,6 +234,31 @@ function CanvasIDEInternal() {
 
   // Construct Virtual Sandboxed HTML
   const bundledPreviewHtml = useMemo(() => {
+    // 1. If project has zero files, show a clear starting state
+    if (canvas.files.length === 0) {
+      return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ayatrisya Canvas</title>
+  <style>
+    body { margin: 0; font-family: system-ui, sans-serif; background: #0c0b12; color: #ece9f3; display: flex; align-items: center; justify-content: center; height: 100vh; }
+    .card { background: #161424; border: 1px solid rgba(255,255,255,0.08); padding: 32px; border-radius: 16px; text-align: center; max-width: 440px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
+    h1 { font-size: 20px; font-weight: 600; margin-bottom: 8px; color: #fff; }
+    p { font-size: 13px; color: #94919f; line-height: 1.6; margin-bottom: 20px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>🚀 Ayatrisya Canvas IDE</h1>
+    <p>No project files loaded yet. Click <strong>AI Generate</strong> above or create a new file in the Explorer to begin.</p>
+  </div>
+</body>
+</html>`;
+    }
+
+    // 2. Identify HTML entry file if present
     const activeIsHtml =
       canvas.activeFile &&
       (canvas.activeFile.name.endsWith('.html') ||
@@ -240,36 +280,98 @@ function CanvasIDEInternal() {
         !f.name.endsWith('.test.ts')
     );
 
-    let baseHtml = htmlFile
-      ? htmlFile.content
-      : `<!DOCTYPE html>
+    // 3. Synthesize live container when files exist but no index.html is defined
+    let baseHtml = '';
+    if (htmlFile) {
+      baseHtml = htmlFile.content;
+    } else {
+      const activeFile = canvas.activeFile || canvas.files[0];
+      const isMd = activeFile?.name.endsWith('.md');
+      const isReact = canvas.files.some((f) => f.name.endsWith('.jsx') || f.name.endsWith('.tsx'));
+      const isPython = activeFile?.name.endsWith('.py');
+
+      if (isMd) {
+        baseHtml = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Ayatrisya Canvas</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${activeFile?.name || 'Document'}</title>
   <style>
-    body { margin: 0; font-family: system-ui, sans-serif; background: #0c0b12; color: #ece9f3; display: flex; align-items: center; justify-content: center; height: 100vh; }
-    .card { background: #161424; border: 1px solid rgba(255,255,255,0.08); padding: 32px; border-radius: 16px; text-align: center; max-width: 440px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
-    h1 { font-size: 20px; font-weight: 600; margin-bottom: 8px; color: #fff; }
-    p { font-size: 13px; color: #94919f; line-height: 1.6; margin-bottom: 20px; }
-    button { background: linear-gradient(135deg, #8b5cf6, #6366f1); border: 0; padding: 10px 20px; border-radius: 8px; color: #fff; font-weight: 600; cursor: pointer; transition: opacity 0.2s; }
+    body { margin: 0; padding: 24px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0c0b12; color: #ece9f3; line-height: 1.6; }
+    h1, h2, h3 { color: #fff; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 8px; }
+    code { background: rgba(255,255,255,0.08); padding: 2px 6px; border-radius: 4px; font-family: monospace; }
+    pre { background: #161424; padding: 14px; border-radius: 8px; overflow-x: auto; border: 1px solid rgba(255,255,255,0.08); }
+    blockquote { border-left: 3px solid #8b5cf6; margin: 0; padding-left: 14px; color: #a1a1aa; }
   </style>
 </head>
 <body>
-  <div class="card">
-    <h1>🚀 Ayatrisya Canvas IDE</h1>
-    <p>Professional cloud development environment with live preview, AI assistance, and Linux bash terminal execution.</p>
-    <button id="actionBtn">Click to Test</button>
-    <div id="output" style="margin-top: 14px; font-size: 12px; color: #c4b5fd;"></div>
-  </div>
-  <script>
-    document.getElementById('actionBtn')?.addEventListener('click', () => {
-      document.getElementById('output').innerText = '✓ Interaction verified at ' + new Date().toLocaleTimeString();
-      console.log('User interaction logged in Ayatrisya Canvas Preview');
-    });
-  </script>
+  <div id="content"><pre style="white-space: pre-wrap;">${(activeFile?.content || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre></div>
 </body>
 </html>`;
+      } else if (isPython) {
+        baseHtml = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${activeFile?.name || 'Python Script'}</title>
+  <style>
+    body { margin: 0; padding: 20px; font-family: system-ui, sans-serif; background: #0c0b12; color: #ece9f3; display: flex; flex-direction: column; height: 100vh; box-sizing: border-box; }
+    .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+    .badge { background: rgba(139, 92, 246, 0.15); color: #c4b5fd; border: 1px solid rgba(139, 92, 246, 0.3); padding: 4px 10px; border-radius: 6px; font-size: 11px; font-family: monospace; }
+    .terminal-box { flex: 1; background: #14131f; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 16px; font-family: monospace; font-size: 13px; color: #a5b4fc; overflow: auto; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <h2 style="margin: 0; font-size: 15px; color: #fff;">${activeFile?.name}</h2>
+      <span style="font-size: 12px; color: #94919f;">Python Sandbox Environment</span>
+    </div>
+    <span class="badge">Ayatrisya POSIX VM</span>
+  </div>
+  <div class="terminal-box">
+    <div style="color: #6ee7b7; margin-bottom: 8px;">✓ Project mounted in Ayatrisya Linux Sandbox</div>
+    <div style="color: #94919f; margin-bottom: 12px;">File size: ${(activeFile?.content || '').length} bytes. Click 'Run' to execute in terminal.</div>
+    <pre style="margin: 0; color: #e2e8f0; font-size: 12px; line-height: 1.5; white-space: pre-wrap;">${(activeFile?.content || '').replace(/</g, '&lt;').replace(/>/g, '&gt;').slice(0, 3000)}</pre>
+  </div>
+</body>
+</html>`;
+      } else if (isReact) {
+        baseHtml = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${canvas.currentProjectName || 'React App'}</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0c0b12; color: #ece9f3; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+</body>
+</html>`;
+      } else {
+        baseHtml = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${canvas.currentProjectName || 'Ayatrisya Project'}</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0c0b12; color: #ece9f3; }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+</body>
+</html>`;
+      }
+    }
 
     // Inject combined CSS
     const combinedCss = cssFiles.map((c) => `<style data-file="${c.name}">\n${c.content}\n</style>`).join('\n');
@@ -321,7 +423,7 @@ function CanvasIDEInternal() {
     }
 
     return baseHtml;
-  }, [canvas.files, canvas.activeFile]);
+  }, [canvas.files, canvas.activeFile, canvas.currentProjectName]);
 
   // Listen for iframe log messages & capture runtime errors
   useEffect(() => {
@@ -500,10 +602,10 @@ function CanvasIDEInternal() {
     setProcessState('running');
     setPreviewKey((k) => k + 1);
 
-    if (isMobile) {
+    if (isTabbedLayout) {
       setMobileTab('preview');
     }
-  }, [canvas.files, detectedFramework, processState, activeProcess?.pid, desktop?.isNative, isMobile]);
+  }, [canvas.files, detectedFramework, processState, activeProcess?.pid, desktop?.isNative, isTabbedLayout]);
 
   // Stop process cleanly (Requirement 3)
   const handleStopProject = useCallback(() => {
@@ -589,7 +691,7 @@ function CanvasIDEInternal() {
     setEditorAiPrompt(`Fix the issue "${prob.message}" in file ${prob.filePath}`);
     const found = canvas.files.find((f) => f.name === prob.filePath);
     if (found) canvas.setActiveFile(found.id);
-    if (isMobile) setMobileTab('editor');
+    if (isTabbedLayout) setMobileTab('editor');
   };
 
   // Clear runtime errors
@@ -771,10 +873,28 @@ function CanvasIDEInternal() {
             <span className={cx('h-1.5 w-1.5 rounded-full', canvas.saveStatus === 'saved' ? 'bg-teal-400' : 'bg-amber-400')} />
             {canvas.saveStatus === 'saved' ? 'Saved' : 'Saving…'}
           </span>
+
+          {/* Toggle File Explorer in Tablet Landscape & Desktop */}
+          {!isTabbedLayout && (
+            <button
+              type="button"
+              onClick={() => setIsExplorerOpen((open) => !open)}
+              className={cx(
+                'flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium border transition',
+                isExplorerOpen
+                  ? 'bg-white/[.08] text-white border-white/[.12]'
+                  : 'bg-white/[.03] text-slate-400 hover:text-white border-white/[.06]'
+              )}
+              title={isExplorerOpen ? 'Collapse File Explorer' : 'Expand File Explorer'}
+            >
+              <PanelLeft size={13} className={isExplorerOpen ? 'text-violet-300' : 'text-slate-400'} />
+              <span className="hidden xl:inline">{isExplorerOpen ? 'Files' : 'Show Files'}</span>
+            </button>
+          )}
         </div>
 
-        {/* Center: Desktop Layout Switcher */}
-        {!isMobile && (
+        {/* Center: Desktop & Tablet Landscape Layout Switcher */}
+        {!isTabbedLayout && (
           <div className="flex items-center bg-black/40 p-0.5 rounded-lg border border-white/[.08]">
             <button
               type="button"
@@ -900,9 +1020,9 @@ function CanvasIDEInternal() {
 
       {/* 2. MAIN WORKSPACE AREA */}
       <div className="flex flex-1 min-h-0 overflow-hidden">
-        {/* DESKTOP / TABLET FILE EXPLORER SIDEBAR */}
-        {!isMobile && (
-          <aside className="w-60 shrink-0 h-full overflow-hidden border-r border-white/[.07] bg-[#111018]">
+        {/* DESKTOP & TABLET LANDSCAPE FILE EXPLORER SIDEBAR */}
+        {!isTabbedLayout && isExplorerOpen && (
+          <aside className="w-56 shrink-0 h-full overflow-hidden border-r border-white/[.07] bg-[#111018]">
             <CanvasFileTree
               files={canvas.files}
               activeFileId={canvas.activeFileId}
@@ -916,8 +1036,8 @@ function CanvasIDEInternal() {
           </aside>
         )}
 
-        {/* MOBILE SINGLE-PANE FILE EXPLORER */}
-        {isMobile && mobileTab === 'files' && (
+        {/* MOBILE & TABLET PORTRAIT SINGLE-PANE FILE EXPLORER */}
+        {isTabbedLayout && mobileTab === 'files' && (
           <div className="flex-1 h-full overflow-hidden">
             <CanvasFileTree
               files={canvas.files}
@@ -939,10 +1059,10 @@ function CanvasIDEInternal() {
         )}
 
         {/* CENTER WORKSPACE: TABS, EDITOR & PREVIEW */}
-        {(!isMobile || mobileTab === 'editor' || mobileTab === 'preview' || mobileTab === 'terminal' || mobileTab === 'ai') && (
+        {(!isTabbedLayout || mobileTab === 'editor' || mobileTab === 'preview' || mobileTab === 'terminal' || mobileTab === 'ai') && (
           <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
-            {/* MULTI-TAB HEADER (Desktop/Tablet) */}
-            {!isMobile && (
+            {/* MULTI-TAB HEADER (Desktop & Tablet Landscape) */}
+            {!isTabbedLayout && (
               <div className="flex h-9 shrink-0 items-center justify-between border-b border-white/[.07] bg-[#14131f] px-2 overflow-x-auto scrollbar-none">
                 <div className="flex items-center gap-1 overflow-x-auto scrollbar-none">
                   {canvas.files.map((file) => {
@@ -1005,7 +1125,7 @@ function CanvasIDEInternal() {
             {/* SPLIT / MAIN WORKSPACE AREA */}
             <div className="flex flex-1 min-h-0 overflow-hidden">
               {/* CODE EDITOR PANE */}
-              {(!isMobile ? viewMode === 'editor-only' || viewMode === 'split' : mobileTab === 'editor') && (
+              {(!isTabbedLayout ? viewMode === 'editor-only' || viewMode === 'split' : mobileTab === 'editor') && (
                 <div className="flex flex-1 flex-col min-w-0 border-r border-white/[.07] bg-[#0e0d15] overflow-hidden">
                   {/* Inline Diff Banner if pending */}
                   {canvas.pendingDiff && (
@@ -1036,7 +1156,7 @@ function CanvasIDEInternal() {
                     onChangeContent={canvas.updateContent}
                     onRun={handleRunProject}
                     problems={problems}
-                    isMobile={isMobile}
+                    isMobile={isTabbedLayout}
                   />
 
                   {/* Bottom AI Refactor Input Bar */}
@@ -1065,7 +1185,7 @@ function CanvasIDEInternal() {
               )}
 
               {/* LIVE PREVIEW PANE */}
-              {(!isMobile ? viewMode === 'preview-only' || viewMode === 'split' : mobileTab === 'preview') && (
+              {(!isTabbedLayout ? viewMode === 'preview-only' || viewMode === 'split' : mobileTab === 'preview') && (
                 <div className="flex flex-1 flex-col min-w-0 bg-[#09080e] overflow-hidden">
                   {/* Preview Toolbar */}
                   <div className="flex h-9 shrink-0 items-center justify-between border-b border-white/[.07] bg-[#14131f] px-3">
@@ -1156,10 +1276,12 @@ function CanvasIDEInternal() {
                     <div
                       className={cx(
                         'relative z-10 h-full max-w-full transition-all duration-200 bg-white shadow-2xl rounded-md overflow-hidden',
-                        deviceViewport === 'mobile'
+                        isTabbedLayout
+                          ? 'w-full'
+                          : deviceViewport === 'mobile'
                           ? 'w-[375px]'
                           : deviceViewport === 'tablet'
-                          ? 'w-[768px]'
+                          ? 'w-full max-w-[768px]'
                           : 'w-full'
                       )}
                     >
@@ -1176,9 +1298,9 @@ function CanvasIDEInternal() {
               )}
             </div>
 
-            {/* 3. RESIZABLE BOTTOM DOCK (Desktop/Tablet) or FULL PANE (Mobile Terminal) */}
-            {(!isMobile ? isBottomDockOpen || viewMode === 'terminal-only' : mobileTab === 'terminal') && (
-              <div className={cx('border-t border-white/[.07] bg-[#0d0c14] flex flex-col', isMobile || viewMode === 'terminal-only' ? 'flex-1' : 'h-48')}>
+            {/* 3. RESIZABLE BOTTOM DOCK (Desktop/Tablet Landscape) or FULL PANE (Mobile/Tablet Portrait Terminal) */}
+            {(!isTabbedLayout ? isBottomDockOpen || viewMode === 'terminal-only' : mobileTab === 'terminal') && (
+              <div className={cx('border-t border-white/[.07] bg-[#0d0c14] flex flex-col', isTabbedLayout || viewMode === 'terminal-only' ? 'flex-1' : isTabletLandscape ? 'h-40' : 'h-48')}>
                 {/* Dock Header */}
                 <div className="flex h-8 shrink-0 items-center justify-between border-b border-white/[.06] bg-[#12111b] px-3">
                   <div className="flex items-center gap-3 text-xs">
@@ -1216,7 +1338,7 @@ function CanvasIDEInternal() {
                     </button>
                   </div>
 
-                  {!isMobile && viewMode !== 'terminal-only' && (
+                  {!isTabbedLayout && viewMode !== 'terminal-only' && (
                     <button
                       type="button"
                       onClick={() => setIsBottomDockOpen(false)}
@@ -1292,8 +1414,8 @@ function CanvasIDEInternal() {
                         />
                       </form>
 
-                      {/* Mobile Quick Terminal Commands */}
-                      {isMobile && (
+                      {/* Mobile & Tablet Quick Terminal Commands */}
+                      {isTabbedLayout && (
                         <div className="flex items-center gap-1.5 pt-2 overflow-x-auto scrollbar-none">
                           {['ls -la', 'pwd', 'node app.js', 'python3 main.py', 'git status', 'clear', 'help'].map((cmd) => (
                             <button
@@ -1377,7 +1499,7 @@ function CanvasIDEInternal() {
             )}
 
             {/* Closed Bottom Dock Bar Toggle */}
-            {!isBottomDockOpen && !isMobile && viewMode !== 'terminal-only' && (
+            {!isBottomDockOpen && !isTabbedLayout && viewMode !== 'terminal-only' && (
               <div className="flex h-6 shrink-0 items-center justify-between border-t border-white/[.07] bg-[#0d0c14] px-3 text-[11px] text-slate-400">
                 <button
                   type="button"
@@ -1393,13 +1515,18 @@ function CanvasIDEInternal() {
         )}
       </div>
 
-      {/* 4. MOBILE BOTTOM NAVIGATION BAR (Phase 1 Mobile Requirement) */}
-      {isMobile && (
-        <nav className="flex h-14 shrink-0 items-center justify-around border-t border-white/[.08] bg-[#12111b] px-2 z-30 select-none">
+      {/* 4. MOBILE & TABLET PORTRAIT BOTTOM NAVIGATION BAR (Phase 1 Mobile Requirement) */}
+      {isTabbedLayout && (
+        <nav
+          aria-label="Canvas workspace tabs"
+          data-testid="canvas-mobile-nav"
+          className="flex h-14 shrink-0 items-center justify-around border-t border-white/[.08] bg-[#12111b] px-2 z-30 select-none shadow-[0_-4px_16px_rgba(0,0,0,0.4)]"
+        >
           <button
             type="button"
             onClick={() => setMobileTab('files')}
-            className={cx('flex flex-col items-center gap-1 p-1 text-[10px] transition', mobileTab === 'files' ? 'text-violet-400 font-bold' : 'text-slate-400')}
+            data-testid="canvas-tab-files"
+            className={cx('flex flex-1 flex-col items-center justify-center gap-1 p-1 text-[11px] min-h-[44px] rounded-lg transition', mobileTab === 'files' ? 'text-violet-300 font-bold bg-violet-500/10' : 'text-slate-400 hover:text-slate-200')}
           >
             <FolderOpen size={18} />
             <span>Files</span>
@@ -1407,7 +1534,8 @@ function CanvasIDEInternal() {
           <button
             type="button"
             onClick={() => setMobileTab('editor')}
-            className={cx('flex flex-col items-center gap-1 p-1 text-[10px] transition', mobileTab === 'editor' ? 'text-violet-400 font-bold' : 'text-slate-400')}
+            data-testid="canvas-tab-editor"
+            className={cx('flex flex-1 flex-col items-center justify-center gap-1 p-1 text-[11px] min-h-[44px] rounded-lg transition', mobileTab === 'editor' ? 'text-violet-300 font-bold bg-violet-500/10' : 'text-slate-400 hover:text-slate-200')}
           >
             <Code2 size={18} />
             <span>Editor</span>
@@ -1415,7 +1543,8 @@ function CanvasIDEInternal() {
           <button
             type="button"
             onClick={() => setMobileTab('preview')}
-            className={cx('flex flex-col items-center gap-1 p-1 text-[10px] transition', mobileTab === 'preview' ? 'text-violet-400 font-bold' : 'text-slate-400')}
+            data-testid="canvas-tab-preview"
+            className={cx('flex flex-1 flex-col items-center justify-center gap-1 p-1 text-[11px] min-h-[44px] rounded-lg transition', mobileTab === 'preview' ? 'text-violet-300 font-bold bg-violet-500/10' : 'text-slate-400 hover:text-slate-200')}
           >
             <Monitor size={18} />
             <span>Preview</span>
@@ -1423,7 +1552,8 @@ function CanvasIDEInternal() {
           <button
             type="button"
             onClick={() => setMobileTab('terminal')}
-            className={cx('flex flex-col items-center gap-1 p-1 text-[10px] transition', mobileTab === 'terminal' ? 'text-violet-400 font-bold' : 'text-slate-400')}
+            data-testid="canvas-tab-terminal"
+            className={cx('flex flex-1 flex-col items-center justify-center gap-1 p-1 text-[11px] min-h-[44px] rounded-lg transition', mobileTab === 'terminal' ? 'text-violet-300 font-bold bg-violet-500/10' : 'text-slate-400 hover:text-slate-200')}
           >
             <TerminalIcon size={18} />
             <span>Terminal</span>
@@ -1431,7 +1561,8 @@ function CanvasIDEInternal() {
           <button
             type="button"
             onClick={() => setShowAiModal(true)}
-            className="flex flex-col items-center gap-1 p-1 text-[10px] text-violet-300 font-semibold"
+            data-testid="canvas-tab-ai"
+            className="flex flex-1 flex-col items-center justify-center gap-1 p-1 text-[11px] text-violet-300 font-semibold min-h-[44px] rounded-lg hover:bg-violet-500/10 transition"
           >
             <Sparkles size={18} className="text-violet-400" />
             <span>AI</span>

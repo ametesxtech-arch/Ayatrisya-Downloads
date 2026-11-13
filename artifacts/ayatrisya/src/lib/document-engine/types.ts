@@ -138,3 +138,4 @@ export interface DocumentAst {
   nodes: DocumentNode[];
   tocEntries: TocEntry[];
 }
+
