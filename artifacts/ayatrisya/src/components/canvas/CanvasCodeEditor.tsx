@@ -36,9 +36,10 @@ export function CanvasCodeEditor({
 }: CanvasCodeEditorProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const gutterRef = useRef<HTMLDivElement>(null);
 
   // Editor configuration
-  const [fontSize, setFontSize] = useState<number>(12);
+  const [fontSize, setFontSize] = useState<number>(isMobile ? 14 : 13);
   const [wordWrap, setWordWrap] = useState<boolean>(false);
   const [lineNumbers, setLineNumbers] = useState<boolean>(true);
 
@@ -364,6 +365,7 @@ export function CanvasCodeEditor({
         {/* Line Numbers Gutter */}
         {lineNumbers && (
           <div
+            ref={gutterRef}
             className="shrink-0 w-12 bg-[#0a0910] py-3 text-right pr-3 select-none border-r border-white/[.06] text-slate-600 font-mono text-xs overflow-hidden"
             style={{ fontSize: `${fontSize}px`, lineHeight: `${Math.round(fontSize * 1.6)}px` }}
           >
@@ -401,6 +403,9 @@ export function CanvasCodeEditor({
           onClick={updateCursorPos}
           onKeyUp={updateCursorPos}
           onKeyDown={handleKeyDown}
+          onScroll={(e) => {
+            if (gutterRef.current) gutterRef.current.scrollTop = e.currentTarget.scrollTop;
+          }}
           placeholder="Write code here..."
           spellCheck={false}
           autoCapitalize="none"

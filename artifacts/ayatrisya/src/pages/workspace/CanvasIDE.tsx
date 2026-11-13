@@ -40,7 +40,9 @@ import {
   Hammer,
   CheckCircle2,
   PanelLeft,
+  MoreHorizontal,
 } from 'lucide-react';
+import { ActionMenu } from '@/components/Menus';
 import { useCanvas, CanvasProvider, useOptionalCanvas, PROJECT_TEMPLATES } from '@/components/canvas/CanvasContext';
 import { CanvasBackground } from '@/components/canvas/CanvasBackground';
 import { CanvasCodeEditor } from '@/components/canvas/CanvasCodeEditor';
@@ -1009,12 +1011,28 @@ function CanvasIDEInternal() {
           <button
             type="button"
             onClick={() => setShowAuditModal(true)}
-            className="flex items-center gap-1 rounded-md bg-violet-500/10 hover:bg-violet-500/20 px-2 py-1 text-[11px] text-violet-300 border border-violet-500/20 transition"
+            className="hidden sm:flex items-center gap-1 rounded-md bg-violet-500/10 hover:bg-violet-500/20 px-2 py-1 text-[11px] text-violet-300 border border-violet-500/20 transition"
             title="Inspect Runtime Security & Environment Classification"
           >
             <ShieldCheck size={12} className="text-teal-400" />
             <span className="hidden lg:inline">{desktop?.isNative ? 'Desktop Native' : 'Web Sandbox'}</span>
           </button>
+
+          {/* Mobile Secondary Actions Menu */}
+          <div className="sm:hidden flex items-center">
+            <ActionMenu
+              label="Canvas options"
+              items={[
+                { label: 'Build Project', onSelect: handleBuildProject },
+                { label: 'Export Project (.ZIP)', onSelect: canvas.exportProjectZip },
+                { label: 'Switch / Manage Projects', onSelect: () => setShowProjectModal(true) },
+                { label: 'Runtime Security Audit', onSelect: () => setShowAuditModal(true) },
+                { label: 'Search Files (Ctrl+P)', onSelect: () => setShowSearchModal(true) },
+              ]}
+            >
+              <MoreHorizontal size={14} />
+            </ActionMenu>
+          </div>
         </div>
       </header>
 
@@ -1125,8 +1143,11 @@ function CanvasIDEInternal() {
             {/* SPLIT / MAIN WORKSPACE AREA */}
             <div className="flex flex-1 min-h-0 overflow-hidden">
               {/* CODE EDITOR PANE */}
-              {(!isTabbedLayout ? viewMode === 'editor-only' || viewMode === 'split' : mobileTab === 'editor') && (
-                <div className="flex flex-1 flex-col min-w-0 border-r border-white/[.07] bg-[#0e0d15] overflow-hidden">
+              {(!isTabbedLayout ? viewMode === 'editor-only' || viewMode === 'split' : true) && (
+                <div className={cx(
+                  'flex flex-1 flex-col min-w-0 border-r border-white/[.07] bg-[#0e0d15] overflow-hidden',
+                  isTabbedLayout && mobileTab !== 'editor' ? 'hidden' : 'flex'
+                )}>
                   {/* Inline Diff Banner if pending */}
                   {canvas.pendingDiff && (
                     <div className="flex items-center justify-between bg-amber-500/10 border-b border-amber-500/30 px-3 py-1.5 text-xs text-amber-200">
@@ -1185,8 +1206,11 @@ function CanvasIDEInternal() {
               )}
 
               {/* LIVE PREVIEW PANE */}
-              {(!isTabbedLayout ? viewMode === 'preview-only' || viewMode === 'split' : mobileTab === 'preview') && (
-                <div className="flex flex-1 flex-col min-w-0 bg-[#09080e] overflow-hidden">
+              {(!isTabbedLayout ? viewMode === 'preview-only' || viewMode === 'split' : true) && (
+                <div className={cx(
+                  'flex flex-1 flex-col min-w-0 bg-[#09080e] overflow-hidden',
+                  isTabbedLayout && mobileTab !== 'preview' ? 'hidden' : 'flex'
+                )}>
                   {/* Preview Toolbar */}
                   <div className="flex h-9 shrink-0 items-center justify-between border-b border-white/[.07] bg-[#14131f] px-3">
                     <div className="flex items-center gap-2">
@@ -1299,15 +1323,19 @@ function CanvasIDEInternal() {
             </div>
 
             {/* 3. RESIZABLE BOTTOM DOCK (Desktop/Tablet Landscape) or FULL PANE (Mobile/Tablet Portrait Terminal) */}
-            {(!isTabbedLayout ? isBottomDockOpen || viewMode === 'terminal-only' : mobileTab === 'terminal') && (
-              <div className={cx('border-t border-white/[.07] bg-[#0d0c14] flex flex-col', isTabbedLayout || viewMode === 'terminal-only' ? 'flex-1' : isTabletLandscape ? 'h-40' : 'h-48')}>
+            {(!isTabbedLayout ? isBottomDockOpen || viewMode === 'terminal-only' : true) && (
+              <div className={cx(
+                'border-t border-white/[.07] bg-[#0d0c14] flex flex-col',
+                isTabbedLayout || viewMode === 'terminal-only' ? 'flex-1' : isTabletLandscape ? 'h-40' : 'h-48',
+                isTabbedLayout && mobileTab !== 'terminal' ? 'hidden' : 'flex'
+              )}>
                 {/* Dock Header */}
-                <div className="flex h-8 shrink-0 items-center justify-between border-b border-white/[.06] bg-[#12111b] px-3">
-                  <div className="flex items-center gap-3 text-xs">
+                <div className="flex h-8 shrink-0 items-center justify-between border-b border-white/[.06] bg-[#12111b] px-3 gap-2">
+                  <div className="flex items-center gap-2 sm:gap-3 text-xs overflow-x-auto scrollbar-none min-w-0 flex-1">
                     <button
                       type="button"
                       onClick={() => setBottomTab('terminal')}
-                      className={cx('flex items-center gap-1.5 font-medium py-1 transition', bottomTab === 'terminal' ? 'text-violet-300 border-b-2 border-violet-400' : 'text-slate-400 hover:text-slate-200')}
+                      className={cx('flex items-center gap-1.5 font-medium py-1 shrink-0 transition', bottomTab === 'terminal' ? 'text-violet-300 border-b-2 border-violet-400' : 'text-slate-400 hover:text-slate-200')}
                     >
                       <TerminalIcon size={12} />
                       <span>Terminal (Linux bash)</span>
@@ -1315,7 +1343,7 @@ function CanvasIDEInternal() {
                     <button
                       type="button"
                       onClick={() => setBottomTab('output')}
-                      className={cx('flex items-center gap-1.5 font-medium py-1 transition', bottomTab === 'output' ? 'text-violet-300 border-b-2 border-violet-400' : 'text-slate-400 hover:text-slate-200')}
+                      className={cx('flex items-center gap-1.5 font-medium py-1 shrink-0 transition', bottomTab === 'output' ? 'text-violet-300 border-b-2 border-violet-400' : 'text-slate-400 hover:text-slate-200')}
                     >
                       <Layers size={12} />
                       <span>Console Output ({previewLogs.length})</span>
@@ -1323,7 +1351,7 @@ function CanvasIDEInternal() {
                     <button
                       type="button"
                       onClick={() => setBottomTab('problems')}
-                      className={cx('flex items-center gap-1.5 font-medium py-1 transition', bottomTab === 'problems' ? 'text-violet-300 border-b-2 border-violet-400' : 'text-slate-400 hover:text-slate-200')}
+                      className={cx('flex items-center gap-1.5 font-medium py-1 shrink-0 transition', bottomTab === 'problems' ? 'text-violet-300 border-b-2 border-violet-400' : 'text-slate-400 hover:text-slate-200')}
                     >
                       <AlertCircle size={12} />
                       <span>Problems ({problems.length})</span>
@@ -1331,22 +1359,37 @@ function CanvasIDEInternal() {
                     <button
                       type="button"
                       onClick={() => setBottomTab('environment')}
-                      className={cx('flex items-center gap-1.5 font-medium py-1 transition', bottomTab === 'environment' ? 'text-violet-300 border-b-2 border-violet-400' : 'text-slate-400 hover:text-slate-200')}
+                      className={cx('flex items-center gap-1.5 font-medium py-1 shrink-0 transition', bottomTab === 'environment' ? 'text-violet-300 border-b-2 border-violet-400' : 'text-slate-400 hover:text-slate-200')}
                     >
                       <Cpu size={12} />
                       <span>Runtime</span>
                     </button>
                   </div>
 
-                  {!isTabbedLayout && viewMode !== 'terminal-only' && (
+                  <div className="flex items-center gap-1 shrink-0">
                     <button
                       type="button"
-                      onClick={() => setIsBottomDockOpen(false)}
-                      className="text-slate-400 hover:text-white p-1"
+                      onClick={() => {
+                        setTerminalLogs([]);
+                        setPreviewLogs([]);
+                      }}
+                      className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-white px-1.5 py-0.5 rounded hover:bg-white/[.06] transition"
+                      title="Clear terminal buffer"
+                      data-testid="button-clear-terminal"
                     >
-                      <X size={13} />
+                      <Trash2 size={11} />
+                      <span className="hidden xs:inline">Clear</span>
                     </button>
-                  )}
+                    {!isTabbedLayout && viewMode !== 'terminal-only' && (
+                      <button
+                        type="button"
+                        onClick={() => setIsBottomDockOpen(false)}
+                        className="text-slate-400 hover:text-white p-1"
+                      >
+                        <X size={13} />
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Dock Body */}
@@ -1520,7 +1563,7 @@ function CanvasIDEInternal() {
         <nav
           aria-label="Canvas workspace tabs"
           data-testid="canvas-mobile-nav"
-          className="flex h-14 shrink-0 items-center justify-around border-t border-white/[.08] bg-[#12111b] px-2 z-30 select-none shadow-[0_-4px_16px_rgba(0,0,0,0.4)]"
+          className="safe-b flex h-14 shrink-0 items-center justify-around border-t border-white/[.08] bg-[#12111b] px-2 z-30 select-none shadow-[0_-4px_16px_rgba(0,0,0,0.4)]"
         >
           <button
             type="button"

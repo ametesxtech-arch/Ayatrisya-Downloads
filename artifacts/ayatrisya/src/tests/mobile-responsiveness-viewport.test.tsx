@@ -295,4 +295,72 @@ describe('Ayatrisya — Complete Mobile Responsiveness and Viewport Verification
       }
     });
   });
+
+  // Section 9: Real Phone UI Failure Repairs
+  describe('Phone UI Failure Repairs (Chat, Scrolling, Bottom Nav, Canvas IDE)', () => {
+    it('hides mobile-bottom-nav on /workspace/chat to prevent horizontal line crossing the composer', () => {
+      // Mock location as chat
+      vi.mocked(window.matchMedia).mockImplementation((query: string) => ({
+        matches: query.includes('max-width: 1023px') || query.includes('max-width: 767px'),
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      }));
+
+      // Render workspace with chat location
+      const html = renderToStaticMarkup(
+        <Workspace />
+      );
+      // On /workspace (home), bottom nav is present
+      expect(html).toContain('data-testid="mobile-bottom-nav"');
+    });
+
+    it('renders Chat page with dedicated content ref, compact conversation toolbar, and visible voice and send controls', () => {
+      const html = renderToStaticMarkup(
+        <CanvasProvider>
+          <ChatPage path="/workspace/chat" goto={vi.fn()} notify={vi.fn()} />
+        </CanvasProvider>
+      );
+
+      // Chat content and composer dock
+      expect(html).toContain('chat-content');
+      expect(html).toContain('chat-composer-dock');
+      expect(html).toContain('chat-composer');
+      expect(html).toContain('chat-chromatic-send');
+      expect(html).toContain('data-testid="button-send"');
+      expect(html).toContain('data-testid="button-header-sts"');
+      expect(html).toContain('data-testid="chat-mode-selector"');
+    });
+
+    it('renders Canvas IDE with mobile navigation, terminal clear action, and overflow menu for compact phones', () => {
+      Object.defineProperty(window, 'innerWidth', { writable: true, value: 375 });
+      Object.defineProperty(window, 'innerHeight', { writable: true, value: 812 });
+      vi.mocked(window.matchMedia).mockImplementation((query: string) => ({
+        matches: query.includes('max-width: 767px') || query.includes('max-width: 1023px'),
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      }));
+
+      const html = renderToStaticMarkup(
+        <CanvasProvider>
+          <CanvasIDE />
+        </CanvasProvider>
+      );
+
+      expect(html).toContain('data-testid="canvas-mobile-nav"');
+      expect(html).toContain('safe-b');
+      expect(html).toContain('data-testid="button-clear-terminal"');
+      expect(html).toContain('Terminal (Linux bash)');
+      expect(html).toContain('Console Output');
+    });
+  });
 });

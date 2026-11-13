@@ -1,4 +1,6 @@
 import React from 'react';
+// @ts-ignore
+globalThis.React = React;
 import { describe, it, expect } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { CanvasProvider, useCanvas } from '@/components/canvas/CanvasContext';

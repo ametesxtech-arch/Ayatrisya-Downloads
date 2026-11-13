@@ -79,16 +79,44 @@ function WorkspaceContent() {
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
   const [creating, setCreating] = useState(false);
 
+  const [visualViewportHeight, setVisualViewportHeight] = useState<number | null>(null);
+
   // Dynamic visual viewport / virtual keyboard detection
   useEffect(() => {
-    if (typeof window === 'undefined' || !window.visualViewport) return;
-    const onResize = () => {
+    if (typeof window === 'undefined') return;
+    const updateViewport = () => {
+      const vv = window.visualViewport;
       const vh = window.innerHeight;
-      const vv = window.visualViewport?.height ?? vh;
-      setIsKeyboardOpen(vh - vv > 120);
+      const currentH = vv ? vv.height : vh;
+      setIsKeyboardOpen(vh - currentH > 120);
+      if (window.innerWidth < 1024 && vv) {
+        setVisualViewportHeight(vv.height);
+      } else {
+        setVisualViewportHeight(null);
+      }
     };
-    window.visualViewport.addEventListener('resize', onResize);
-    return () => window.visualViewport?.removeEventListener('resize', onResize);
+    updateViewport();
+    window.visualViewport?.addEventListener('resize', updateViewport);
+    window.visualViewport?.addEventListener('scroll', updateViewport);
+    window.addEventListener('resize', updateViewport);
+    window.addEventListener('orientationchange', updateViewport);
+    return () => {
+      window.visualViewport?.removeEventListener('resize', updateViewport);
+      window.visualViewport?.removeEventListener('scroll', updateViewport);
+      window.removeEventListener('resize', updateViewport);
+      window.removeEventListener('orientationchange', updateViewport);
+    };
+  }, []);
+
+  // Prevent scroll drift / header displacement on mobile devices
+  useEffect(() => {
+    const handleScrollLock = () => {
+      if (window.scrollY > 0 || window.scrollX > 0) {
+        window.scrollTo(0, 0);
+      }
+    };
+    window.addEventListener('scroll', handleScrollLock, { passive: true });
+    return () => window.removeEventListener('scroll', handleScrollLock);
   }, []);
 
   // Prevent scroll drift / canvas going up on route change
@@ -205,7 +233,14 @@ function WorkspaceContent() {
   const initials = (user?.displayName || prefs.displayName || user?.email || 'G').slice(0, 2).toUpperCase();
   const h = (t: string) => !effectiveCollapsed && <div className="mb-2 mt-6 px-2 text-[10px] font-bold uppercase tracking-[.17em] text-slate-500">{t}</div>;
   return (
-    <div className="app-noise workspace-shell flex h-[100dvh] min-h-0 overflow-hidden bg-[#101116] text-slate-100" data-workspace-mode={prefs.workspaceMode}>
+    <div
+      className="app-noise workspace-shell flex min-h-0 overflow-hidden bg-[#101116] text-slate-100"
+      style={{
+        height: visualViewportHeight ? `${visualViewportHeight}px` : '100dvh',
+        maxHeight: visualViewportHeight ? `${visualViewportHeight}px` : '100dvh',
+      }}
+      data-workspace-mode={prefs.workspaceMode}
+    >
       <a href="#main" className="skip-link">Skip to content</a>
       {mobileOpen && <button aria-label="Close navigation overlay" tabIndex={-1} onClick={() => setMobileOpen(false)} className="fixed inset-0 z-30 bg-black/60 lg:hidden" />}
       <aside
@@ -350,7 +385,7 @@ function WorkspaceContent() {
           className={cx(
             'workspace-main-content min-h-0 flex-1 focus:outline-none overflow-hidden',
             isFullViewport ? 'flex flex-col h-full' : 'overflow-y-auto',
-            isMobile && !isCanvas && !isKeyboardOpen ? (isChat ? 'pb-14 lg:pb-0' : 'pb-24 lg:pb-0') : ''
+            isMobile && !isCanvas && !isChat && !isKeyboardOpen ? 'pb-24 lg:pb-0' : ''
           )}
         >
           <div ref={pageRef} className={cx(isFullViewport ? 'flex-1 h-full min-h-0 flex flex-col overflow-hidden' : 'min-h-full')}>
@@ -381,7 +416,7 @@ function WorkspaceContent() {
       </div>
 
       {/* DEDICATED MOBILE BOTTOM NAVIGATION BAR */}
-      {isMobile && !isCanvas && !isKeyboardOpen && (
+      {isMobile && !isCanvas && !isChat && !isKeyboardOpen && (
         <nav
           aria-label="Mobile workspace navigation"
           data-testid="mobile-bottom-nav"

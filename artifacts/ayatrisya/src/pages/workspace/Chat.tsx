@@ -5,7 +5,7 @@ import {
   ArrowDown, Check, Copy, RefreshCw, MoreHorizontal, Mic, Paperclip, Pencil,
   Send, Square, Trash2, X, Sparkles, ArrowUpRight, Code2, Lightbulb,
   ShieldCheck, Archive, HelpCircle, Radio, Image as ImageIcon, Flame, Smile, MessageSquare, ExternalLink,
-  FileText, Presentation, FileArchive, ChevronDown, ChevronUp, Play
+  FileText, Presentation, FileArchive, ChevronDown, ChevronUp, Play, Download
 } from 'lucide-react';
 import { downloadDocx } from '@/lib/docx-export';
 import { downloadPdf } from '@/lib/pdf-export';
@@ -135,20 +135,37 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
   }, [uid]);
 
   const list = msgs.data ?? [];
+  const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const main = document.getElementById('main'); if (!main) return;
-    const f = () => setAtBottom(main.scrollHeight - main.scrollTop - main.clientHeight < 120);
-    f(); main.addEventListener('scroll', f, { passive: true });
-    return () => main.removeEventListener('scroll', f);
+    const el = contentRef.current;
+    if (!el) return;
+    const f = () => setAtBottom(el.scrollHeight - el.scrollTop - el.clientHeight < 120);
+    f();
+    el.addEventListener('scroll', f, { passive: true });
+    return () => el.removeEventListener('scroll', f);
   }, []);
 
-  const atBottomRef = useRef(true); atBottomRef.current = atBottom;
+  const atBottomRef = useRef(true);
+  atBottomRef.current = atBottom;
   useEffect(() => {
+    const el = contentRef.current;
+    if (!el) return;
     if (atBottomRef.current) {
-      endRef.current?.scrollIntoView({ block: 'end', behavior: prefs.reducedMotion ? 'auto' : 'smooth' });
+      if (prefs.reducedMotion) {
+        el.scrollTop = el.scrollHeight;
+      } else {
+        el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+      }
     }
   }, [list.length, stream, prefs.reducedMotion]);
+
+  useEffect(() => {
+    const el = contentRef.current;
+    if (el) {
+      el.scrollTop = el.scrollHeight;
+    }
+  }, [id]);
 
   useEffect(() => {
     const t = taRef.current; if (!t) return;
@@ -582,19 +599,6 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
           </div>
 
           <div className="flex items-center gap-1 shrink-0">
-            <Button
-              variant="quiet"
-              onClick={() => {
-                window.open('/workspace/canvas', '_blank');
-              }}
-              data-testid="button-toggle-canvas"
-              title="Open full-screen Canvas IDE in a dedicated workspace tab"
-              className="whitespace-nowrap text-xs h-7 px-2"
-            >
-              <Code2 size={13} className="text-violet-300" />
-              <span className="hidden sm:inline">Canvas IDE</span>
-              <ExternalLink size={10} className="text-slate-400 ml-0.5 hidden sm:inline" />
-            </Button>
             {/* Live Chat Orb Indicator */}
             <div
               onClick={openSts}
@@ -607,9 +611,23 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
                 {chatAgentState}
               </span>
             </div>
-            <Button variant="bubble" onClick={openSts} data-testid="button-header-sts" title="Start real-time Voice Conversation" className="whitespace-nowrap text-xs h-7 px-2.5">
+            <Button variant="bubble" onClick={openSts} data-testid="button-header-sts" title="Start real-time Voice Conversation" className="whitespace-nowrap text-xs h-7 px-2 sm:px-2.5">
               <Radio size={13} className="text-violet-300 animate-pulse" />
               <span className="hidden sm:inline">Voice</span>
+            </Button>
+            {/* Desktop secondary action buttons */}
+            <Button
+              variant="quiet"
+              onClick={() => {
+                window.open('/workspace/canvas', '_blank');
+              }}
+              data-testid="button-toggle-canvas"
+              title="Open full-screen Canvas IDE in a dedicated workspace tab"
+              className="hidden sm:inline-flex whitespace-nowrap text-xs h-7 px-2"
+            >
+              <Code2 size={13} className="text-violet-300" />
+              <span>Canvas IDE</span>
+              <ExternalLink size={10} className="text-slate-400 ml-0.5" />
             </Button>
             {list.length > 0 && (
               <Button
@@ -617,27 +635,46 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
                 onClick={copyEntireConversation}
                 data-testid="button-copy-conversation"
                 title="Copy entire conversation formatted to clipboard"
-                className="whitespace-nowrap text-xs h-7 px-2"
+                className="hidden sm:inline-flex whitespace-nowrap text-xs h-7 px-2"
               >
                 <Copy size={13} className="text-slate-300" />
-                <span className="hidden sm:inline">Copy chat</span>
+                <span>Copy chat</span>
               </Button>
             )}
-            {id && !guest && <>
-              <Button variant="quiet" onClick={() => setRenaming(conv.data?.title ?? '')} className="whitespace-nowrap text-xs h-7 px-2">
-                <Pencil size={13} />
-                <span className="hidden sm:inline">Rename</span>
-              </Button>
-              <Button variant="quiet" onClick={() => setConfirmDel(true)} className="whitespace-nowrap text-xs h-7 px-2">
-                <Trash2 size={13} />
-                <span className="hidden sm:inline">Delete</span>
-              </Button>
-              {conv.data && <ActionMenu label="More conversation actions" items={acts.items(conv.data)}><MoreHorizontal size={15} /></ActionMenu>}
-            </>}
+            {id && !guest && (
+              <>
+                <Button variant="quiet" onClick={() => setRenaming(conv.data?.title ?? '')} className="hidden sm:inline-flex whitespace-nowrap text-xs h-7 px-2">
+                  <Pencil size={13} />
+                  <span>Rename</span>
+                </Button>
+                <Button variant="quiet" onClick={() => setConfirmDel(true)} className="hidden sm:inline-flex whitespace-nowrap text-xs h-7 px-2">
+                  <Trash2 size={13} />
+                  <span>Delete</span>
+                </Button>
+                {conv.data && <div className="hidden sm:block"><ActionMenu label="More conversation actions" items={acts.items(conv.data)}><MoreHorizontal size={15} /></ActionMenu></div>}
+              </>
+            )}
+            {/* Mobile-only consolidated menu */}
+            <div className="sm:hidden flex items-center">
+              <ActionMenu
+                label="Conversation actions"
+                items={[
+                  { label: 'Open Canvas IDE', onSelect: () => window.open('/workspace/canvas', '_blank') },
+                  ...(list.length > 0 ? [{ label: 'Copy entire chat', onSelect: copyEntireConversation }] : []),
+                  ...(id && !guest ? [
+                    { label: 'Rename conversation', onSelect: () => setRenaming(conv.data?.title ?? '') },
+                    { label: 'Delete conversation', danger: true, onSelect: () => setConfirmDel(true) },
+                    ...(conv.data ? acts.items(conv.data) : []),
+                  ] : []),
+                ]}
+              >
+                <MoreHorizontal size={15} />
+              </ActionMenu>
+            </div>
           </div>
         </div>
 
-        <div className={`chat-content mx-auto w-full ${studioWidth ? 'max-w-[1060px]' : 'max-w-[820px]'} flex-1 min-h-0 overflow-y-auto px-4 pb-8 pt-7 sm:px-7 sm:pt-10`}>
+        <div ref={contentRef} className={`chat-content mx-auto w-full ${studioWidth ? 'max-w-[1060px]' : 'max-w-[820px]'} flex-1 min-h-0 overflow-y-auto px-4 pb-8 pt-4 sm:px-7 sm:pt-6`}>
           {id && msgs.loading && !msgs.data && <div className="space-y-7 pt-8" role="status" aria-label="Loading conversation"><Skeleton className="h-20 w-3/5" /><Skeleton className="ml-auto h-16 w-2/5" /><Skeleton className="h-24 w-4/5" /></div>}
           {msgs.error && <LoadError message={msgs.error} retry={msgs.refresh} />}
           {id && conv.data === undefined && !conv.loading && !conv.error && <Notice>This conversation was not found in this browser. <Link href="/workspace" className="underline">Start a new chat</Link>.</Notice>}
@@ -713,40 +750,54 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
 
                     {/* Instant Docx / PDF / Zip Export for any AI message in chat */}
                     {m.role === 'assistant' && (
-                      <div className="flex items-center gap-1 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => downloadDocx(`Ayatrisya_${m.id.slice(0, 6)}`, m.content)}
-                          className="flex items-center gap-1 rounded border border-white/[.08] px-2 py-1 text-[11px] text-slate-300 hover:bg-white/[.07] hover:text-white shrink-0 whitespace-nowrap min-w-max transition-colors"
-                          title="Export as Word (.docx)"
-                          data-testid={`button-export-docx-${m.id}`}
-                        >
-                          <FileText size={12} className="text-blue-400 shrink-0" />
-                          <span>.docx</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => downloadPdf(`Ayatrisya_${m.id.slice(0, 6)}`, m.content)}
-                          className="flex items-center gap-1 rounded border border-white/[.08] px-2 py-1 text-[11px] text-slate-300 hover:bg-white/[.07] hover:text-white shrink-0 whitespace-nowrap min-w-max transition-colors"
-                          title="Export as PDF"
-                          data-testid={`button-export-pdf-${m.id}`}
-                        >
-                          <FileText size={12} className="text-red-400 shrink-0" />
-                          <span>.pdf</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => downloadZip(`Ayatrisya_${m.id.slice(0, 6)}`, [
-                            { path: `response-${m.id.slice(0, 6)}.md`, data: m.content }
-                          ])}
-                          className="flex items-center gap-1 rounded border border-white/[.08] px-2 py-1 text-[11px] text-slate-300 hover:bg-white/[.07] hover:text-white shrink-0 whitespace-nowrap min-w-max transition-colors"
-                          title="Export as .ZIP package"
-                          data-testid={`button-export-zip-${m.id}`}
-                        >
-                          <FileArchive size={12} className="text-amber-400 shrink-0" />
-                          <span>.zip</span>
-                        </button>
-                      </div>
+                      <>
+                        <div className="hidden sm:flex items-center gap-1 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => downloadDocx(`Ayatrisya_${m.id.slice(0, 6)}`, m.content)}
+                            className="flex items-center gap-1 rounded border border-white/[.08] px-2 py-1 text-[11px] text-slate-300 hover:bg-white/[.07] hover:text-white shrink-0 whitespace-nowrap min-w-max transition-colors"
+                            title="Export as Word (.docx)"
+                            data-testid={`button-export-docx-${m.id}`}
+                          >
+                            <FileText size={12} className="text-blue-400 shrink-0" />
+                            <span>.docx</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => downloadPdf(`Ayatrisya_${m.id.slice(0, 6)}`, m.content)}
+                            className="flex items-center gap-1 rounded border border-white/[.08] px-2 py-1 text-[11px] text-slate-300 hover:bg-white/[.07] hover:text-white shrink-0 whitespace-nowrap min-w-max transition-colors"
+                            title="Export as PDF"
+                            data-testid={`button-export-pdf-${m.id}`}
+                          >
+                            <FileText size={12} className="text-red-400 shrink-0" />
+                            <span>.pdf</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => downloadZip(`Ayatrisya_${m.id.slice(0, 6)}`, [
+                              { path: `response-${m.id.slice(0, 6)}.md`, data: m.content }
+                            ])}
+                            className="flex items-center gap-1 rounded border border-white/[.08] px-2 py-1 text-[11px] text-slate-300 hover:bg-white/[.07] hover:text-white shrink-0 whitespace-nowrap min-w-max transition-colors"
+                            title="Export as .ZIP package"
+                            data-testid={`button-export-zip-${m.id}`}
+                          >
+                            <FileArchive size={12} className="text-amber-400 shrink-0" />
+                            <span>.zip</span>
+                          </button>
+                        </div>
+                        <div className="sm:hidden flex items-center shrink-0">
+                          <ActionMenu
+                            label="Export response"
+                            items={[
+                              { label: 'Export as Word (.docx)', onSelect: () => downloadDocx(`Ayatrisya_${m.id.slice(0, 6)}`, m.content) },
+                              { label: 'Export as PDF', onSelect: () => downloadPdf(`Ayatrisya_${m.id.slice(0, 6)}`, m.content) },
+                              { label: 'Export as .ZIP package', onSelect: () => downloadZip(`Ayatrisya_${m.id.slice(0, 6)}`, [{ path: `response-${m.id.slice(0, 6)}.md`, data: m.content }]) },
+                            ]}
+                          >
+                            <Download size={13} />
+                          </ActionMenu>
+                        </div>
+                      </>
                     )}
 
                     <IconButton label={copied === m.id ? 'Copied' : 'Copy message'} onClick={() => navigator.clipboard.writeText(m.content).then(() => { setCopied(m.id); window.setTimeout(() => setCopied(null), 1600); }, () => notify('Copy was blocked by the browser.'))} className="shrink-0 size-8" data-testid={`button-copy-message-${m.id}`}>{copied === m.id ? <Check size={13} className="text-teal-300" /> : <Copy size={13} />}</IconButton>
@@ -980,7 +1031,7 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
             </div>
             <p id="composer-hint" className="chat-composer-hint" aria-live="polite" data-testid="status-composer-hint">{saving ? (files.length ? `Saving ${files.length} file${files.length > 1 ? 's' : ''} and your message to this browser…` : 'Saving to this browser…') : <>{prefs.enterToSend ? 'Enter to send' : 'Ctrl+Enter to send'} <span aria-hidden>·</span> {prefs.enterToSend ? 'Shift+Enter for a new line' : 'Enter for a new line'} <span className="chat-local-promise"><ShieldCheck size={12} /> Stored locally</span></>}</p>
           </div>
-          {!atBottom && <button type="button" onClick={() => endRef.current?.scrollIntoView({ block: 'end', behavior: 'smooth' })} aria-label="Scroll to latest message" data-testid="button-scroll-latest" className="chat-scroll-latest"><ArrowDown size={16} /></button>}
+          {!atBottom && <button type="button" onClick={() => contentRef.current?.scrollTo({ top: contentRef.current.scrollHeight, behavior: 'smooth' })} aria-label="Scroll to latest message" data-testid="button-scroll-latest" className="chat-scroll-latest"><ArrowDown size={16} /></button>}
         </div>
         {acts.dialogs}
         {delMsg && <ConfirmDialog danger title="Delete message" confirmLabel="Delete message" body="Delete this message from the conversation? Files attached to it stay in your Library. This cannot be undone." onConfirm={async () => { try { await repository.deleteMessage(delMsg.id); } catch (e) { notify(errMsg(e)); } setDelMsg(null); }} onClose={() => setDelMsg(null)} />}
