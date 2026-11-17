@@ -717,8 +717,11 @@ export function normalizeInteractivePayload(raw: unknown): unknown {
     }
   }
 
-  // 2. Quiz Normalization: Convert string options to mcqOptionSchema { id, label } and validate answers
-  if (obj.type === 'quiz' && Array.isArray(obj.questions)) {
+  // 2. Quiz / Assessment Normalization: Convert string options to mcqOptionSchema { id, label } and validate answers
+  if (
+    (obj.type === 'quiz' || obj.type === 'assessment' || obj.type === 'mock_test' || obj.type === 'exam') &&
+    Array.isArray(obj.questions)
+  ) {
     const letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
     obj.questions = obj.questions.map((q: unknown, qIdx: number) => {
       if (!q || typeof q !== 'object') return q;

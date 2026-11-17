@@ -774,6 +774,17 @@ async function proxyModelRequest(
             ...first,
             content: `[System Directives & Memory Context:\n${sharedOrchestratedContext.augmentedSystemPrompt}]\n\n${first.content}`,
           };
+          // In multi-turn conversations, reinforce active interactive intent on the latest message
+          if (messagesForUpstream.length > 1) {
+            const lastIdx = messagesForUpstream.length - 1;
+            const lastMsg = messagesForUpstream[lastIdx];
+            if (lastMsg.role === "user" && sharedOrchestratedContext.classification.intent === "assessment_request") {
+              messagesForUpstream[lastIdx] = {
+                ...lastMsg,
+                content: `${lastMsg.content}\n\n[System Directive: Generate a genuine \`\`\`interactive assessment JSON block. Do NOT simulate interactivity with text like "reply with A, B, C, or D".]`,
+              };
+            }
+          }
         }
         body = JSON.stringify({
           ...parsedChatData,

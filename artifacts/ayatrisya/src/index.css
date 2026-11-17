@@ -437,8 +437,8 @@ button,input,textarea,select{ min-width: 0; touch-action: manipulation; }
   color:#d7c8ff;font-family:var(--app-font-mono);font-size:.88em;overflow-wrap:break-word;word-break:normal;
 }
 .chat-prose :where(hr){border-color:var(--chat-line)}
-.chat-table-wrap{max-width:100%;overflow-x:auto;border:1px solid var(--chat-line);border-radius:9px;overscroll-behavior-inline:contain}
-.chat-prose table{width:100%;min-width:440px;border-collapse:collapse;font-size:13px}
+.chat-table-wrap{max-width:100%;overflow-x:auto;border:1px solid rgba(255,255,255,.09);border-radius:10px;overscroll-behavior-inline:contain;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.18) transparent}
+.chat-prose table{width:100%;min-width:360px;border-collapse:collapse;font-size:13px}
 .chat-prose :where(th,td){border-bottom:1px solid var(--chat-line);padding:9px 12px;text-align:left}
 .chat-prose th{background:rgba(255,255,255,.035);color:#ece9f1;font-family:var(--app-font-heading);font-weight:650}
 .chat-prose tr:last-child td{border-bottom:0}
@@ -453,7 +453,7 @@ button,input,textarea,select{ min-width: 0; touch-action: manipulation; }
 .chat-code .chat-token-number{color:#dfaa7a}
 .chat-code .chat-token-comment{color:#777b88;font-style:italic}
 .chat-prose .katex{font-size:1.05em;color:#f1edfa;text-rendering:geometricPrecision;max-width:100%}
-.chat-prose .katex-display{margin:1em 0;padding:.75em 1em;overflow-x:auto;overflow-y:hidden;max-width:100%;border-radius:8px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);-webkit-overflow-scrolling:touch;overscroll-behavior-inline:contain}
+.chat-prose .katex-display{margin:1em 0;padding:.75em 1em;overflow-x:auto;overflow-y:hidden;max-width:100%;border-radius:8px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);-webkit-overflow-scrolling:touch;overscroll-behavior-inline:contain;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.18) transparent}
 .chat-prose .katex-display>.katex{display:block;text-align:center;color:#a7f3d0}
 .chat-prose .katex-error{color:#fca5a5;font-family:var(--app-font-mono);font-size:.88em;background:rgba(248,113,113,.08);padding:.1em .35em;border-radius:4px}
 html[data-appearance="light"] .chat-prose .katex{color:#24222e}

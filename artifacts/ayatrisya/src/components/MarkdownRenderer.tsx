@@ -201,7 +201,9 @@ export function CodeBlock({ children }: { children?: ReactNode }) {
   // Check if this is an interactive block
   if (
     /^(interactive|interactive-block|ayatrisya-block|ayatrisya-interactive|quiz|mcq|assessment|exam|mock-test|calculator|calc|comparison|form)$/i.test(langLower) ||
-    (langLower === 'json' && /"type"\s*:\s*"(quiz|mcq|poll|flashcards|accordion|input_controls|chart|assessment|mock_test|exam|calculator|comparison|form)"/.test(text))
+    (langLower === 'json' &&
+      (/"type"\s*:\s*"(quiz|mcq|poll|flashcards|accordion|input_controls|chart|assessment|mock_test|exam|calculator|comparison|form)"/.test(text) ||
+        (isStreaming && /"(version|questions|items|slides|chartType|title)"/.test(text))))
   ) {
     const parsed = parseInteractiveBlock(text, { isStreaming });
     if (parsed.status === 'valid') {
@@ -744,7 +746,7 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
   const isLikelyInteractiveJson =
     trimmed.startsWith('{') &&
     (trimmed.endsWith('}') ||
-      (isStreaming && (trimmed.includes('"type"') || trimmed.includes('"questions"') || trimmed.includes('"items"'))));
+      (isStreaming && (trimmed.includes('"type"') || trimmed.includes('"questions"') || trimmed.includes('"items"') || trimmed.includes('"version"'))));
 
   if (isLikelyInteractiveJson) {
     const directParse = parseInteractiveBlock(trimmed, { isStreaming });

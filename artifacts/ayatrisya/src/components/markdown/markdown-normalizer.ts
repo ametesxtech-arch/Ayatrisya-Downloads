@@ -101,14 +101,30 @@ export function stabilizeStreamingMarkdown(raw: string): string {
         segment += '_';
       }
 
-      // 7. Incomplete table rows (e.g. '| Col 1 | Col 2' without trailing | or newline)
+      // 7. Progressive Markdown Table Stabilization:
+      // When a table is streaming, e.g. '| Header 1 | Header 2' without trailing | or without separator row
       if (segment.includes('|')) {
         const lines = segment.split('\n');
         const lastLine = lines[lines.length - 1];
         if (lastLine.trim().startsWith('|') && !lastLine.trim().endsWith('|')) {
           lines[lines.length - 1] = lastLine + ' |';
-          segment = lines.join('\n');
         }
+
+        // If table has header row but incomplete or missing separator row during streaming
+        const pipeLines = lines.filter((l) => l.trim().startsWith('|'));
+        if (pipeLines.length === 1 && !lines.some((l) => /^[ \t]*\|[ \t]*[-:]+[-| :]*\|?[ \t]*$/.test(l))) {
+          const headerPipes = (pipeLines[0].match(/\|/g) || []).length;
+          const colCount = Math.max(1, headerPipes - 1);
+          const separatorRow = '|' + Array(colCount).fill(' --- ').join('|') + '|';
+          lines.push(separatorRow);
+        } else if (pipeLines.length >= 2) {
+          const lastPipeLine = lines[lines.length - 1].trim();
+          if (lastPipeLine.startsWith('|') && /\|[ \t]*[-:]+/.test(lastPipeLine) && !lastPipeLine.endsWith('|')) {
+            lines[lines.length - 1] = lastPipeLine + ' |';
+          }
+        }
+
+        segment = lines.join('\n');
       }
 
       return segment;
@@ -121,7 +137,7 @@ export function stabilizeStreamingMarkdown(raw: string): string {
  * in $$ ... $$ display blocks when emitted by models without explicit delimiters.
  */
 const BARE_LATEX_ENV_REGEX =
-  /(?:^|\n)[ \t]*(\\begin\{(aligned|align\*?|equation\*?|matrix|pmatrix|bmatrix|vmatrix|Vmatrix|cases|gather\*?|split|multline\*?)\}[\s\S]*?\\end\{\2\})[ \t]*(?=\n|$)/g;
+  /(?:^|\n|[ \t]*)(\\begin\{(aligned|align\*?|equation\*?|matrix|pmatrix|bmatrix|vmatrix|Vmatrix|cases|gather\*?|split|multline\*?)\}[\s\S]*?\\end\{\2\})/g;
 
 /**
  * Normalizes Markdown syntax across responses to resolve common LLM defects
@@ -184,8 +200,8 @@ export function normalizeMarkdown(
           // Ensure $$ display math is reliably formatted with newlines for remark-math AST parsing
           prose = prose.replace(/(?<!\$)\$\$(?!\$)([\s\S]*?)(?<!\$)\$\$(?!\$)/g, (_m, math: string) => `\n\n$$\n${math.trim()}\n$$\n\n`);
 
-          // Normalize chemical equations \ce{...} not already wrapped in math
-          prose = prose.replace(/(?<!\$)\\ce\{([^{}]+)\}(?!\$)/g, '$\\ce{$1}$');
+          // Normalize chemical equations \ce{...} not already wrapped in math (supports nested sub/superscript braces)
+          prose = prose.replace(/(?<!\$)\\ce\{((?:[^{}]|\{[^{}]*\})*)\}(?!\$)/g, '$\\ce{$1}$');
 
           // Detect bare LaTeX environments (aligned, matrix, pmatrix, cases, etc.) not wrapped in $$
           // Protect any existing $$ blocks first
@@ -214,6 +230,15 @@ export function normalizeMarkdown(
           // Ensure lists preceded by non-list text have a blank line before them:
           prose = prose.replace(/([^\n\s\-*+0-9])\n([ \t]*[-*+]\s+)/g, '$1\n\n$2');
           prose = prose.replace(/([^\n\s\-*+0-9])\n([ \t]*\d+\.\s+)/g, '$1\n\n$2');
+
+          // Ensure blockquotes preceded by non-blockquote text have a blank line before them:
+          prose = prose.replace(/([^\n>])\n([ \t]*>[ \t]*)/g, '$1\n\n$2');
+
+          // Ensure horizontal dividers preceded by text have a blank line before them:
+          prose = prose.replace(/([^\n])\n([ \t]*[-*_]{3,}[ \t]*)(?=\n|$)/g, '$1\n\n$2');
+
+          // Ensure markdown tables followed by non-table text have a blank line after them:
+          prose = prose.replace(/(\|[ \t]*\n)([^|\n\s])/g, '$1\n$2');
 
           return prose;
         })

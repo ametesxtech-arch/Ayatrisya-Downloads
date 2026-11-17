@@ -53,8 +53,8 @@ export function detectMarkdownQuizOrMcq(rawText: string): DetectedInteractiveCon
     }
   }
 
-  // 2. Standard MCQ & Practice Question pattern
-  const questionPattern = /(?:^|\n)(?:(?:###\s*)?(?:Question\s*)?(\d+)[.:]\s*|\*\*Question\s*(\d+):?\*\*\s*)([^\n]+)\n((?:[ \t]*(?:[-*]\s*)?[A-Ea-e][).]\s+[^\n]+\n?){2,6})(?:[ \t]*(?:\*\*|__)?(?:Answer|Correct Answer|Ans)(?:\*\*|__)?:\s*([A-Ea-e])\b[^\n]*)?(?:\n[ \t]*(?:\*\*|__)?Explanation(?:\*\*|__)?:\s*([^\n]+))?/gi;
+  // 2. Standard MCQ & Practice Question pattern (supports ### Question 1, Question 1, 1., or Question: without numbers)
+  const questionPattern = /(?:^|\n)(?:(?:###\s*)?(?:Question\s*)?(\d+)[.:]\s*|\*\*Question\s*(\d+):?\*\*\s*|(?:###\s*)?Question:\s*)([^\n]+)\n((?:[ \t]*(?:[-*]\s*)?[A-Ea-e][).]\s+[^\n]+\n?){2,6})(?:[ \t]*(?:\*\*|__)?(?:Answer|Correct Answer|Ans)(?:\*\*|__)?:\s*([A-Ea-e])\b[^\n]*)?(?:\n[ \t]*(?:\*\*|__)?Explanation(?:\*\*|__)?:\s*([^\n]+))?/gi;
 
   const matches: Array<{
     fullMatch: string;
@@ -183,8 +183,17 @@ export function detectMarkdownQuizOrMcq(rawText: string): DetectedInteractiveCon
   const firstIndex = allMatchIndices[0].start;
   const lastIndex = allMatchIndices[allMatchIndices.length - 1].end;
 
-  const beforeText = rawText.slice(0, firstIndex).trim();
-  const afterText = rawText.slice(lastIndex).trim();
+  // Clean simulation phrases like "Just reply with A, B, C, or D" from intro/outro prose
+  const cleanSimulationPhrases = (str: string): string => {
+    let s = str.trim();
+    s = s.replace(/(?:let's do it interactively[!,.]?\s*)?(?:we will go through [^\n.]*one question at a time[!,.]?\s*)?(?:just\s+)?(?:reply|type|respond)\s+(?:with\s+)?(?:[A-Ea-e](?:,\s*[A-Ea-e])*(?:\s*,?\s*or\s*[A-Ea-e])?|your (?:choice|answer))[!,.]?/gi, '');
+    s = s.replace(/(?:reply|type|respond)\s+(?:with\s+)?(?:[A-Ea-e](?:,\s*[A-Ea-e])*(?:\s*,?\s*or\s*[A-Ea-e])?|your (?:choice|answer))[!,.]?/gi, '');
+    s = s.replace(/\b(let me know your choice|type your answer below|what is your answer\?)\b/gi, '');
+    return s.trim();
+  };
+
+  const beforeText = cleanSimulationPhrases(rawText.slice(0, firstIndex));
+  const afterText = cleanSimulationPhrases(rawText.slice(lastIndex));
 
   // Extract metadata from beforeText (e.g. title, duration, exam mode)
   let title = 'Interactive Assessment';

@@ -235,7 +235,14 @@ export function normalizeUniversalResponse(params: {
 
         // Check if preamble has text before question 1
         const preambleMatch = rawText.match(/^(.*?)((?:(?:\*{1,2})?(?:Question\s+)?1[\.\)]))/s);
-        const preambleText = preambleMatch ? preambleMatch[1].trim() : "";
+        let preambleText = preambleMatch ? preambleMatch[1].trim() : "";
+        if (preambleText) {
+          preambleText = preambleText
+            .replace(/(?:let's do it interactively[!,.]?\s*)?(?:we will go through [^\n.]*one question at a time[!,.]?\s*)?(?:just\s+)?(?:reply|type|respond)\s+(?:with\s+)?(?:[A-Ea-e](?:,\s*[A-Ea-e])*(?:\s*,?\s*or\s*[A-Ea-e])?|your (?:choice|answer))[!,.]?/gi, "")
+            .replace(/(?:reply|type|respond)\s+(?:with\s+)?(?:[A-Ea-e](?:,\s*[A-Ea-e])*(?:\s*,?\s*or\s*[A-Ea-e])?|your (?:choice|answer))[!,.]?/gi, "")
+            .replace(/\b(let me know your choice|type your answer below|what is your answer\?)\b/gi, "")
+            .trim();
+        }
 
         blocks.length = 0;
         if (preambleText) {
