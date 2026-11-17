@@ -524,7 +524,7 @@ export function ArtifactBlockRenderer({ block }: { block: ArtifactBlockData }) {
                   ]
                     .filter(Boolean)
                     .join('\n\n'),
-                  layout: s.smartArt ? ('cards' as const) : ('bullets' as const),
+                  layout: s.smartArt ? ('card-grid' as const) : ('bullets' as const),
                 }));
                 void downloadPptx(fileName, pptxSlides);
               }}

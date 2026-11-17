@@ -47,6 +47,7 @@ Rules:
       [{ role: 'user', content: titleInstruction }],
       {
         model: options.model || 'v1-fast',
+        mode: 'Normal',
         signal: options.signal ? AbortSignal.any([options.signal, timeoutSignal]) : timeoutSignal,
       }
     );

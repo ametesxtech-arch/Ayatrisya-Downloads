@@ -14,6 +14,7 @@ import {
   Info,
 } from 'lucide-react';
 import { AIMemorySummaryEngine } from '@/storage/ai-memory-summary-engine';
+import { MemoryEngine } from '@/storage/memory-engine';
 import { repository } from '@/storage/repository';
 import type { AIMemorySummary } from '@/storage/types';
 import { ago } from '@/lib/format';

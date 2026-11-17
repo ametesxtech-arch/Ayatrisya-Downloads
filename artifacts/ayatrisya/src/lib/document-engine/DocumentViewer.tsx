@@ -144,7 +144,13 @@ export function DocumentViewer({
         {ast.nodes.map((node, idx) => {
           switch (node.type) {
             case 'heading': {
-              const Tag = `h${Math.min(node.level, 6)}` as keyof JSX.IntrinsicElements;
+              const Tag = `h${Math.min(Math.max(node.level, 1), 6)}` as
+                | 'h1'
+                | 'h2'
+                | 'h3'
+                | 'h4'
+                | 'h5'
+                | 'h6';
               const sizeClasses =
                 node.level === 1
                   ? 'text-2xl sm:text-3xl font-bold text-white pt-6 border-b border-white/10 pb-2'

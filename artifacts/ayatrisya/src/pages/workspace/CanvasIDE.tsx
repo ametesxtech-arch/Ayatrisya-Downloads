@@ -731,13 +731,15 @@ function CanvasIDEInternal() {
     const active = canvas.activeFile;
     try {
       const promptText = `You are the Ayatrisya Canvas Coding Engine. Modify the following file according to the user request. Output ONLY the complete modified file content with no conversational chit-chat or markdown fences.\n\nFile Name: ${active.name}\nRequest: ${editorAiPrompt}\n\nCurrent Content:\n${active.content}`;
-      const res = await modelClient.sendChat({
-        messages: [{ role: 'user', content: promptText }],
-        model: prefs.model || 'ayatrisya-coder-v1',
-        temperature: 0.2,
-      });
+      const resText = await modelClient.generateResponse(
+        [{ role: 'user', content: promptText }],
+        {
+          model: 'v1-fast',
+          mode: 'Normal',
+        }
+      );
 
-      const proposed = res.text
+      const proposed = (resText || '')
         .replace(/^```[a-z]*\n/i, '')
         .replace(/\n```$/i, '')
         .trim();

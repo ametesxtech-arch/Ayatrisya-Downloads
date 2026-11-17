@@ -1139,7 +1139,7 @@ export function ModelsAndEnginesPage({
                   Test Connection
                 </Button>
                 <Button
-                  variant="primary"
+                  variant="solid"
                   onClick={() => void handleSaveRemoteConfig()}
                   disabled={remoteSaving}
                   className="text-xs"

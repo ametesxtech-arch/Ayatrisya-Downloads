@@ -105,3 +105,4 @@ ${installers
 
 writeFileSync(releaseNotesPath, releaseNotes, 'utf8');
 console.log(`Generated release notes: ${releaseNotesPath}`);
+

@@ -26,5 +26,11 @@ export function useDesktopRuntime() {
     return () => { active = false; };
   }, []);
 
-  return { runtime, desktop: runtime?.api ?? null, checking, refresh };
+  return {
+    runtime,
+    desktop: runtime?.api ?? null,
+    isNative: Boolean(runtime),
+    checking,
+    refresh,
+  };
 }
