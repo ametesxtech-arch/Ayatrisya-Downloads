@@ -21,6 +21,8 @@ export interface IntentClassificationResult {
   suggestedBlockType?: string;
   wantsPracticeMode?: boolean;
   wantsExamMode?: boolean;
+  wantsOneQuestionAtATime?: boolean;
+  wantsInteractive?: boolean;
   targetQuestionCount?: number;
   examType?: string; // CBSE, NEET, JEE, etc.
 }
@@ -36,15 +38,31 @@ export function classifyConversationIntent(
   const p = (userPrompt || "").trim().toLowerCase();
   const tags: string[] = [];
 
+  // Check conversational history to contextualize follow-up requests (e.g. "make it interactive")
+  const priorContent = (history || [])
+    .slice(-4)
+    .map((m) => m.content)
+    .join("\n");
+  const priorHasQuizOrQuestions =
+    /\b(quiz|mcq|question\s*\d|1\.\s+|options?|answer|assessment|test|problems?)\b/i.test(priorContent);
+
+  // Direct interactive request patterns
+  const isExplicitInteractiveRequest =
+    /\b(make\s+it\s+interactive|turn\s+(this|it)\s+into\s+a\s+quiz|ask\s+me\s+one\s+question\s+at\s+a\s+time|test\s+my\s+knowledge|let\s+me\s+answer(\s+by\s+clicking)?|let\s+me\s+solve\s+it\s+myself|create\s+an\s+interactive\s+practice\s+session|interactive\s+practice|interactive\s+quiz|do\s+it\s+interactively|interactive\s+learning\s+activity)\b/i.test(
+      p,
+    ) || (priorHasQuizOrQuestions && /\b(interactive|interactively|one\s*by\s*one|one\s*at\s*a\s*time|quiz\s*me|test\s*me|let\s*me\s*try)\b/i.test(p));
+
   // 1. Assessment / MCQ / Exam Request Detection
   const isMcqRequest =
+    isExplicitInteractiveRequest ||
     /\b(mcqs?|quiz(zes)?|questions?|test|exam|mock\s*test|practice\s*questions?|assessment|pyqs?|sample\s*paper|assertion\s*(and|&)\s*reasoning|match\s*the\s*following)\b/i.test(
       p,
     );
 
   const hasExamIndicators = /\b(cbse|neet|jee|board\s*exam|upsc|sat|gre|gmat|gate|class\s*1[0-2]|class\s*[6-9])\b/i.test(p);
   const wantsExamMode = /\b(exam\s*mode|examination\s*mode|strict\s*mode|timed\s*test|test\s*mode)\b/i.test(p);
-  const wantsPracticeMode = /\b(practice\s*mode|learn\s*mode|immediate\s*feedback)\b/i.test(p);
+  const wantsOneQuestionAtATime = /\b(one\s*question\s*at\s*a\s*time|one\s*by\s*one|step\s*by\s*step)\b/i.test(p);
+  const wantsPracticeMode = wantsOneQuestionAtATime || isExplicitInteractiveRequest || /\b(practice\s*mode|learn\s*mode|immediate\s*feedback)\b/i.test(p);
 
   // Extract count if user specified (e.g., "give me 10 MCQs" or "15 CBSE Physics questions")
   const countMatch =
@@ -62,6 +80,8 @@ export function classifyConversationIntent(
     if (hasExamIndicators) tags.push("standardized_exam");
     if (wantsExamMode) tags.push("examination_mode");
     if (wantsPracticeMode) tags.push("practice_mode");
+    if (isExplicitInteractiveRequest) tags.push("interactive_quiz");
+    if (wantsOneQuestionAtATime) tags.push("one_question_at_a_time");
 
     return {
       intent: "assessment_request",
@@ -70,8 +90,32 @@ export function classifyConversationIntent(
       suggestedBlockType: "assessment",
       wantsPracticeMode: !wantsExamMode,
       wantsExamMode,
+      wantsOneQuestionAtATime,
+      wantsInteractive: true,
       targetQuestionCount,
       examType,
+    };
+  }
+
+  // 1b. Flashcard Request Detection
+  if (/\b(flashcards?|study\s*cards?|make\s+flashcards)\b/i.test(p)) {
+    return {
+      intent: "technical_explanation",
+      confidence: 0.92,
+      tags: ["flashcards", "interactive"],
+      suggestedBlockType: "flashcard",
+      wantsInteractive: true,
+    };
+  }
+
+  // 1c. Step by step explanation request
+  if (/\b(explain\s+this\s+step\s+by\s+step|step\s*by\s*step\s*(guide|tutorial|breakdown)|walk\s+me\s+through\s+step\s+by\s+step)\b/i.test(p)) {
+    return {
+      intent: "project_planning",
+      confidence: 0.9,
+      tags: ["steps", "step_by_step", "interactive"],
+      suggestedBlockType: "steps",
+      wantsInteractive: true,
     };
   }
 

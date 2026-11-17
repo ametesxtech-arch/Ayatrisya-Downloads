@@ -34,6 +34,7 @@ import { generateSyntheticSpeechWav } from "../lib/voice-synthesizer";
 import { imageOrchestrator } from "../lib/image-engine/orchestrator";
 import { orchestrator, type OrchestratedContext } from "../lib/orchestrator/orchestrator";
 import { UniversalResponseSchema, type UniversalResponse } from "../lib/response-protocol/schema";
+import { buildActivityFromUniversal } from "../lib/response-protocol/normalizer";
 
 const router: IRouter = Router();
 const MAX_JSON_RESPONSE_BYTES = 25 * 1024 * 1024;
@@ -245,11 +246,14 @@ Core Principles for Response Excellence:
 8. Image Generation Integrity:
    - When the user asks to create, draw, or edit an image, image generation is handled directly by the native Ayatrisya Vision Engine.
    - Never output fabricated external markdown image links (such as unsplash, wikimedia, or random http URLs).
-9. Interactive Chat Blocks:
-   - When the user asks for a quiz, multiple-choice question (MCQ), poll, comparison, checklist, step-by-step tutorial, expandable answers, sliders/controls, or metrics, you can render an Interactive Chat Block by outputting a fenced code block tagged with \`\`\`interactive containing valid JSON (version "1.0"):
+9. Interactive Chat Blocks & Structured Activities:
+   - When the user asks for a quiz, test, assessment, or asks to "make it interactive", "turn this into a quiz", "ask me one question at a time", or "test my knowledge", you MUST ALWAYS generate an Interactive Component Block by outputting a fenced code block tagged with \`\`\`interactive containing valid JSON (version "1.0", type "assessment" or "quiz"):
+     * Quiz / Assessment: \`\`\`interactive { "version": "1.0", "type": "assessment", "title": "Interactive Quiz", "mode": "practice", "passingScore": 70, "questions": [{"id": "q1", "type": "single_choice", "question": "...", "options": [{"id": "a", "label": "Option A"}, {"id": "b", "label": "Option B"}], "correctAnswer": "a", "explanation": "..."}] } \`\`\`
+   - STRICT CONSTRAINT: NEVER simulate interactivity in plain text (e.g., NEVER say "Let's do it interactively!", "We will go through one question at a time. Just reply with A, B, C, or D", "Tell me your answer", or "Reply in the chat"). ALWAYS generate the real interactive component.
+   - For other interactive activities:
      * MCQ: \`\`\`interactive { "version": "1.0", "type": "mcq", "question": "...", "options": [{"id": "a", "label": "..."}], "correctAnswer": "a", "explanation": "..." } \`\`\`
-     * Quiz: \`\`\`interactive { "version": "1.0", "type": "quiz", "title": "...", "questions": [{"id": "q1", "question": "...", "options": [{"id": "a", "label": "..."}, {"id": "b", "label": "..."}], "correctAnswer": "a", "explanation": "..."}], "passingScore": 70 } \`\`\`
      * Poll: \`\`\`interactive { "version": "1.0", "type": "poll", "question": "...", "options": [{"id": "a", "label": "..."}] } \`\`\`
+     * Flashcards: \`\`\`interactive { "version": "1.0", "type": "flashcard", "cards": [{"front": "Term", "back": "Definition"}] } \`\`\`
      * Checklist: \`\`\`interactive { "version": "1.0", "type": "checklist", "title": "...", "items": [{"id": "1", "label": "..."}] } \`\`\`
      * Steps: \`\`\`interactive { "version": "1.0", "type": "steps", "title": "...", "steps": [{"title": "...", "description": "..."}] } \`\`\`
      * Accordion: \`\`\`interactive { "version": "1.0", "type": "accordion", "title": "...", "items": [{"id": "1", "title": "...", "content": "..."}] } \`\`\`
@@ -497,6 +501,8 @@ ${orchestratedContext.augmentedSystemPrompt}`;
         webSearchResults: gatheredSources,
       });
 
+      const activity = buildActivityFromUniversal(universal);
+
       res.status(200).set({
         "Cache-Control": "no-store",
         "x-model-source": "ayatrisya-gemini-fallback",
@@ -504,6 +510,7 @@ ${orchestratedContext.augmentedSystemPrompt}`;
         "x-conversation-intent": orchestratedContext.classification.intent,
       }).json({
         text: text || "Ayatrisya AI generated response.",
+        activity,
         universalResponse: universal,
         intent: orchestratedContext.classification.intent,
         provider: "gemini-fallback",
@@ -1184,6 +1191,9 @@ async function proxyModelRequest(
 
           rawJson.text = responseText;
           rawJson.universalResponse = universal;
+          if (universal) {
+            rawJson.activity = buildActivityFromUniversal(universal);
+          }
           rawJson.intent = sharedOrchestratedContext?.classification.intent || "general_conversation";
           rawJson.provider = rawJson.provider || "ayatrisya-native";
         }

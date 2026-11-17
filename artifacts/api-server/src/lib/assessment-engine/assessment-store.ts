@@ -103,13 +103,14 @@ export class AssessmentStore {
 
   /**
    * Returns a sanitized client view of the assessment.
-   * If in examination mode, correct answers and explanations are stripped to prevent cheating.
+   * By default or in examination mode, correct answers and explanations are stripped to prevent cheating.
+   * Correct answers are returned ONLY upon server-side evaluation.
    */
-  getClientAssessment(id: string): any | null {
+  getClientAssessment(id: string, includeAnswers = false): any | null {
     const assessment = this.getAssessment(id);
     if (!assessment) return null;
 
-    if (assessment.mode === "examination") {
+    if (!includeAnswers || assessment.mode === "examination") {
       return {
         ...assessment,
         questions: assessment.questions.map((q) => {

@@ -123,6 +123,28 @@ export function QuestionRenderer({
               />
             );
 
+          case 'numerical':
+            return (
+              <div className="space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                  <input
+                    type="number"
+                    step="any"
+                    value={selectedAnswer ?? ''}
+                    onChange={(e) => onAnswer(e.target.value === '' ? undefined : Number(e.target.value))}
+                    disabled={disabled}
+                    placeholder="Enter your numerical answer..."
+                    className="w-full sm:max-w-xs rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500 disabled:opacity-50"
+                  />
+                  {question.tolerance !== undefined && (
+                    <span className="text-xs text-slate-400">
+                      (Tolerance: ±{question.tolerance})
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+
           case 'true_false':
           case 'single_choice':
           case 'image_based':

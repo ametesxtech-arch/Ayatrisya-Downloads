@@ -1,7 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { z } from "zod";
 import { assessmentStore } from "../lib/assessment-engine/assessment-store";
-import { gradeAssessment } from "../lib/assessment-engine/assessment-grader";
+import { gradeAssessment, evaluateSingleQuestionAnswer } from "../lib/assessment-engine/assessment-grader";
 import { validateAndSanitizeQuestions } from "../lib/assessment-engine/assessment-validator";
 import type { StoredAssessment } from "../lib/assessment-engine/assessment-types";
 
@@ -30,7 +30,16 @@ const CreateAssessmentSchema = z.object({
   examType: z.string().optional(),
   questions: z.array(z.object({
     id: z.string(),
-    type: z.enum(["single_choice", "multiple_choice", "true_false", "assertion_reason", "match_following", "case_based", "image_based"]),
+    type: z.enum([
+      "single_choice",
+      "multiple_choice",
+      "true_false",
+      "numerical",
+      "assertion_reason",
+      "match_following",
+      "case_based",
+      "image_based",
+    ]),
     question: z.string().min(1),
     assertion: z.string().optional(),
     reason: z.string().optional(),
@@ -38,7 +47,7 @@ const CreateAssessmentSchema = z.object({
     imageUrl: z.string().optional(),
     options: z.array(z.object({ id: z.string(), label: z.string(), hint: z.string().optional() })).optional(),
     matchPairs: z.array(z.object({ id: z.string(), left: z.string(), right: z.string() })).optional(),
-    correctAnswer: z.union([z.string(), z.array(z.string()), z.record(z.string())]),
+    correctAnswer: z.union([z.string(), z.number(), z.array(z.union([z.string(), z.number()])), z.record(z.string())]),
     explanation: z.string().optional(),
     hint: z.string().optional(),
     topic: z.string().optional(),
@@ -46,7 +55,14 @@ const CreateAssessmentSchema = z.object({
     isPyq: z.boolean().optional(),
     examTag: z.string().optional(),
     marks: z.number().optional(),
+    tolerance: z.number().optional(),
   })).min(1),
+});
+
+const EvaluateAnswerSchema = z.object({
+  questionId: z.string().min(1),
+  answer: z.any(),
+  timeSpentSeconds: z.number().int().min(0).optional().default(0),
 });
 
 const SaveProgressSchema = z.object({
@@ -67,8 +83,8 @@ const SubmitAssessmentSchema = z
     message: "Either userAnswers or answers must be provided.",
   });
 
-// 1. Create or register an assessment
-router.post("/assessments/generate", (req: Request, res: Response): void => {
+// 1. Create or register an assessment / interactive activity
+router.post(["/assessments/generate", "/activities", "/activities/generate"], (req: Request, res: Response): void => {
   const parsed = CreateAssessmentSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid assessment specification.", details: parsed.error.issues });
@@ -104,12 +120,12 @@ router.post("/assessments/generate", (req: Request, res: Response): void => {
 
   assessmentStore.saveAssessment(stored);
 
-  // Return the client-safe view (strip answers if in exam mode)
+  // Return client-safe view (answers and explanations are securely held on server until submitted)
   res.status(201).json(assessmentStore.getClientAssessment(assessmentId));
 });
 
-// 2. Get assessment metadata and questions
-router.get("/assessments/:id", (req: Request, res: Response): void => {
+// 2. Get assessment or activity metadata and questions
+router.get(["/assessments/:id", "/activities/:id"], (req: Request, res: Response): void => {
   const id = String(req.params.id);
   const clientView = assessmentStore.getClientAssessment(id);
   if (!clientView) {
@@ -122,12 +138,13 @@ router.get("/assessments/:id", (req: Request, res: Response): void => {
 
   res.status(200).json({
     assessment: clientView,
+    activity: clientView,
     progress: progress || null,
   });
 });
 
-// 3. Save student progress (autosave)
-router.post("/assessments/:id/progress", (req: Request, res: Response): void => {
+// 3. Save student progress / advance questions (autosave)
+router.post(["/assessments/:id/progress", "/activities/:id/progress", "/activities/:id/advance"], (req: Request, res: Response): void => {
   const id = String(req.params.id);
   const assessment = assessmentStore.getAssessment(id);
   if (!assessment) {
@@ -153,15 +170,85 @@ router.post("/assessments/:id/progress", (req: Request, res: Response): void => 
     updatedAt: new Date().toISOString(),
   });
 
-  res.status(200).json({ status: "saved" });
+  res.status(200).json({ status: "saved", currentQuestionIndex: parsed.data.currentQuestionIndex });
 });
 
-// 4. Secure server-side submit and evaluation
-router.post("/assessments/:id/submit", (req: Request, res: Response): void => {
+// 4. Real-time individual answer evaluation (one-question-at-a-time interactive practice)
+router.post(["/assessments/:id/evaluate", "/activities/:id/evaluate", "/activities/:id/answer"], (req: Request, res: Response): void => {
   const id = String(req.params.id);
   const assessment = assessmentStore.getAssessment(id);
   if (!assessment) {
-    res.status(404).json({ error: "Assessment not found." });
+    res.status(404).json({ error: "Assessment or activity not found." });
+    return;
+  }
+
+  const parsed = EvaluateAnswerSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid evaluation request payload.", details: parsed.error.issues });
+    return;
+  }
+
+  const question = assessment.questions.find((q) => q.id === parsed.data.questionId);
+  if (!question) {
+    res.status(404).json({ error: `Question with id '${parsed.data.questionId}' was not found in this assessment.` });
+    return;
+  }
+
+  const userId = getUserId(req);
+  const evalResult = evaluateSingleQuestionAnswer({
+    question,
+    userAnswer: parsed.data.answer,
+  });
+
+  // Persist updated progress
+  const currentProg = assessmentStore.getProgress(userId, id);
+  const updatedAnswers = { ...(currentProg?.answers || {}), [question.id]: parsed.data.answer };
+  const totalSpent = (currentProg?.totalTimeSpentSeconds || 0) + (parsed.data.timeSpentSeconds || 0);
+
+  assessmentStore.saveProgress({
+    assessmentId: id,
+    userId,
+    currentQuestionIndex: currentProg?.currentQuestionIndex ?? 0,
+    answers: updatedAnswers,
+    markedForReview: currentProg?.markedForReview || {},
+    timeRemainingSeconds: currentProg?.timeRemainingSeconds ?? assessment.timeLimitMinutes * 60,
+    totalTimeSpentSeconds: totalSpent,
+    updatedAt: new Date().toISOString(),
+  });
+
+  // Calculate current score summary across answered questions
+  const answeredCount = Object.keys(updatedAnswers).length;
+  let correctSoFar = 0;
+  for (const q of assessment.questions) {
+    if (updatedAnswers[q.id] !== undefined) {
+      const qEval = evaluateSingleQuestionAnswer({ question: q, userAnswer: updatedAnswers[q.id] });
+      if (qEval.isCorrect) correctSoFar += 1;
+    }
+  }
+
+  res.status(200).json({
+    assessmentId: id,
+    questionId: question.id,
+    isCorrect: evalResult.isCorrect,
+    correctAnswer: evalResult.correctAnswer,
+    explanation: evalResult.explanation,
+    marksObtained: evalResult.marksObtained,
+    maxMarks: evalResult.maxMarks,
+    stats: {
+      correctCount: correctSoFar,
+      totalAnswered: answeredCount,
+      totalQuestions: assessment.questions.length,
+      progressPercent: Math.round((answeredCount / assessment.questions.length) * 100),
+    },
+  });
+});
+
+// 5. Secure server-side submit and complete
+router.post(["/assessments/:id/submit", "/activities/:id/submit", "/activities/:id/complete"], (req: Request, res: Response): void => {
+  const id = String(req.params.id);
+  const assessment = assessmentStore.getAssessment(id);
+  if (!assessment) {
+    res.status(404).json({ error: "Assessment or activity not found." });
     return;
   }
 
@@ -185,8 +272,8 @@ router.post("/assessments/:id/submit", (req: Request, res: Response): void => {
   res.status(200).json(gradedResult);
 });
 
-// 5. Get previous submission results
-router.get("/assessments/:id/results", (req: Request, res: Response): void => {
+// 6. Get previous submission results
+router.get(["/assessments/:id/results", "/activities/:id/results"], (req: Request, res: Response): void => {
   const id = String(req.params.id);
   const userId = getUserId(req);
   const latest = assessmentStore.getLatestSubmission(userId, id);

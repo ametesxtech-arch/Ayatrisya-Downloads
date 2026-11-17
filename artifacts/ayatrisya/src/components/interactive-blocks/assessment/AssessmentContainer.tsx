@@ -40,7 +40,8 @@ export function AssessmentContainer({
       if (!q || !q.question) return false;
       if (q.type === 'match_following') return (q.matchPairs && q.matchPairs.length >= 2) || true;
       if (q.type === 'assertion_reason') return true;
-      // Other types must have at least 2 options or valid correct answer
+      if (q.type === 'numerical') return true;
+      // Other types must have at least 2 options or valid question structure
       return (q.options && q.options.length >= 2) || Boolean(q.correctAnswer);
     });
   }, [block.questions]);
@@ -159,6 +160,31 @@ export function AssessmentContainer({
           }),
         });
       } catch {}
+
+      // In practice mode with instant feedback, evaluate with server
+      if (state.mode === 'practice' && instantFeedback && answerValue !== undefined) {
+        try {
+          const evalUrl = buildApiUrl(`/api/assessments/${encodeURIComponent(assessmentId)}/evaluate`);
+          const res = await fetch(evalUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              questionId: currentQuestion.id,
+              answer: answerValue,
+            }),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data?.evaluation) {
+              currentQuestion.correctAnswer = data.evaluation.correctAnswer;
+              if (data.evaluation.explanation) {
+                currentQuestion.explanation = data.evaluation.explanation;
+              }
+              setState((prev) => ({ ...prev }));
+            }
+          }
+        } catch {}
+      }
     })();
   };
 
@@ -198,7 +224,7 @@ export function AssessmentContainer({
     void (async () => {
       try {
         const url = buildApiUrl(`/api/assessments/${encodeURIComponent(assessmentId)}/submit`);
-        await fetch(url, {
+        const res = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -207,6 +233,19 @@ export function AssessmentContainer({
             timeSpentSeconds: state.totalTimeSpentSeconds,
           }),
         });
+        if (res.ok) {
+          const resultData = await res.json();
+          if (Array.isArray(resultData?.results)) {
+            for (const r of resultData.results) {
+              const q = validQuestions.find((vq) => vq.id === r.questionId);
+              if (q) {
+                if (r.correctAnswer !== undefined) q.correctAnswer = r.correctAnswer;
+                if (r.explanation) q.explanation = r.explanation;
+              }
+            }
+            setState((prev) => ({ ...prev }));
+          }
+        }
       } catch {}
     })();
   };

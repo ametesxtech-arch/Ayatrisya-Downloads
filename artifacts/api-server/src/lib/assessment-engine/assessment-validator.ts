@@ -61,6 +61,7 @@ export function validateAndSanitizeQuestions(
       "single_choice",
       "multiple_choice",
       "true_false",
+      "numerical",
       "assertion_reason",
       "match_following",
       "case_based",
@@ -149,6 +150,7 @@ export function validateAndSanitizeQuestions(
       isPyq: Boolean(raw.isPyq || (raw.examTag && /CBSE|JEE|NEET/i.test(raw.examTag))),
       examTag: raw.examTag ? String(raw.examTag).trim() : undefined,
       marks: typeof raw.marks === "number" && raw.marks > 0 ? raw.marks : 1,
+      tolerance: typeof raw.tolerance === "number" ? raw.tolerance : undefined,
     });
   }
 

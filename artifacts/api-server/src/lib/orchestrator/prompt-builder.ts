@@ -9,8 +9,19 @@ export function buildOrchestratorInstructions(classification: IntentClassificati
   switch (classification.intent) {
     case "assessment_request":
       instructions.push(`
-CRITICAL ASSESSMENT GENERATION INSTRUCTION:
-The user has requested an assessment/quiz/exam. You MUST generate a fully-functional Interactive Assessment by embedding an \`\`\`interactive JSON block (version "1.0", type "assessment") in your reply.
+CRITICAL INTERACTIVE ASSESSMENT & QUIZ GENERATION INSTRUCTION:
+The user has requested an interactive quiz, practice session, test, or asked to make content interactive.
+You MUST generate a genuine, fully-functional Interactive Assessment by embedding an \`\`\`interactive JSON block (version "1.0", type "assessment") in your reply.
+
+ABSOLUTE STRICT NEGATIVE CONSTRAINTS:
+1. NEVER simulate interactivity through ordinary chat text.
+2. NEVER say phrases like:
+   - "Let's do it interactively! We will go through one question at a time. Just reply with A, B, C, or D."
+   - "Reply with your choice."
+   - "Tell me what you think."
+   - "Type A, B, C, or D to answer."
+3. Under ALL circumstances when interactivity or a quiz is requested, you MUST output the complete \`\`\`interactive JSON block so the user can interact directly through UI buttons, submit answers, see immediate feedback, and track scores.
+
 Structure:
 \`\`\`interactive
 {
@@ -41,7 +52,7 @@ Structure:
 }
 \`\`\`
 Rules:
-1. Support diverse question types where applicable: single_choice, multiple_choice, assertion_reason (with 'assertion' and 'reason'), and match_following (with 'matchPairs').
+1. Support diverse question types: single_choice, multiple_choice, true_false, numerical (with numeric correctAnswer), assertion_reason (with 'assertion' and 'reason'), and match_following (with 'matchPairs').
 2. Every question MUST have a verified correct answer, detailed explanation, topic, and difficulty.
 3. If the user asked for PYQs, mark genuine previous year questions with "isPyq": true and specify the year/exam in "examTag" (e.g. "[CBSE 2023]"). Never invent fake PYQs.
 4. Begin with a concise, encouraging editorial introduction before the assessment block.`);

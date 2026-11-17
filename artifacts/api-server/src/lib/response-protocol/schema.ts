@@ -107,6 +107,7 @@ export const AssessmentQuestionSchema = z.object({
     "match_following",
     "case_based",
     "image_based",
+    "numerical",
   ]),
   question: z.string().min(1),
   assertion: z.string().optional(),
@@ -116,13 +117,14 @@ export const AssessmentQuestionSchema = z.object({
   options: z.array(AssessmentOptionSchema).optional(),
   matchPairs: z.array(MatchPairSchema).optional(),
   // In exam mode, correct answer is retained securely on server until submission
-  correctAnswer: z.union([z.string(), z.array(z.string()), z.record(z.string())]).optional(),
+  correctAnswer: z.union([z.string(), z.number(), z.array(z.union([z.string(), z.number()])), z.record(z.string())]).optional(),
   explanation: z.string().optional(),
   hint: z.string().optional(),
   topic: z.string().optional(),
   difficulty: z.enum(["easy", "medium", "hard"]).optional(),
   isPyq: z.boolean().default(false),
   examTag: z.string().optional(),
+  tolerance: z.number().optional(),
 });
 
 export const AssessmentBlockSchema = BaseContentBlockSchema.extend({

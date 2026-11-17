@@ -93,13 +93,11 @@ export function normalizeUniversalResponse(params: {
             } catch {}
           }
 
-          // If examination mode, strip correctAnswer from client payload so it is not prematurely disclosed
-          const clientQuestions = assessmentMode === "examination"
-            ? questions.map((q) => {
-                const { correctAnswer, explanation, ...sanitized } = q;
-                return sanitized as AssessmentQuestion;
-              })
-            : questions;
+          // Strip correctAnswer and explanation from client payload to prevent cheating ahead of time
+          const clientQuestions = questions.map((q) => {
+            const { correctAnswer, explanation, ...sanitized } = q;
+            return sanitized as AssessmentQuestion;
+          });
 
           blocks.push({
             id: assessmentId,
@@ -201,6 +199,67 @@ export function normalizeUniversalResponse(params: {
     });
   }
 
+  // Fallback: If no interactive assessment block was parsed, but the raw text contains numbered multiple choice questions,
+  // automatically extract and promote them to a genuine interactive assessment block.
+  const hasAssessmentBlock = blocks.some((b) => b.type === "assessment");
+  if (!hasAssessmentBlock) {
+    const fallbackQuestions = extractQuestionsFromMarkdown(rawText);
+    if (fallbackQuestions && fallbackQuestions.length > 0) {
+      detectedIntent = "assessment_request";
+      const validated = validateAndSanitizeQuestions(fallbackQuestions);
+      if (validated.sanitizedQuestions.length > 0) {
+        const assessmentId = `${messageId}-assessment-auto`;
+        const assessmentMode = "practice";
+
+        // Persist full questions including answers to store
+        try {
+          assessmentStore.saveAssessment({
+            id: assessmentId,
+            title: "Interactive Practice Assessment",
+            description: "Practice questions auto-structured for interactive answering.",
+            mode: assessmentMode,
+            timeLimitMinutes: Math.max(5, validated.sanitizedQuestions.length * 2),
+            passingScore: 70,
+            questions: validated.sanitizedQuestions as any,
+            topicSummary: Array.from(new Set(validated.sanitizedQuestions.map((q) => q.topic).filter(Boolean))) as string[],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          });
+        } catch {}
+
+        // Strip answers for client
+        const clientQuestions = validated.sanitizedQuestions.map((q) => {
+          const { correctAnswer, explanation, ...sanitized } = q;
+          return sanitized as AssessmentQuestion;
+        });
+
+        // Check if preamble has text before question 1
+        const preambleMatch = rawText.match(/^(.*?)((?:(?:\*{1,2})?(?:Question\s+)?1[\.\)]))/s);
+        const preambleText = preambleMatch ? preambleMatch[1].trim() : "";
+
+        blocks.length = 0;
+        if (preambleText) {
+          blocks.push({
+            id: `${messageId}-intro`,
+            type: "markdown",
+            content: preambleText,
+          });
+        }
+        blocks.push({
+          id: assessmentId,
+          type: "assessment",
+          title: "Interactive Practice Assessment",
+          description: "Answer the questions interactively one at a time.",
+          mode: assessmentMode,
+          timeLimitMinutes: Math.max(5, validated.sanitizedQuestions.length * 2),
+          passingScore: 70,
+          questions: clientQuestions,
+          topicSummary: Array.from(new Set(validated.sanitizedQuestions.map((q) => q.topic).filter(Boolean))) as string[],
+        });
+      }
+    }
+  }
+
   // Convert citations to structured blocks
   const citationBlocks = extractedCitations.map((c, i) => ({
     id: `${messageId}-citation-${i + 1}`,
@@ -225,5 +284,124 @@ export function normalizeUniversalResponse(params: {
     suggestedFollowUps,
     metadata,
   });
+}
+
+/**
+ * Extracts multiple choice questions from plain Markdown text if LLM failed to wrap in interactive code blocks.
+ */
+export function extractQuestionsFromMarkdown(text: string): any[] | null {
+  if (!text || text.length < 20) return null;
+
+  const qSplitRegex = /(?:^|\n)(?:(?:\#{1,4}\s*)?(?:\*{1,2})?(?:Question\s+)?(\d+)[\.\)]\s*(?:\*{1,2})?\s*)/i;
+  const parts = text.split(qSplitRegex);
+  if (parts.length < 3) return null;
+
+  const extracted: any[] = [];
+  for (let i = 1; i < parts.length; i += 2) {
+    const qNum = parts[i];
+    const qBody = parts[i + 1];
+    if (!qBody) continue;
+
+    const optRegex = /(?:^|\n)[-\s*]*\b([A-Da-d])[\.\)]\s*([^\n]+)/g;
+    const options: Array<{ id: string; label: string }> = [];
+    let optMatch: RegExpExecArray | null;
+    let firstOptIndex = -1;
+
+    while ((optMatch = optRegex.exec(qBody)) !== null) {
+      if (firstOptIndex === -1) firstOptIndex = optMatch.index;
+      options.push({
+        id: optMatch[1].toLowerCase(),
+        label: optMatch[2].replace(/\*{1,2}/g, "").trim(),
+      });
+    }
+
+    if (options.length >= 2) {
+      const qText = firstOptIndex > -1
+        ? qBody.substring(0, firstOptIndex).trim()
+        : qBody.split("\n")[0].trim();
+
+      const ansMatch = qBody.match(/(?:Answer|Correct\s*Answer)\s*[:\-]?\s*(?:\*{1,2})?\s*([A-Da-d])/i);
+      const correctAnswer = ansMatch ? ansMatch[1].toLowerCase() : options[0].id;
+
+      const expMatch = qBody.match(/Explanation\s*[:\-]?\s*([^\n]+(?:\n[^\n]+)?)/i);
+      const explanation = expMatch ? expMatch[1].trim() : undefined;
+
+      extracted.push({
+        id: `q${qNum || extracted.length + 1}`,
+        type: "single_choice",
+        question: qText.replace(/\*{1,2}/g, "").trim(),
+        options,
+        correctAnswer,
+        explanation,
+      });
+    }
+  }
+
+  return extracted.length >= 2 || (extracted.length === 1 && extracted[0].options.length >= 2) ? extracted : null;
+}
+
+/**
+ * Builds structured activity object matching the structured interactive response protocol.
+ */
+export function buildActivityFromUniversal(universal: UniversalResponse): any | undefined {
+  const assessmentBlock = universal.blocks.find((b) => b.type === "assessment");
+  if (assessmentBlock && assessmentBlock.type === "assessment") {
+    return {
+      type: "interactive_quiz",
+      id: assessmentBlock.id,
+      title: assessmentBlock.title || "Interactive Assessment",
+      description: assessmentBlock.description || "Test your knowledge one question at a time.",
+      mode: "one_question_at_a_time",
+      questions: assessmentBlock.questions,
+      progress: {
+        currentQuestion: 0,
+        totalQuestions: assessmentBlock.questions.length,
+      },
+      scoring: {
+        total: assessmentBlock.questions.length,
+        currentScore: 0,
+      },
+      completionRules: {
+        requiresAllAnswered: true,
+        showResultsAtEnd: true,
+      },
+    };
+  }
+
+  const chartBlock = universal.blocks.find((b) => b.type === "chart");
+  if (chartBlock && chartBlock.type === "chart") {
+    return {
+      type: "charts",
+      id: chartBlock.id,
+      title: chartBlock.title,
+      chartType: chartBlock.chartType,
+      data: chartBlock.data,
+      xAxisKey: chartBlock.xAxisKey,
+      series: chartBlock.series,
+    };
+  }
+
+  const tableBlock = universal.blocks.find((b) => b.type === "table");
+  if (tableBlock && tableBlock.type === "table") {
+    return {
+      type: "tables",
+      id: tableBlock.id,
+      title: tableBlock.title,
+      columns: tableBlock.columns,
+      rows: tableBlock.rows,
+    };
+  }
+
+  const diagramBlock = universal.blocks.find((b) => b.type === "diagram");
+  if (diagramBlock && diagramBlock.type === "diagram") {
+    return {
+      type: "diagrams",
+      id: diagramBlock.id,
+      diagramType: diagramBlock.diagramType,
+      code: diagramBlock.code,
+    };
+  }
+
+  return undefined;
 }
 

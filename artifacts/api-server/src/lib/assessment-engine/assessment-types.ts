@@ -2,6 +2,7 @@ export type QuestionType =
   | "single_choice"
   | "multiple_choice"
   | "true_false"
+  | "numerical"
   | "assertion_reason"
   | "match_following"
   | "case_based"
@@ -37,6 +38,7 @@ export interface StoredQuestion {
   isPyq?: boolean;
   examTag?: string;
   marks?: number;
+  tolerance?: number;
 }
 
 export type StoredOption = StoredAssessmentOption;

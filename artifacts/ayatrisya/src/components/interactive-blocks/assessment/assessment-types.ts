@@ -5,7 +5,8 @@ export type AssessmentQuestionType =
   | 'assertion_reason'
   | 'match_following'
   | 'case_based'
-  | 'image_based';
+  | 'image_based'
+  | 'numerical';
 
 export interface AssessmentOption {
   id: string; // 'a', 'b', 'c', 'd'
@@ -28,7 +29,9 @@ export interface AssessmentQuestion {
   // For multiple_choice: ['a', 'c']
   // For assertion_reason: 'a' | 'b' | 'c' | 'd'
   // For match_following: Record<leftId, rightId> or matching pairs
-  correctAnswer: string | string[] | Record<string, string>;
+  // For numerical: number or numeric string
+  correctAnswer?: string | string[] | Record<string, string> | number;
+  tolerance?: number;
   explanation?: string;
   topic?: string;
   difficulty?: 'easy' | 'medium' | 'hard';

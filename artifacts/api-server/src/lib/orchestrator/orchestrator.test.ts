@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { classifyConversationIntent } from "./classifier";
 import { normalizeUniversalResponse } from "../response-protocol/normalizer";
+import { assessmentStore } from "../assessment-engine/assessment-store";
 
 describe("Conversational Orchestrator 2.0", () => {
   describe("Intent Classification", () => {
@@ -146,7 +147,11 @@ Let me know if you would like more practice questions!`;
       if (assessmentBlock && assessmentBlock.type === "assessment") {
         expect(assessmentBlock.title).toBe("Quantum Mechanics Intro");
         expect(assessmentBlock.questions.length).toBe(1);
-        expect(assessmentBlock.questions[0].correctAnswer).toBe("a");
+        // Correct answer is stripped from client payload to prevent cheating ahead of time
+        expect(assessmentBlock.questions[0].correctAnswer).toBeUndefined();
+        // Server store retains the verified answer
+        const serverAssessment = assessmentStore.getAssessment(assessmentBlock.id);
+        expect(serverAssessment?.questions[0].correctAnswer).toBe("a");
       }
 
       expect(response.citations.length).toBe(1);

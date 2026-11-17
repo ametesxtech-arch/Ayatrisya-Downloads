@@ -3,6 +3,7 @@ import { isCloudflareConfigured } from "./cloudflare-image";
 import { streamCloudflareChat, type CloudflareChatMessage } from "./cloudflare-chat";
 import { searchInternet, shouldSearchInternet, formatSourcesSection, type SearchResult } from "./web-search";
 import { orchestrator, type OrchestratedContext } from "./orchestrator/orchestrator";
+import { buildActivityFromUniversal } from "./response-protocol/normalizer";
 
 export async function handleCloudflareChatFallback(
   req: Request,
@@ -165,6 +166,8 @@ Guidelines:
         webSearchResults: gatheredSources,
       });
 
+      const activity = buildActivityFromUniversal(universal);
+
       res.status(200).set({
         "Cache-Control": "no-store",
         "x-model-source": "ayatrisya-cloudflare-ai",
@@ -172,6 +175,7 @@ Guidelines:
         "x-conversation-intent": orchestratedContext.classification.intent,
       }).json({
         text,
+        activity,
         universalResponse: universal,
         intent: orchestratedContext.classification.intent,
         provider: "cloudflare-workers-ai",
