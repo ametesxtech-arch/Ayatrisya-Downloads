@@ -8,6 +8,11 @@ import { usePrefs } from '@/hooks/use-prefs';
 import { errMsg } from '@/lib/format';
 import { PublicSiteFooter } from '@/components/PublicSite';
 import { MotionText } from '@/components/MotionText';
+import {
+  isAllowedCanvasOrigin,
+  createHandshakeTicketForCanvas,
+  appendTicketToUrl,
+} from '@/lib/canvasHandoff';
 
 export function AuthPage() {
   const [path, setPath] = useLocation();
@@ -34,6 +39,30 @@ export function AuthPage() {
   useEffect(() => {
     if (auth.user && !isCheck && loaded) {
       if (!auth.user.emailVerified && isCreate) return;
+
+      // Check for Canvas returnUrl parameter
+      const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+      const returnUrl = params?.get('returnUrl') || params?.get('redirect');
+
+      if (returnUrl) {
+        let parsedReturn: URL | null = null;
+        try {
+          parsedReturn = new URL(returnUrl);
+        } catch {}
+
+        if (parsedReturn && isAllowedCanvasOrigin(parsedReturn.origin)) {
+          void (async () => {
+            const ticketCode = await createHandshakeTicketForCanvas(returnUrl, auth.user!);
+            if (ticketCode) {
+              window.location.href = appendTicketToUrl(returnUrl, ticketCode);
+              return;
+            }
+            window.location.href = returnUrl;
+          })();
+          return;
+        }
+      }
+
       setPath(prefs.onboardingComplete ? '/workspace' : '/onboarding', { replace: true });
     }
   }, [auth.user, isCheck, isCreate, loaded, prefs.onboardingComplete, setPath]);

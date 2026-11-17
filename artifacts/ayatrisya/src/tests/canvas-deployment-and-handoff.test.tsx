@@ -5,6 +5,8 @@ import {
   openCanvasWithAuth,
   ensureCanvasHandoffListener,
   broadcastSignOutToCanvas,
+  createHandshakeTicketForCanvas,
+  appendTicketToUrl,
   ALLOWED_CANVAS_ORIGINS,
 } from '@/lib/canvasHandoff';
 
@@ -46,7 +48,7 @@ describe('Ayatrisya Canvas Deployment and Auth Handoff Protocol', () => {
   describe('Canvas URL and Origin Validation', () => {
     it('defaults to the deployed Firebase Hosting URL for Canvas', () => {
       const url = getCanvasAppUrl();
-      expect(url).toBe('https://ayatrisya-canvas.web.app');
+      expect(url).toBe('https://canvas.ayatrisya.web.app');
     });
 
     it('accepts designated Canvas origins', () => {
@@ -84,7 +86,7 @@ describe('Ayatrisya Canvas Deployment and Auth Handoff Protocol', () => {
       expect(target).toBe('_blank');
 
       const parsedUrl = new URL(openedUrl);
-      expect(parsedUrl.origin).toBe('https://ayatrisya-canvas.web.app');
+      expect(parsedUrl.origin).toBe('https://canvas.ayatrisya.web.app');
       expect(parsedUrl.searchParams.get('handoff')).toBe('1');
 
       const nonce = parsedUrl.searchParams.get('nonce');
@@ -205,6 +207,46 @@ describe('Ayatrisya Canvas Deployment and Auth Handoff Protocol', () => {
       expect(mockPostMessage).toHaveBeenCalled();
       const calledWithSignOut = mockPostMessage.mock.calls.some(([msg]: [any]) => msg?.type === 'AYATRISYA_AUTH_SIGNOUT');
       expect(calledWithSignOut).toBe(true);
+    });
+  });
+
+  describe('Single-Use Ticket Handoff for Direct Canvas Access', () => {
+    it('appends ticket code cleanly to target Canvas URL', () => {
+      const target = 'https://canvas.ayatrisya.web.app/workspace/project_abc';
+      const urlWithCode = appendTicketToUrl(target, 'cac_mock_code_123');
+      expect(urlWithCode).toBe('https://canvas.ayatrisya.web.app/workspace/project_abc?code=cac_mock_code_123');
+    });
+
+    it('generates a single-use Canvas ticket for authenticated user', async () => {
+      vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+        if (url.includes('/api/auth/canvas/ticket')) {
+          return new Response(JSON.stringify({ code: 'cac_generated_ticket_456', expiresInSeconds: 60 }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+        return new Response('Not found', { status: 404 });
+      }));
+
+      const mockUser = {
+        uid: 'user_123',
+        email: 'user@ayatrisya.ai',
+        displayName: 'User',
+        getIdToken: async () => 'mock_token',
+      } as any;
+
+      const code = await createHandshakeTicketForCanvas('https://canvas.ayatrisya.web.app', mockUser);
+      expect(code).toBe('cac_generated_ticket_456');
+    });
+
+    it('rejects ticket generation for untrusted origin', async () => {
+      const mockUser = {
+        uid: 'user_123',
+        getIdToken: async () => 'mock_token',
+      } as any;
+
+      const code = await createHandshakeTicketForCanvas('https://evil-site.com', mockUser);
+      expect(code).toBeNull();
     });
   });
 });

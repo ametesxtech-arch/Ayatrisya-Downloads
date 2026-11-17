@@ -60,6 +60,9 @@ export function isAllowedApiOrigin(
     "https://ayatrisya.web.app",
     "https://ayatrisya-ai.web.app",
     "https://ayatrisya.firebaseapp.com",
+    "https://canvas.ayatrisya.web.app",
+    "https://ayatrisya-canvas.web.app",
+    "https://ayatrisya-canvas.firebaseapp.com",
     ...(environment.AYATRISYA_APP_ORIGIN ?? "")
       .split(",")
       .map((origin) => configuredHttpsOrigin(origin)),

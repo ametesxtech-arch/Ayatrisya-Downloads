@@ -1,8 +1,10 @@
 import { firebaseAuth, firebaseConfigured } from '@/integrations/firebase/client';
+import { buildApiUrl } from '@/lib/api-config';
+import type { User } from 'firebase/auth';
 
 export const ALLOWED_CANVAS_ORIGINS = [
-  'https://ayatrisya-canvas.web.app',
   'https://canvas.ayatrisya.web.app',
+  'https://ayatrisya-canvas.web.app',
   'https://ayatrisya-canvas.firebaseapp.com',
   'http://localhost:3000',
   'http://localhost:5173',
@@ -26,7 +28,59 @@ export function isAllowedCanvasOrigin(origin: string): boolean {
 export function getCanvasAppUrl(): string {
   const envUrl = (import.meta.env.VITE_CANVAS_APP_URL as string | undefined)?.trim();
   if (envUrl) return envUrl.replace(/\/$/, '');
-  return 'https://ayatrisya-canvas.web.app';
+  return 'https://canvas.ayatrisya.web.app';
+}
+
+export function appendTicketToUrl(rawUrl: string, code: string): string {
+  try {
+    const url = new URL(rawUrl);
+    url.searchParams.set('code', code);
+    return url.toString();
+  } catch {
+    const separator = rawUrl.includes('?') ? '&' : '?';
+    return `${rawUrl}${separator}code=${encodeURIComponent(code)}`;
+  }
+}
+
+export async function createHandshakeTicketForCanvas(
+  targetUrl: string,
+  user: User,
+): Promise<string | null> {
+  try {
+    let parsed: URL;
+    try {
+      parsed = new URL(targetUrl);
+    } catch {
+      return null;
+    }
+
+    if (!isAllowedCanvasOrigin(parsed.origin)) {
+      return null;
+    }
+
+    const token = await user.getIdToken();
+    const apiUrl = buildApiUrl('/api/auth/canvas/ticket');
+    const res = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        targetOrigin: parsed.origin,
+        returnPath: parsed.pathname + parsed.search,
+        email: user.email || undefined,
+        displayName: user.displayName || undefined,
+        photoURL: user.photoURL || undefined,
+      }),
+    });
+
+    if (!res.ok) return null;
+    const data = (await res.json()) as { code?: string };
+    return data?.code || null;
+  } catch {
+    return null;
+  }
 }
 
 interface PendingHandoff {
