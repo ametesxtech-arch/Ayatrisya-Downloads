@@ -7,6 +7,9 @@ import tasksRouter from "./tasks";
 import privacyRouter from "./privacy";
 import assessmentsRouter from "./assessments";
 import interactiveEventsRouter from "./interactive-events";
+import presentationsRouter from "./presentations";
+import uploadsRouter from "./uploads";
+import voiceRouter from "./voice";
 
 const router: IRouter = Router();
 
@@ -18,5 +21,8 @@ router.use(tasksRouter);
 router.use(privacyRouter);
 router.use(assessmentsRouter);
 router.use(interactiveEventsRouter);
+router.use(presentationsRouter);
+router.use(uploadsRouter);
+router.use(voiceRouter);
 
 export default router;

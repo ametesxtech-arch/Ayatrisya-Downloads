@@ -74,7 +74,7 @@ router.post("/interactive/event", (req: Request, res: Response): void => {
           updatedAt: new Date().toISOString(),
         };
 
-        existing.answers[questionId] = answer;
+        (existing.answers as Record<string, any>)[questionId] = answer;
         if (typeof timeRemainingSeconds === "number") existing.timeRemainingSeconds = timeRemainingSeconds;
         if (typeof totalTimeSpentSeconds === "number") existing.totalTimeSpentSeconds = totalTimeSpentSeconds;
         existing.updatedAt = new Date().toISOString();

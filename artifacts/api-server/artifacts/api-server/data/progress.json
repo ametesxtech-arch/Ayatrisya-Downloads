@@ -82,5 +82,61 @@
     "timeRemainingSeconds": 2400,
     "totalTimeSpentSeconds": 300,
     "updatedAt": "2026-11-07T17:46:40.991Z"
+  },
+  "student_101:exam_1794886317824_koe5l": {
+    "assessmentId": "exam_1794886317824_koe5l",
+    "userId": "student_101",
+    "currentQuestionIndex": 1,
+    "answers": {
+      "q1": "b"
+    },
+    "markedForReview": {
+      "q2": true
+    },
+    "timeRemainingSeconds": 2400,
+    "totalTimeSpentSeconds": 300,
+    "updatedAt": "2026-11-17T03:31:58.268Z"
+  },
+  "student_101:exam_1794886430077_jftdc": {
+    "assessmentId": "exam_1794886430077_jftdc",
+    "userId": "student_101",
+    "currentQuestionIndex": 1,
+    "answers": {
+      "q1": "b"
+    },
+    "markedForReview": {
+      "q2": true
+    },
+    "timeRemainingSeconds": 2400,
+    "totalTimeSpentSeconds": 300,
+    "updatedAt": "2026-11-17T03:33:50.246Z"
+  },
+  "student_101:exam_1794887131399_08jng": {
+    "assessmentId": "exam_1794887131399_08jng",
+    "userId": "student_101",
+    "currentQuestionIndex": 1,
+    "answers": {
+      "q1": "b"
+    },
+    "markedForReview": {
+      "q2": true
+    },
+    "timeRemainingSeconds": 2400,
+    "totalTimeSpentSeconds": 300,
+    "updatedAt": "2026-11-17T03:45:31.610Z"
+  },
+  "student_101:exam_1794887399451_42tov": {
+    "assessmentId": "exam_1794887399451_42tov",
+    "userId": "student_101",
+    "currentQuestionIndex": 1,
+    "answers": {
+      "q1": "b"
+    },
+    "markedForReview": {
+      "q2": true
+    },
+    "timeRemainingSeconds": 2400,
+    "totalTimeSpentSeconds": 300,
+    "updatedAt": "2026-11-17T03:49:59.512Z"
   }
 }
