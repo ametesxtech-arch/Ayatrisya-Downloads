@@ -848,4 +848,65 @@ describe("authenticated Ayatrisya model gateway", () => {
     expect(data.universalResponse.intent).toBe("code_generation");
     expect(data.universalResponse.blocks.length).toBeGreaterThan(0);
   });
+
+  it("handles Hugging Face Space upstream for /capabilities with discovery", async () => {
+    vi.stubEnv("AYATRISYA_MODEL_ENDPOINT", "https://huggingface.co/spaces/grpAX/ayatrisya-chat-model-server");
+    vi.stubEnv("AYATRISYA_MODEL_API_KEY", "hf_test_token");
+
+    vi.stubGlobal("fetch", vi.fn(async (input: any) => {
+      const url = String(input);
+      if (url.includes("/capabilities")) {
+        return new Response(JSON.stringify({
+          models: [
+            { id: "v1-fast", available: true, modalities: ["chat", "coding"] },
+            { id: "v2-best", available: true, modalities: ["chat", "coding"] },
+          ],
+        }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      return new Response("Not found", { status: 404 });
+    }));
+
+    const call = await startApi();
+    const response = await call("/api/model/capabilities", { method: "GET" });
+
+    expect(response.status).toBe(200);
+    const data: any = await response.json();
+    expect(data.models).toHaveLength(2);
+    expect(data.models[0].id).toBe("v1-fast");
+  });
+
+  it("returns 503 with authentication message when upstream rejects credentials with 401", async () => {
+    vi.stubEnv("AYATRISYA_MODEL_ENDPOINT", "https://models.ayatrisya.example/v1/");
+    vi.stubEnv("AYATRISYA_MODEL_API_KEY", "invalid_key");
+
+    vi.stubGlobal("fetch", vi.fn(async (input: any) => {
+      return new Response("Unauthorized", { status: 401 });
+    }));
+
+    const call = await startApi();
+    const response = await call("/api/model/capabilities", { method: "GET" });
+
+    expect(response.status).toBe(503);
+    const data: any = await response.json();
+    expect(data.error).toContain("authentication");
+  });
+
+  it("returns 429 when upstream model service rate limit is exceeded", async () => {
+    vi.stubEnv("AYATRISYA_MODEL_ENDPOINT", "https://models.ayatrisya.example/v1/");
+    vi.stubEnv("AYATRISYA_MODEL_API_KEY", "test_key");
+
+    vi.stubGlobal("fetch", vi.fn(async (input: any) => {
+      return new Response("Rate limited", { status: 429 });
+    }));
+
+    const call = await startApi();
+    const response = await call("/api/model/capabilities", { method: "GET" });
+
+    expect(response.status).toBe(429);
+    const data: any = await response.json();
+    expect(data.error).toContain("rate limit");
+  });
 });

@@ -29,6 +29,8 @@ import {
   normalizeHfSpaceBaseUrl,
   synthesizeSpeechViaHf,
   transcribeAudioViaHf,
+  discoverHfCapabilities,
+  callHfDirectRestApi,
 } from "../lib/hf-space-client";
 import { generateSyntheticSpeechWav } from "../lib/voice-synthesizer";
 import { imageOrchestrator } from "../lib/image-engine/orchestrator";
@@ -811,7 +813,7 @@ async function proxyModelRequest(
     }
   }
 
-  // Handle Hugging Face Gradio ZeroGPU Space integration
+  // Handle Hugging Face ZeroGPU Space / Gradio integration
   if (isHuggingFaceSpaceUrl(config.baseUrl.toString())) {
     try {
       // Use HF_READ_TOKEN or AYATRISYA_MODEL_API_KEY
@@ -824,7 +826,34 @@ async function proxyModelRequest(
 
       if (route.upstreamPath === "/chat" && method === "POST") {
         const payload = typeof body === "string" ? body : JSON.stringify(req.body);
-        const result = (await callHfGradioApi(hfConfig, "predict", [payload])) as { text?: string; error?: string };
+        let result: { text?: string; error?: string } | undefined;
+
+        // Path 1: Direct REST /chat if supported by mounted FastAPI wrapper
+        const directChat = await callHfDirectRestApi<{ text?: string; error?: string }>(
+          hfConfig,
+          "/chat",
+          "POST",
+          typeof body === "string" ? JSON.parse(body) : req.body,
+        );
+
+        if (directChat.ok && directChat.data) {
+          result = directChat.data;
+        } else if (!directChat.isNotFound) {
+          if (directChat.isUnauthorized) {
+            sendError(res, 502, "Upstream model server rejected authentication. Verify AYATRISYA_MODEL_API_KEY.");
+            return;
+          }
+          if (directChat.isRateLimited) {
+            sendError(res, 429, "Upstream model server rate limit or compute quota exceeded.");
+            return;
+          }
+        }
+
+        // Path 2: Gradio SSE API (/gradio_api/call/predict)
+        if (!result) {
+          result = (await callHfGradioApi(hfConfig, "predict", [payload])) as { text?: string; error?: string };
+        }
+
         if (result && typeof result.text === "string") {
           let responseText = result.text;
           if (sharedOrchestratedContext && sharedOrchestratedContext.webSearchResults.length > 0) {
@@ -846,6 +875,31 @@ async function proxyModelRequest(
               })
             : undefined;
 
+          // Streaming adaptation: If client requested streaming, chunk output as SSE or NDJSON
+          if (parsedChatData?.stream) {
+            const acceptHeader = req.get("accept") ?? "";
+            const isNdjson = acceptHeader.includes("ndjson");
+            const contentType = isNdjson ? "application/x-ndjson" : "text/event-stream";
+            res.status(200).set({
+              "Cache-Control": "no-store",
+              "Content-Type": contentType,
+              "x-model-source": "ayatrisya-hosted-zerogpu",
+              "x-conversation-intent": sharedOrchestratedContext?.classification.intent || "general_conversation",
+            });
+
+            // Split into word tokens for smooth client rendering
+            const tokens = responseText.split(/(?<=\s+)/);
+            for (const token of tokens) {
+              if (isNdjson) {
+                res.write(`${JSON.stringify({ token })}\n`);
+              } else {
+                res.write(`data: ${JSON.stringify({ token })}\n\n`);
+              }
+            }
+            res.end();
+            return;
+          }
+
           res
             .status(200)
             .set({
@@ -866,23 +920,20 @@ async function proxyModelRequest(
       }
 
       if (route.upstreamPath === "/health" && method === "GET") {
-        const health = (await callHfGradioApi(hfConfig, "health", [])) as {
-          status?: string;
-          model?: string;
-          readiness?: string;
-          parameter_count?: string;
-          device?: string;
-          error?: string;
-        };
+        // Direct REST first, then Gradio health
+        const directHealth = await callHfDirectRestApi<any>(hfConfig, "/health", "GET");
+        let health: any = directHealth.ok ? directHealth.data : null;
+        if (!health) {
+          health = (await callHfGradioApi(hfConfig, "health", [])) as any;
+        }
         const status = health?.status === "ok" ? 200 : 503;
         res.status(status).set({ "Cache-Control": "no-store", "Content-Type": "application/json" }).json(health);
         return;
       }
 
       if (route.upstreamPath === "/capabilities" && method === "GET") {
-        const caps = (await callHfGradioApi(hfConfig, "capabilities", [])) as {
-          models?: Array<{ id: string; available: boolean; modalities?: string[] }>;
-        };
+        // Discover verified capabilities via direct REST, Gradio SSE, or health inspection
+        const caps = await discoverHfCapabilities(hfConfig);
         if (caps?.models && Array.isArray(caps.models)) {
           if (isCloudflareConfigured()) {
             for (const m of caps.models) {
@@ -896,8 +947,17 @@ async function proxyModelRequest(
         }
         throw new Error("Invalid capabilities payload from HF Space.");
       }
-    } catch (hfErr) {
+    } catch (hfErr: any) {
       req.log.warn({ error: hfErr instanceof Error ? hfErr.message : String(hfErr) }, "HF Space inference failed");
+      // Distinguish status if preserved
+      if (hfErr?.status === 401 || hfErr?.status === 403) {
+        sendError(res, 502, "Upstream model server rejected authentication. Verify AYATRISYA_MODEL_API_KEY.");
+        return;
+      }
+      if (hfErr?.status === 429) {
+        sendError(res, 429, "Upstream model server rate limit or compute quota exceeded.");
+        return;
+      }
       // Fallback to Gemini if configured
       if (route.upstreamPath === "/chat" && method === "POST" && process.env.GEMINI_API_KEY?.trim()) {
         const fallbackOk = await fallbackWithGeminiChat(req, res, parsedChatData, sharedOrchestratedContext);
@@ -992,7 +1052,11 @@ async function proxyModelRequest(
       }
 
       if (upstream.status === 429) {
-        sendError(res, 503, "The Ayatrisya model service is busy. Try again shortly.");
+        sendError(res, 429, "Upstream model service rate limit or compute quota exceeded.");
+      } else if (upstream.status === 401 || upstream.status === 403) {
+        sendError(res, 503, "Upstream model server rejected authentication. Verify AYATRISYA_MODEL_API_KEY.");
+      } else if (upstream.status === 404) {
+        sendError(res, 503, `Upstream model service does not support endpoint ${route.upstreamPath} (HTTP 404).`);
       } else {
         sendError(res, 503, "The Ayatrisya model service is unavailable or rejected the request.");
       }

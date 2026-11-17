@@ -478,5 +478,65 @@ with gr.Blocks(title="Ayatrisya Multi-Modal Model Server") as demo:
 
 demo.queue()
 
+# ---------------------------------------------------------------------------
+# Direct REST API Gateway Endpoints (FastAPI Mount)
+# ---------------------------------------------------------------------------
+try:
+    from fastapi import FastAPI, Request
+    from fastapi.responses import JSONResponse
+
+    fastapi_app = FastAPI(
+        title="Ayatrisya Multi-Modal Model Server",
+        description="Dedicated serverless intelligence and multi-modal inference engine for Ayatrisya AI",
+        version="1.1.0",
+    )
+
+    def verify_request_token(req: Request) -> bool:
+        secret = os.getenv("AYATRISYA_MODEL_API_KEY", "").strip()
+        if not secret:
+            return True
+        auth = req.headers.get("authorization", "")
+        if auth.startswith("Bearer "):
+            token = auth[7:].strip()
+            if token == secret:
+                return True
+        return False
+
+    @fastapi_app.get("/health")
+    def api_health():
+        res = health_check()
+        return JSONResponse(content=json.loads(res))
+
+    @fastapi_app.get("/capabilities")
+    def api_capabilities(req: Request):
+        if not verify_request_token(req):
+            return JSONResponse(status_code=401, content={"error": "Unauthorized: Invalid model API key."})
+        res = capabilities()
+        return JSONResponse(content=json.loads(res))
+
+    @fastapi_app.post("/chat")
+    async def api_chat(req: Request):
+        if not verify_request_token(req):
+            return JSONResponse(status_code=401, content={"error": "Unauthorized: Invalid model API key."})
+        try:
+            body = await req.json()
+            res_str = chat_predict(body)
+            parsed = json.loads(res_str)
+            if "error" in parsed:
+                return JSONResponse(status_code=400, content=parsed)
+            return JSONResponse(content=parsed)
+        except Exception as e:
+            return JSONResponse(status_code=400, content={"error": str(e)})
+
+    app = gr.mount_gradio_app(fastapi_app, demo, path="/")
+except Exception as mount_err:
+    logger.warning(f"Could not mount FastAPI wrapper; falling back to standalone Gradio: {mount_err}")
+    app = demo
+
 if __name__ == "__main__":
-    demo.launch(server_name="0.0.0.0", server_port=int(os.getenv("PORT", 7860)))
+    port = int(os.getenv("PORT", 7860))
+    try:
+        import uvicorn
+        uvicorn.run(app, host="0.0.0.0", port=port)
+    except Exception:
+        demo.launch(server_name="0.0.0.0", server_port=port)
