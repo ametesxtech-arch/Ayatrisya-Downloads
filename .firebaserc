@@ -1,5 +1,18 @@
 {
   "projects": {
     "default": "ayatrisya"
-  }
+  },
+  "targets": {
+    "ayatrisya": {
+      "hosting": {
+        "app": [
+          "ayatrisya"
+        ],
+        "canvas": [
+          "ayatrisya-canvas"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }

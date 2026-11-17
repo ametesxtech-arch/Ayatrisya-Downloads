@@ -3,6 +3,7 @@ import { createUserWithEmailAndPassword, GithubAuthProvider, GoogleAuthProvider,
 import { repository } from "@/storage/repository";
 import { firebaseAuth, firebaseConfigured, authError } from "./client";
 import { driveSync } from "@/integrations/google-drive/sync";
+import { broadcastSignOutToCanvas } from "@/lib/canvasHandoff";
 interface AuthState {
   user: User | null; guest:boolean; loading:boolean; configured:boolean; error:string|null;
   startGuest():void;

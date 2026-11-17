@@ -68,6 +68,7 @@ import { LinuxVM } from '@/lib/linux-vm';
 import { detectFramework, type FrameworkDetectionResult } from '@/components/canvas/framework-detector';
 import type { CanvasFile, EditorProblem, ProcessState, ActiveProcess } from '@/components/canvas/types';
 import { cx } from '@/lib/cx';
+import { openCanvasWithAuth } from '@/lib/canvasHandoff';
 
 function getLangFromExt(fileName: string): string {
   const ext = fileName.split('.').pop()?.toLowerCase();
@@ -1007,6 +1008,18 @@ function CanvasIDEInternal() {
           >
             <Download size={13} />
             <span>Export .ZIP</span>
+          </button>
+
+          {/* Dedicated Canvas App Launcher */}
+          <button
+            type="button"
+            onClick={() => openCanvasWithAuth()}
+            className="flex items-center gap-1.5 rounded-md bg-violet-600/20 hover:bg-violet-600/30 px-2.5 py-1 text-[11px] text-violet-200 border border-violet-500/30 transition shadow-sm font-medium"
+            title="Open Canvas in dedicated full-screen tab"
+            data-testid="open-canvas-dedicated-btn"
+          >
+            <ExternalLink size={12} className="text-violet-300" />
+            <span className="hidden sm:inline">Open App ↗</span>
           </button>
 
           {/* Runtime Audit Pill */}

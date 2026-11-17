@@ -25,6 +25,7 @@ import type { ChatMode, ModelId, WorkspaceMode } from '@/storage/types';
 import { WorkspaceHome } from '@/pages/workspace/WorkspaceHome';
 import { GuestWorkspace } from '@/components/GuestWorkspace';
 import { MotionText } from '@/components/MotionText';
+import { openCanvasWithAuth, getCanvasAppUrl } from '@/lib/canvasHandoff';
 
 const modelNames: Record<ModelId, string> = { 'v1-fast': 'V1 Fast', 'v2-best': 'V2 Best Result' };
 const workspaceModeNames: Record<WorkspaceMode, string> = {
@@ -199,6 +200,7 @@ function WorkspaceContent() {
     { id: 'research', category: 'Navigate', keywords: ['notes', 'findings'], label: 'Open research notes', run: () => goto('/workspace/research') },
     { id: 'presentations', category: 'Navigate', keywords: ['slides'], label: 'Open presentations', run: () => goto('/workspace/presentations') },
     { id: 'coding', category: 'Navigate', keywords: ['developer'], label: 'Open coding workspace', run: () => goto('/workspace/coding') },
+    { id: 'canvas-app', category: 'Navigate', keywords: ['ide', 'editor', 'code', 'canvas'], label: 'Open Canvas IDE (Dedicated Tab)', run: () => { openCanvasWithAuth(); } },
     { id: 'images', category: 'Navigate', keywords: ['visual', 'image studio'], label: 'Open Image Studio', run: () => goto('/workspace/images') },
     { id: 'voice', category: 'Navigate', keywords: ['audio', 'record'], label: 'Open Voice Studio', run: () => goto('/workspace/voice') },
     { id: 'history', category: 'Navigate', keywords: ['conversations'], label: 'Open conversation history', run: () => goto('/workspace/history') },
@@ -291,7 +293,21 @@ function WorkspaceContent() {
           {L('/workspace/documents', path.startsWith('/workspace/documents'), <FileText size={15} />, 'Documents')}
           {L('/workspace/presentations', path === '/workspace/presentations', <Presentation size={15} />, 'Presentations')}
           {L('/workspace/coding', path.startsWith('/workspace/coding'), <Code2 size={15} />, 'Coding')}
-          {L('/workspace/canvas', path.startsWith('/workspace/canvas'), <Code2 size={15} className="text-violet-400" />, 'Canvas IDE')}
+          <SideLink
+            href={getCanvasAppUrl()}
+            target="_blank"
+            rel="noopener noreferrer"
+            active={path.startsWith('/workspace/canvas')}
+            icon={<Code2 size={15} className="text-violet-400" />}
+            label="Canvas IDE"
+            collapsed={effectiveCollapsed}
+            onSelect={() => setMobileOpen(false)}
+            onClick={(e) => {
+              e.preventDefault();
+              openCanvasWithAuth();
+              setMobileOpen(false);
+            }}
+          />
           {h('Studios')}
           {L('/workspace/images', path === '/workspace/images', <Image size={15} />, 'Image studio')}
           {L('/workspace/3d', path === '/workspace/3d', <Box size={15} />, '3D studio')}
@@ -450,7 +466,10 @@ function WorkspaceContent() {
           </button>
           <button
             type="button"
-            onClick={() => goto('/workspace/canvas')}
+            onClick={() => {
+              openCanvasWithAuth();
+              setMobileOpen(false);
+            }}
             aria-current={isCanvas ? 'page' : undefined}
             data-testid="mobile-nav-canvas"
             className={cx(
@@ -493,9 +512,48 @@ function WorkspaceContent() {
   );
 }
 
-export function SideLink({ href, active, icon, label, collapsed, onSelect }: { href: string; active: boolean; icon: ReactNode; label: string; collapsed: boolean; onSelect: () => void }) {
+export function SideLink({
+  href,
+  active,
+  icon,
+  label,
+  collapsed,
+  onSelect,
+  onClick,
+  target,
+  rel,
+}: {
+  href: string;
+  active: boolean;
+  icon: ReactNode;
+  label: string;
+  collapsed: boolean;
+  onSelect: () => void;
+  onClick?: (e: React.MouseEvent) => void;
+  target?: string;
+  rel?: string;
+}) {
   return (
-    <Link href={href} onClick={onSelect} title={collapsed ? label : undefined} aria-label={collapsed ? label : undefined} aria-current={active ? 'page' : undefined} className={cx('workspace-nav-link my-0.5 flex min-h-10 items-center gap-3 rounded-lg px-2.5 text-[12px] transition min-w-0 overflow-hidden', active ? 'bg-violet-300/[.1] text-violet-100' : 'text-slate-400 hover:bg-white/[.04] hover:text-slate-100', collapsed && 'justify-center px-0')}>
+    <Link
+      href={href}
+      target={target}
+      rel={rel}
+      onClick={(e) => {
+        if (onClick) {
+          onClick(e);
+        } else {
+          onSelect();
+        }
+      }}
+      title={collapsed ? label : undefined}
+      aria-label={collapsed ? label : undefined}
+      aria-current={active ? 'page' : undefined}
+      className={cx(
+        'workspace-nav-link my-0.5 flex min-h-10 items-center gap-3 rounded-lg px-2.5 text-[12px] transition min-w-0 overflow-hidden',
+        active ? 'bg-violet-300/[.1] text-violet-100' : 'text-slate-400 hover:bg-white/[.04] hover:text-slate-100',
+        collapsed && 'justify-center px-0'
+      )}
+    >
       <span className="shrink-0">{icon}</span>
       {!collapsed && <span className="truncate min-w-0">{label}</span>}
     </Link>
