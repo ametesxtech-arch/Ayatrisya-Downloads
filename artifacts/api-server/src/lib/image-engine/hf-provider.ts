@@ -14,7 +14,11 @@ export class HfImageProvider {
   private token: string | null = null;
 
   constructor() {
-    this.token = process.env.HF_TOKEN?.trim() || process.env.HF_READ_TOKEN?.trim() || null;
+    this.token =
+      process.env.HF_IMAGE_TOKEN?.trim() ||
+      process.env.HF_TOKEN?.trim() ||
+      process.env.HF_READ_TOKEN?.trim() ||
+      null;
   }
 
   isConfigured(): boolean {

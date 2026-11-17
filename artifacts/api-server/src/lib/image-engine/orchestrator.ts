@@ -80,8 +80,7 @@ export class ImageProviderOrchestrator {
     const stage1Start = Date.now();
     try {
       const endpoint = this.ayatrisyaModel.getEndpoint();
-      const apiKey = this.ayatrisyaModel.getApiKey();
-      if (!endpoint || !apiKey) {
+      if (!endpoint) {
         stageAudit.push({
           stage: 1,
           provider: "ayatrisya-own-model",

@@ -171,10 +171,12 @@ describe("authenticated Ayatrisya model gateway", () => {
   });
 
   it("applies generation limits per verified user without affecting another account", async () => {
+    vi.stubEnv("AYATRISYA_IMAGE_MODEL_ENDPOINT", "https://models.ayatrisya.example/v1/");
+    const validPngBase64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkWPjfDwAEeQHzHk9t5gAAAABJRU5ErkJggg==";
     const upstream = vi.fn(async () => Response.json({
       fileName: "sample.png",
       mimeType: "image/png",
-      dataBase64: "aGVsbG8=",
+      dataBase64: validPngBase64,
     }));
     vi.stubGlobal("fetch", upstream);
     const call = await startApi();

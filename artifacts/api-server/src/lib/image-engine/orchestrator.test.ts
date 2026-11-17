@@ -181,4 +181,73 @@ describe("Ayatrisya 4-Stage Image Generation Orchestrator", () => {
       orchestrator.generateImage({ prompt: "A watercolor sunset" })
     ).rejects.toThrow(/All 4 image generation stages failed/);
   });
+
+  it("Halts immediately on Gemini Stage 3 safety refusal without falling back to Cloudflare", async () => {
+    vi.spyOn(AyatrisyaImageModel.prototype, "getEndpoint").mockReturnValue(null);
+    vi.spyOn(HfImageProvider.prototype, "isConfigured").mockReturnValue(false);
+
+    vi.spyOn(GeminiImageProvider.prototype, "isConfigured").mockReturnValue(true);
+    const geminiSafetyErr = new Error("Gemini Imagen safety refusal: Prompt triggered content safety filters.");
+    (geminiSafetyErr as any).isSafetyRefusal = true;
+    vi.spyOn(GeminiImageProvider.prototype, "generate").mockRejectedValue(geminiSafetyErr);
+
+    const cfSpy = vi.spyOn(CloudflareImageProvider.prototype, "generate");
+
+    await expect(
+      orchestrator.generateImage({ prompt: "Safety policy violation prompt" })
+    ).rejects.toThrow("Gemini Imagen safety refusal");
+
+    expect(cfSpy).not.toHaveBeenCalled();
+  });
+
+  it("Ensures Ayatrisya image model does not conflate with AYATRISYA_MODEL_ENDPOINT (chat endpoint)", () => {
+    const originalChatEndpoint = process.env.AYATRISYA_MODEL_ENDPOINT;
+    const originalImageEndpoint = process.env.AYATRISYA_IMAGE_MODEL_ENDPOINT;
+
+    try {
+      process.env.AYATRISYA_MODEL_ENDPOINT = "https://chat-model-server.hf.space";
+      delete process.env.AYATRISYA_IMAGE_MODEL_ENDPOINT;
+
+      const model = new AyatrisyaImageModel();
+      // Must NOT use chat endpoint for image model
+      expect(model.getEndpoint()).toBeNull();
+    } finally {
+      process.env.AYATRISYA_MODEL_ENDPOINT = originalChatEndpoint;
+      if (originalImageEndpoint) {
+        process.env.AYATRISYA_IMAGE_MODEL_ENDPOINT = originalImageEndpoint;
+      } else {
+        delete process.env.AYATRISYA_IMAGE_MODEL_ENDPOINT;
+      }
+    }
+  });
+
+  it("Correctly computes 16:9 dimensions when passing to providers", async () => {
+    vi.spyOn(AyatrisyaImageModel.prototype, "getEndpoint").mockReturnValue(null);
+    vi.spyOn(HfImageProvider.prototype, "isConfigured").mockReturnValue(false);
+    vi.spyOn(GeminiImageProvider.prototype, "isConfigured").mockReturnValue(false);
+    vi.spyOn(CloudflareImageProvider.prototype, "isConfigured").mockReturnValue(true);
+
+    const cfSpy = vi.spyOn(CloudflareImageProvider.prototype, "generate").mockResolvedValue({
+      fileName: "cf-102.png",
+      mimeType: "image/png",
+      dataBase64: VALID_1X1_PNG_BASE64,
+      provider: "cloudflare",
+      model: "@cf/black-forest-labs/flux-1-schnell",
+      stage: 4,
+      fallbackUsed: true,
+    });
+
+    await orchestrator.generateImage({
+      prompt: "A cinematic widescreen landscape",
+      aspectRatio: "16:9",
+    });
+
+    expect(cfSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        aspectRatio: "16:9",
+        width: 1024,
+        height: 576,
+      })
+    );
+  });
 });

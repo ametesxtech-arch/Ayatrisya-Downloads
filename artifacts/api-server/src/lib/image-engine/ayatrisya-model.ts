@@ -34,15 +34,15 @@ export class AyatrisyaImageModel {
   static readonly LICENSE = "Proprietary Ametesx Adapter Weights / OpenRAIL-M Foundation Base";
 
   getEndpoint(): string | null {
-    return (
-      process.env.AYATRISYA_IMAGE_MODEL_ENDPOINT?.trim() ||
-      process.env.AYATRISYA_MODEL_ENDPOINT?.trim() ||
-      null
-    );
+    return process.env.AYATRISYA_IMAGE_MODEL_ENDPOINT?.trim() || null;
   }
 
   getApiKey(): string | null {
-    return process.env.AYATRISYA_MODEL_API_KEY?.trim() || null;
+    return (
+      process.env.AYATRISYA_IMAGE_MODEL_API_KEY?.trim() ||
+      process.env.AYATRISYA_MODEL_API_KEY?.trim() ||
+      null
+    );
   }
 
   /**
@@ -53,7 +53,7 @@ export class AyatrisyaImageModel {
     const endpoint = this.getEndpoint();
     const apiKey = this.getApiKey();
 
-    if (!endpoint || !apiKey) {
+    if (!endpoint) {
       return {
         operational: false,
         reason: "Ayatrisya proprietary weights and GPU inference instance are currently offline. Awaiting dedicated Ametesx self-hosted GPU runner (AYATRISYA_IMAGE_MODEL_ENDPOINT).",
@@ -91,7 +91,7 @@ export class AyatrisyaImageModel {
     const endpoint = this.getEndpoint();
     const apiKey = this.getApiKey();
 
-    if (!endpoint || !apiKey) {
+    if (!endpoint) {
       throw new Error(
         "Ayatrisya proprietary weights and GPU inference instance are currently offline. Awaiting dedicated Ametesx self-hosted GPU runner."
       );

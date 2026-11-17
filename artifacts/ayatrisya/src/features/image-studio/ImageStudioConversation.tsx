@@ -625,9 +625,13 @@ export function ImageStudioConversation({
                             <span className="inline-flex items-center gap-1 rounded bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 text-[10px] font-semibold text-blue-300">
                               Google Gemini
                             </span>
-                          ) : (
+                          ) : msg.generated.provider === 'cloudflare' ? (
                             <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 text-[10px] font-semibold text-amber-300">
-                              Ayatrisya Vision Engine
+                              Cloudflare Workers AI
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 rounded bg-slate-500/10 border border-slate-500/20 px-2 py-0.5 text-[10px] font-semibold text-slate-300">
+                              {msg.generated.provider || 'Image Engine'}
                             </span>
                           )}
 

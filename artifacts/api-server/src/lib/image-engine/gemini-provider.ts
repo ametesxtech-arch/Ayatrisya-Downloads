@@ -9,7 +9,11 @@ export class GeminiImageProvider {
   private apiKey: string | null = null;
 
   constructor() {
-    this.apiKey = process.env.GEMINI_API_KEY?.trim() || null;
+    this.apiKey =
+      process.env.GEMINI_IMAGE_API_KEY?.trim() ||
+      process.env.GEMINI_API_KEY?.trim() ||
+      process.env.GOOGLE_API_KEY?.trim() ||
+      null;
   }
 
   isConfigured(): boolean {
