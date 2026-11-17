@@ -59,7 +59,8 @@ __pycache__/
 .pytest_cache/
 .firebase/
 scratch_test/
-artifacts/ayatrisya/build/
+artifacts/ayatrisya/build/*
+!artifacts/ayatrisya/build/installer.nsh
 attached_assets/
 artifacts/api-server/data/
 repos/
