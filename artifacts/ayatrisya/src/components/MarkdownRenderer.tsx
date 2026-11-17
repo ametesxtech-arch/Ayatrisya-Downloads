@@ -18,8 +18,13 @@ import {
   Terminal,
   AlertCircle,
   ExternalLink,
+  Info,
+  Lightbulb,
+  AlertTriangle,
+  ShieldAlert,
 } from 'lucide-react';
 import 'katex/dist/katex.min.css';
+import 'katex/dist/contrib/mhchem.js';
 import {
   parseInteractiveBlock,
   InteractiveBlockRenderer,
@@ -481,6 +486,72 @@ export function CodeBlock({ children }: { children?: ReactNode }) {
   );
 }
 
+const ALERT_STYLES = {
+  NOTE: {
+    icon: Info,
+    label: 'Note',
+    containerClass: 'border-sky-500/35 bg-sky-500/[.07] text-sky-200',
+    headerClass: 'text-sky-300',
+    iconClass: 'text-sky-400',
+  },
+  TIP: {
+    icon: Lightbulb,
+    label: 'Tip',
+    containerClass: 'border-emerald-500/35 bg-emerald-500/[.07] text-emerald-200',
+    headerClass: 'text-emerald-300',
+    iconClass: 'text-emerald-400',
+  },
+  IMPORTANT: {
+    icon: AlertCircle,
+    label: 'Important',
+    containerClass: 'border-purple-500/35 bg-purple-500/[.07] text-purple-200',
+    headerClass: 'text-purple-300',
+    iconClass: 'text-purple-400',
+  },
+  WARNING: {
+    icon: AlertTriangle,
+    label: 'Warning',
+    containerClass: 'border-amber-500/35 bg-amber-500/[.07] text-amber-200',
+    headerClass: 'text-amber-300',
+    iconClass: 'text-amber-400',
+  },
+  CAUTION: {
+    icon: ShieldAlert,
+    label: 'Caution',
+    containerClass: 'border-rose-500/35 bg-rose-500/[.07] text-rose-200',
+    headerClass: 'text-rose-300',
+    iconClass: 'text-rose-400',
+  },
+} as const;
+
+type AlertType = keyof typeof ALERT_STYLES;
+
+function stripAlertHeader(nodes: ReactNode, type: string): ReactNode {
+  if (typeof nodes === 'string') {
+    const pattern = new RegExp(`^\\[!${type}\\][ \\t]*(?:\\r?\\n)?`, 'i');
+    return nodes.replace(pattern, '');
+  }
+  if (Array.isArray(nodes)) {
+    let replaced = false;
+    return nodes.map((child) => {
+      if (!replaced && (typeof child === 'string' || (child && typeof child === 'object' && 'props' in child))) {
+        const next = stripAlertHeader(child, type);
+        if (next !== child) replaced = true;
+        return next;
+      }
+      return child;
+    });
+  }
+  if (nodes && typeof nodes === 'object' && 'props' in nodes) {
+    const el = nodes as React.ReactElement<{ children?: ReactNode }>;
+    return React.cloneElement(el, {
+      ...el.props,
+      children: stripAlertHeader(el.props.children, type),
+    });
+  }
+  return nodes;
+}
+
 export const mdComponents = {
   pre: ({ children }: { children?: ReactNode }) => <CodeBlock>{children}</CodeBlock>,
   code: ({ className, children, ...props }: { className?: string; children?: ReactNode }) => {
@@ -562,11 +633,39 @@ export const mdComponents = {
   td: ({ children }: { children?: ReactNode }) => (
     <td className="border-b border-white/[.06] px-3.5 py-2 text-slate-300">{children}</td>
   ),
-  blockquote: ({ children }: { children?: ReactNode }) => (
-    <blockquote className="my-3 border-l-2 border-teal-400/60 bg-white/[.02] py-1 pl-4 italic text-slate-300">
-      {children}
-    </blockquote>
-  ),
+  blockquote: ({ children }: { children?: ReactNode }) => {
+    const text = nodeText(children).trim();
+    const alertMatch = text.match(/^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]/i);
+    if (alertMatch) {
+      const type = alertMatch[1].toUpperCase() as AlertType;
+      const style = ALERT_STYLES[type] || ALERT_STYLES.NOTE;
+      const Icon = style.icon;
+      const strippedChildren = stripAlertHeader(children, type);
+
+      return (
+        <div
+          className={`my-3.5 overflow-hidden rounded-xl border p-3.5 text-xs shadow-sm transition-colors ${style.containerClass}`}
+          data-testid={`alert-${type.toLowerCase()}`}
+          role="region"
+          aria-label={`${style.label} alert`}
+        >
+          <div className={`mb-1.5 flex items-center gap-2 font-medium tracking-wide ${style.headerClass}`}>
+            <Icon size={14} className={`shrink-0 ${style.iconClass}`} aria-hidden />
+            <span className="font-semibold uppercase tracking-wider text-[11px]">{type}</span>
+          </div>
+          <div className="leading-relaxed text-slate-200">
+            {strippedChildren}
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <blockquote className="my-3 border-l-2 border-teal-400/60 bg-white/[.02] py-1 pl-4 italic text-slate-300">
+        {children}
+      </blockquote>
+    );
+  },
   ul: ({ children }: { children?: ReactNode }) => (
     <ul className="my-2 list-disc space-y-1 pl-5 text-slate-200">{children}</ul>
   ),
@@ -641,8 +740,13 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
     return protocolResponse.blocks.filter((b): b is CitationBlock => b.type === 'citation');
   }, [protocolResponse]);
 
-  // 2. If content is a standalone JSON interactive block
-  if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+  // 2. If content is a standalone JSON interactive block (or actively streaming JSON)
+  const isLikelyInteractiveJson =
+    trimmed.startsWith('{') &&
+    (trimmed.endsWith('}') ||
+      (isStreaming && (trimmed.includes('"type"') || trimmed.includes('"questions"') || trimmed.includes('"items"'))));
+
+  if (isLikelyInteractiveJson) {
     const directParse = parseInteractiveBlock(trimmed, { isStreaming });
     if (directParse.status === 'valid') {
       return (
@@ -672,7 +776,7 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
           {intro && (
             <ReactMarkdown
               remarkPlugins={[remarkGfm, remarkMath]}
-              rehypePlugins={[[rehypeKatex, { throwOnError: false, strict: false }]]}
+              rehypePlugins={[[rehypeKatex, { throwOnError: false, strict: false, errorColor: '#fca5a5' }]]}
               components={mdComponents}
             >
               {intro}
@@ -684,7 +788,7 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
           {outro && (
             <ReactMarkdown
               remarkPlugins={[remarkGfm, remarkMath]}
-              rehypePlugins={[[rehypeKatex, { throwOnError: false, strict: false }]]}
+              rehypePlugins={[[rehypeKatex, { throwOnError: false, strict: false, errorColor: '#fca5a5' }]]}
               components={mdComponents}
             >
               {outro}
@@ -716,7 +820,7 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
       <div className={className}>
         <ReactMarkdown
           remarkPlugins={[remarkGfm, remarkMath]}
-          rehypePlugins={[[rehypeKatex, { throwOnError: false, strict: false }]]}
+          rehypePlugins={[[rehypeKatex, { throwOnError: false, strict: false, errorColor: '#fca5a5' }]]}
           components={mdComponents}
         >
           {normalized}

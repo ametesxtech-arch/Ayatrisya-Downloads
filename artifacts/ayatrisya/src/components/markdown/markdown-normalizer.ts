@@ -117,6 +117,13 @@ export function stabilizeStreamingMarkdown(raw: string): string {
 }
 
 /**
+ * List of bare LaTeX mathematical environments that should be safely wrapped
+ * in $$ ... $$ display blocks when emitted by models without explicit delimiters.
+ */
+const BARE_LATEX_ENV_REGEX =
+  /(?:^|\n)[ \t]*(\\begin\{(aligned|align\*?|equation\*?|matrix|pmatrix|bmatrix|vmatrix|Vmatrix|cases|gather\*?|split|multline\*?)\}[\s\S]*?\\end\{\2\})[ \t]*(?=\n|$)/g;
+
+/**
  * Normalizes Markdown syntax across responses to resolve common LLM defects
  * while strictly preserving legitimate literal syntax inside code blocks.
  */
@@ -157,13 +164,40 @@ export function normalizeMarkdown(
 
           let prose = sub;
 
-          // Disambiguate standalone currency amounts ($50, $1,000, $4.99) so remark-math does not misparse them as LaTeX
-          prose = prose.replace(/(^|[\s(])\$(\d+(?:,\d+)*(?:\.\d+)?)(?=$|[\s),.?!;:])/g, (_m, p1, p2) => `${p1}&#36;${p2}`);
+          // Disambiguate standalone currency amounts ($50, -$50, $1,250.50, $10-$20, $100 to $200)
+          // so remark-math does not misparse them as LaTeX math delimiters.
+          prose = prose.replace(
+            /(^|[\s(\[{"'–—\-+~=])\$(\d[\d,]*(?:\.\d+)?)(?=$|[\s)\]}"'.,?!;:–—\-+/]|\b)/g,
+            (_m, p1, p2) => `${p1}&#36;${p2}`
+          );
+          prose = prose.replace(
+            /(^|[\s(\[{"'–—\-+~=])\\\$(\d[\d,]*(?:\.\d+)?)(?=$|[\s)\]}"'.,?!;:–—\-+/]|\b)/g,
+            (_m, p1, p2) => `${p1}&#36;${p2}`
+          );
 
           // Normalize KaTeX math output (\[ ... \] -> $$, \( ... \) -> $)
           prose = prose.replace(/\\\[([\s\S]*?)\\\]/g, (_m, math: string) => `\n\n$$\n${math.trim()}\n$$\n\n`);
           prose = prose.replace(/\\\(([\s\S]*?)\\\)/g, (_m, math: string) => `$${math.trim()}$`);
-          prose = prose.replace(/\\\$([^\s$][^$]*?[^\s$]?)\\\$/g, (_m, math: string) => `$${math.trim()}$`);
+          prose = prose.replace(/\\\$\\$([\s\S]*?)\\\$\\$/g, (_m, math: string) => `\n\n$$\n${math.trim()}\n$$\n\n`);
+          prose = prose.replace(/\\\$([^\s$][^$\n]*?[^\s$]?)\\\$/g, (_m, math: string) => `$${math.trim()}$`);
+
+          // Ensure $$ display math is reliably formatted with newlines for remark-math AST parsing
+          prose = prose.replace(/(?<!\$)\$\$(?!\$)([\s\S]*?)(?<!\$)\$\$(?!\$)/g, (_m, math: string) => `\n\n$$\n${math.trim()}\n$$\n\n`);
+
+          // Normalize chemical equations \ce{...} not already wrapped in math
+          prose = prose.replace(/(?<!\$)\\ce\{([^{}]+)\}(?!\$)/g, '$\\ce{$1}$');
+
+          // Detect bare LaTeX environments (aligned, matrix, pmatrix, cases, etc.) not wrapped in $$
+          // Protect any existing $$ blocks first
+          if (prose.includes('\\begin{')) {
+            const mathParts = prose.split(/(\$\$[\s\S]*?\$\$)/g);
+            prose = mathParts
+              .map((part, mIdx) => {
+                if (mIdx % 2 === 1) return part; // Inside existing $$ ... $$ block, preserve
+                return part.replace(BARE_LATEX_ENV_REGEX, (_match, env) => `\n\n$$\n${env.trim()}\n$$\n\n`);
+              })
+              .join('');
+          }
 
           // Fix loose spaces inside bold:
           // In CommonMark: "** text **" or "**text **" is not bold due to flanking whitespace rules.
