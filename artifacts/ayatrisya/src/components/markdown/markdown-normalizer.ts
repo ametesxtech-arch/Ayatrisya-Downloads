@@ -180,7 +180,41 @@ export function normalizeMarkdown(
 
           let prose = sub;
 
-          // Disambiguate standalone currency amounts ($50, -$50, $1,250.50, $10-$20, $100 to $200)
+          // 1. Normalize KaTeX math delimiters first (\[ ... \] -> $$, \( ... \) -> $)
+          prose = prose.replace(/\\\[([\s\S]*?)\\\]/g, (_m, math: string) => `\n\n$$\n${math.trim()}\n$$\n\n`);
+          prose = prose.replace(/\\\(([\s\S]*?)\\\)/g, (_m, math: string) => `$${math.trim()}$`);
+          prose = prose.replace(/\\\$\\$([\s\S]*?)\\\$\\$/g, (_m, math: string) => `\n\n$$\n${math.trim()}\n$$\n\n`);
+          prose = prose.replace(/\\\$([^\s$][^$\n]*?[^\s$]?)\\\$/g, (_m, math: string) => `$${math.trim()}$`);
+
+          // 2. Ensure $$ display math is reliably formatted with newlines for remark-math AST parsing
+          prose = prose.replace(/(?<!\$)\$\$(?!\$)([\s\S]*?)(?<!\$)\$\$(?!\$)/g, (_m, math: string) => `\n\n$$\n${math.trim()}\n$$\n\n`);
+
+          // 3. Normalize chemical equations \ce{...} not already wrapped in math
+          prose = prose.replace(/(?<!\$)\\ce\{((?:[^{}]|\{[^{}]*\})*)\}(?!\$)/g, '$\\ce{$1}$');
+
+          // 4. Protect legitimate inline LaTeX math spans ($ ... $) containing LaTeX commands or math operators
+          // so standalone currency disambiguation does not corrupt expressions like $0 \text{ RPM}$, $x = 5$, or $10^5$.
+          const mathTokens: string[] = [];
+          prose = prose.replace(/(?<!\\|\$)\$([^\s$](?:[^$\n]*?[^\s$])?)\$(?!\$)/g, (fullMatch, mathContent: string) => {
+            const trimmed = mathContent.trim();
+            const hasLatexCommand = /\\[a-zA-Z]+/.test(trimmed);
+            const isSingleVariableOrFn = /^[a-zA-Z0-9]$|^[a-zA-Z]_\d+$|^O\(.+\)$/.test(trimmed);
+            const isMathExpr =
+              /^[a-zA-Z0-9\s()\[\]{}.+\-*/=^_<>|~':]+$/.test(trimmed) &&
+              /[\^_=<>~]/.test(trimmed) &&
+              !/,\s+[a-zA-Z]/.test(trimmed) &&
+              !/:\s*[-+]?$/.test(trimmed) &&
+              !/[+\-*/=<>]$/.test(trimmed);
+
+            if (hasLatexCommand || isSingleVariableOrFn || isMathExpr) {
+              const token = `__AYATRISYA_MATH_${mathTokens.length}__`;
+              mathTokens.push(fullMatch);
+              return token;
+            }
+            return fullMatch;
+          });
+
+          // 5. Disambiguate standalone currency amounts ($50, -$50, $1,250.50, $10-$20, $100 to $200)
           // so remark-math does not misparse them as LaTeX math delimiters.
           prose = prose.replace(
             /(^|[\s(\[{"'–—\-+~=])\$(\d[\d,]*(?:\.\d+)?)(?=$|[\s)\]}"'.,?!;:–—\-+/]|\b)/g,
@@ -191,17 +225,13 @@ export function normalizeMarkdown(
             (_m, p1, p2) => `${p1}&#36;${p2}`
           );
 
-          // Normalize KaTeX math output (\[ ... \] -> $$, \( ... \) -> $)
-          prose = prose.replace(/\\\[([\s\S]*?)\\\]/g, (_m, math: string) => `\n\n$$\n${math.trim()}\n$$\n\n`);
-          prose = prose.replace(/\\\(([\s\S]*?)\\\)/g, (_m, math: string) => `$${math.trim()}$`);
-          prose = prose.replace(/\\\$\\$([\s\S]*?)\\\$\\$/g, (_m, math: string) => `\n\n$$\n${math.trim()}\n$$\n\n`);
-          prose = prose.replace(/\\\$([^\s$][^$\n]*?[^\s$]?)\\\$/g, (_m, math: string) => `$${math.trim()}$`);
-
-          // Ensure $$ display math is reliably formatted with newlines for remark-math AST parsing
-          prose = prose.replace(/(?<!\$)\$\$(?!\$)([\s\S]*?)(?<!\$)\$\$(?!\$)/g, (_m, math: string) => `\n\n$$\n${math.trim()}\n$$\n\n`);
-
-          // Normalize chemical equations \ce{...} not already wrapped in math (supports nested sub/superscript braces)
-          prose = prose.replace(/(?<!\$)\\ce\{((?:[^{}]|\{[^{}]*\})*)\}(?!\$)/g, '$\\ce{$1}$');
+          // 6. Restore protected inline LaTeX math tokens
+          if (mathTokens.length > 0) {
+            prose = prose.replace(/__AYATRISYA_MATH_(\d+)__/g, (_m, idxStr) => {
+              const idx = parseInt(idxStr, 10);
+              return mathTokens[idx] ?? _m;
+            });
+          }
 
           // Detect bare LaTeX environments (aligned, matrix, pmatrix, cases, etc.) not wrapped in $$
           // Protect any existing $$ blocks first

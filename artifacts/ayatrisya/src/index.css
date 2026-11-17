@@ -401,23 +401,25 @@ button,input,textarea,select{ min-width: 0; touch-action: manipulation; }
   color:#e6e2ed;
   font-family:var(--app-font-reading);
   font-size:16px;line-height:1.7;
-  overflow-wrap:anywhere;
-  word-break:break-word;
-  hyphens:auto;
+  overflow-wrap:break-word;
+  word-break:normal;
+  hyphens:manual;
+  text-wrap:pretty;
 }
-.chat-user-content p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word}
+.chat-user-content p{margin:0;white-space:pre-wrap;overflow-wrap:break-word;word-break:normal}
 .chat-prose{
   min-width:0;
   color:#d9d6e0;
   font-family:var(--app-font-reading);
   font-size:16.5px;
-  line-height:1.72;
+  line-height:1.76;
   letter-spacing:-.005em;
-  overflow-wrap:anywhere;
-  word-break:break-word;
-  hyphens:auto;
+  overflow-wrap:break-word;
+  word-break:normal;
+  hyphens:manual;
+  text-wrap:pretty;
 }
-.chat-prose :where(p,ul,ol,blockquote,pre,table){margin-top:.7em;margin-bottom:.95em}
+.chat-prose :where(p,ul,ol,blockquote,pre,table){margin-top:.85em;margin-bottom:1.15em}
 .chat-prose :where(h1,h2,h3,h4){
   color:#efecf3;
   font-family:var(--app-font-heading);

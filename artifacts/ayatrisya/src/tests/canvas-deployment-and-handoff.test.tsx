@@ -48,7 +48,7 @@ describe('Ayatrisya Canvas Deployment and Auth Handoff Protocol', () => {
   describe('Canvas URL and Origin Validation', () => {
     it('defaults to the deployed Firebase Hosting URL for Canvas', () => {
       const url = getCanvasAppUrl();
-      expect(url).toBe('https://canvas.ayatrisya.web.app');
+      expect(url).toBe('https://ayatrisya-canvas.web.app');
     });
 
     it('accepts designated Canvas origins', () => {
@@ -86,7 +86,7 @@ describe('Ayatrisya Canvas Deployment and Auth Handoff Protocol', () => {
       expect(target).toBe('_blank');
 
       const parsedUrl = new URL(openedUrl);
-      expect(parsedUrl.origin).toBe('https://canvas.ayatrisya.web.app');
+      expect(parsedUrl.origin).toBe('https://ayatrisya-canvas.web.app');
       expect(parsedUrl.searchParams.get('handoff')).toBe('1');
 
       const nonce = parsedUrl.searchParams.get('nonce');

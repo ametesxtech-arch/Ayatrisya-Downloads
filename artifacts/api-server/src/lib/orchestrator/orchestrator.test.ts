@@ -82,6 +82,32 @@ describe("Conversational Orchestrator 2.0", () => {
       expect(res.tags).toContain("audit");
     });
 
+    it("classifies letter and correspondence requests with strict format fidelity", () => {
+      const res1 = classifyConversationIntent("Make letter on cars");
+      expect(res1.intent).toBe("correspondence_or_creative");
+      expect(res1.tags).toContain("letter");
+
+      const res2 = classifyConversationIntent("Write a letter to my friend about electric vehicles");
+      expect(res2.intent).toBe("correspondence_or_creative");
+      expect(res2.tags).toContain("letter");
+
+      const res3 = classifyConversationIntent("Write an email to the team regarding project launch");
+      expect(res3.intent).toBe("correspondence_or_creative");
+      expect(res3.tags).toContain("email");
+    });
+
+    it("classifies summarization requests", () => {
+      const res = classifyConversationIntent("Summarize the key takeaways and findings of this research paper");
+      expect(res.intent).toBe("summarization");
+      expect(res.tags).toContain("summary");
+    });
+
+    it("classifies interactive quiz creation request with 5 questions", () => {
+      const res = classifyConversationIntent("Create a five-question science quiz and make it interactive");
+      expect(res.intent).toBe("assessment_request");
+      expect(res.wantsInteractive).toBe(true);
+    });
+
     it("classifies database schema design requests", () => {
       const res = classifyConversationIntent("Design a PostgreSQL database schema for multi-tenant accounts with index optimization");
       expect(res.intent).toBe("database_design");

@@ -8,7 +8,8 @@ const path = require("node:path");
 const { createSeedModelHost, validateCheckpoint, PORT } = require("./seed-model-host.cjs");
 
 async function makeModelProject(t) {
-  const root = await fs.mkdtemp(path.join(os.tmpdir(), "ayatrisya-seed-host-"));
+  const rawRoot = await fs.mkdtemp(path.join(os.tmpdir(), "ayatrisya-seed-host-"));
+  const root = await fs.realpath(rawRoot);
   t.after(() => fs.rm(root, { recursive: true, force: true }));
   for (const file of [
     "inference/server.py",

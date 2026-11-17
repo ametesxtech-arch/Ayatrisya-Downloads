@@ -217,6 +217,14 @@ describe('Ayatrisya — Unified Markdown Renderer Acceptance Test Suite', () => 
       const inlineHtml = render(inlineMath);
       expect(inlineHtml).toContain('class="katex"');
 
+      // Regression check for "$0 \text{ RPM}$" not being mangled by currency parser
+      const rpmContent = 'The electric vehicle delivers instantaneous torque at $0 \\text{ RPM}$ while priced at $55,000.';
+      const rpmHtml = render(rpmContent);
+      expect(rpmHtml).toContain('class="katex"');
+      expect(rpmHtml).toContain('RPM');
+      expect(rpmHtml).not.toContain('$0 \\text{ RPM}$');
+      expect(rpmHtml).toContain('$55,000');
+
       const blockMath = 'The normal distribution:\n$$\\int_{-\\infty}^{\\infty} e^{-x^2} dx = \\sqrt{\\pi}$$';
       const blockHtml = render(blockMath);
       expect(blockHtml).toContain('class="katex"');

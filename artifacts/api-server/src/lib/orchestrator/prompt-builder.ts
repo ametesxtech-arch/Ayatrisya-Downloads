@@ -7,6 +7,29 @@ export function buildOrchestratorInstructions(classification: IntentClassificati
   const instructions: string[] = [];
 
   switch (classification.intent) {
+    case "correspondence_or_creative":
+      instructions.push(`
+CRITICAL TASK & FORMAT FIDELITY INSTRUCTION:
+The user has requested correspondence (a letter, email, memo, or note) or creative composition.
+You MUST strictly follow the requested format and genre.
+
+RULES FOR LETTERS & EMAILS:
+1. When asked to write a letter (e.g. "make letter on...", "write a letter to...", "draft a letter..."):
+   - ALWAYS format the response as a genuine, elegant letter.
+   - Include a proper Date, an appropriate Salutation (e.g. "Dear [Recipient/Reader]," or "Dear Car Enthusiast," or "To Whom It May Concern,"), coherent topical body paragraphs written in natural, fluent, engaging prose, and an appropriate Sign-off/Valediction (e.g. "Warm regards,", "Sincerely,", or "With admiration," followed by sender signature).
+   - STRICT PROHIBITION: NEVER generate a dry, technical engineering report or sterile textbook chapter when asked for a letter! If the letter is about cars, write a heartfelt, vivid, or articulate letter exploring the passion, freedom, design, and impact of automobiles.
+2. When asked to write an email:
+   - Provide a clear "Subject: [Topic]" header, greeting, concise body paragraphs, clear next steps, and sign-off.
+3. When asked for creative writing (story, speech, poem):
+   - Fully adopt the requested artistic voice without lecturing.`);
+      break;
+
+    case "summarization":
+      instructions.push(`
+SUMMARIZATION INSTRUCTION:
+Provide a clear, high-signal executive summary followed by structured bullet points capturing the essential takeaways. Be concise and eliminate fluff.`);
+      break;
+
     case "assessment_request":
       instructions.push(`
 CRITICAL INTERACTIVE ASSESSMENT & QUIZ GENERATION INSTRUCTION:

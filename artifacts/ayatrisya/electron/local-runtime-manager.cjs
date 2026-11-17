@@ -116,7 +116,7 @@ function createLocalRuntimeManager({
       port,
       host: HOST,
       endpoint: `http://${HOST}:${port}`,
-      activeModel: activeModelPath ? path.basename(activeModelPath) : null,
+      activeModel: activeModelPath ? activeModelPath.split(/[/\\]/).pop() : null,
       backend: activeBackend,
       activeRequests: activeRequests.size,
       message: statusMessage,

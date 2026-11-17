@@ -89,6 +89,7 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
   const [pendingImageGen, setPendingImageGen] = useState<{ cid: string; prompt: string; userMessageId?: string } | null>(null);
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null), [confirmDel, setConfirmDel] = useState(false), [renaming, setRenaming] = useState<string | null>(null), [delMsg, setDelMsg] = useState<Message | null>(null), [resubmit, setResubmit] = useState<{ m: Message; text: string } | null>(null), [copied, setCopied] = useState<string | null>(null), [atBottom, setAtBottom] = useState(true);
   const streamRef = useRef('');
+  const rafRef = useRef<number | null>(null);
 
   // Per-conversation mode: initialize from conversation record if present, otherwise fallback to global prefs
   const activeMode: ChatMode = (conv.data?.mode as ChatMode | undefined) || prefs.mode || 'Normal';
@@ -300,13 +301,23 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
           signal: ac.signal,
           onToken: (t: string) => {
             streamRef.current += t;
-            setStream(streamRef.current);
+            if (rafRef.current === null) {
+              rafRef.current = requestAnimationFrame(() => {
+                rafRef.current = null;
+                setStream(streamRef.current);
+              });
+            }
           },
           attachments: latestTurn?.attachments,
         },
       });
       jobIdRef.current = job.id;
       const out = await job.result;
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+      setStream(out);
       let finalOut = out;
       if (latestTurn?.content) {
         const scheduleIntent = parseScheduleRequest(latestTurn.content);
@@ -378,7 +389,13 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
       }
       setError(ac.signal.aborted ? 'Generation stopped. Partial response preserved.' : errMsg(e, 'The model request failed.'));
     }
-    finally { runningRef.current = false; setPendingQuery(''); setBusy(false); setStream(''); setStreamFor(null); abortRef.current = null; jobIdRef.current = null; }
+    finally {
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+      runningRef.current = false; setPendingQuery(''); setBusy(false); setStream(''); setStreamFor(null); abortRef.current = null; jobIdRef.current = null;
+    }
   }
 
   function stop() {

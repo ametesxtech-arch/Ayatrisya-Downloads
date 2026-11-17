@@ -3,9 +3,9 @@ import { buildApiUrl } from '@/lib/api-config';
 import type { User } from 'firebase/auth';
 
 export const ALLOWED_CANVAS_ORIGINS = [
-  'https://canvas.ayatrisya.web.app',
   'https://ayatrisya-canvas.web.app',
   'https://ayatrisya-canvas.firebaseapp.com',
+  'https://canvas.ayatrisya.web.app',
   'http://localhost:3000',
   'http://localhost:5173',
   'http://127.0.0.1:3000',
@@ -28,7 +28,7 @@ export function isAllowedCanvasOrigin(origin: string): boolean {
 export function getCanvasAppUrl(): string {
   const envUrl = (import.meta.env.VITE_CANVAS_APP_URL as string | undefined)?.trim();
   if (envUrl) return envUrl.replace(/\/$/, '');
-  return 'https://canvas.ayatrisya.web.app';
+  return 'https://ayatrisya-canvas.web.app';
 }
 
 export function appendTicketToUrl(rawUrl: string, code: string): string {

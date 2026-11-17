@@ -1,5 +1,7 @@
 export type ConversationIntent =
   | "general_conversation"
+  | "correspondence_or_creative"
+  | "summarization"
   | "assessment_request"
   | "code_generation"
   | "project_planning"
@@ -97,7 +99,29 @@ export function classifyConversationIntent(
     };
   }
 
-  // 1b. Flashcard Request Detection
+  // 1b. Correspondence (Letters, Emails, Memos) & Creative Writing (Stories, Poems, Speeches)
+  if (
+    /\b(letter(\s+(on|about|to|for|regarding))?|write\s+(a\s+)?letter|make\s+(a\s+)?letter|draft\s+(a\s+)?letter|compose\s+(a\s+)?letter|email|write\s+(an\s+)?email|draft\s+(an\s+)?email|memo|speech|poem|poetry|essay|story|dialogue)\b/i.test(p)
+  ) {
+    const isLetter = /\bletter\b/i.test(p);
+    const isEmail = /\bemail\b/i.test(p);
+    return {
+      intent: "correspondence_or_creative",
+      confidence: 0.94,
+      tags: [isLetter ? "letter" : isEmail ? "email" : "creative_writing"],
+    };
+  }
+
+  // 1c. Summarization / TL;DR Request
+  if (/\b(summariz(e|ation)|summary|tldr|tl;dr|key\s*takeaways|recap|condense|abstract)\b/i.test(p)) {
+    return {
+      intent: "summarization",
+      confidence: 0.92,
+      tags: ["summary"],
+    };
+  }
+
+  // 1d. Flashcard Request Detection
   if (/\b(flashcards?|study\s*cards?|make\s+flashcards)\b/i.test(p)) {
     return {
       intent: "technical_explanation",

@@ -5,9 +5,9 @@ import { verifiedFirebaseUid } from "../lib/firebase-auth";
 const router: IRouter = Router();
 
 export const ALLOWED_CANVAS_ORIGINS = [
-  "https://canvas.ayatrisya.web.app",
   "https://ayatrisya-canvas.web.app",
   "https://ayatrisya-canvas.firebaseapp.com",
+  "https://canvas.ayatrisya.web.app",
   "http://localhost:3000",
   "http://localhost:5173",
   "http://127.0.0.1:3000",
@@ -80,7 +80,7 @@ router.post("/auth/canvas/ticket", async (req: Request, res: Response) => {
     } catch {}
   }
 
-  const rawTarget = body?.targetOrigin || req.query?.targetOrigin || "https://canvas.ayatrisya.web.app";
+  const rawTarget = body?.targetOrigin || req.query?.targetOrigin || "https://ayatrisya-canvas.web.app";
   const targetOrigin = String(rawTarget).trim().replace(/\/+$/, "");
 
   if (!isAllowedCanvasOrigin(targetOrigin)) {

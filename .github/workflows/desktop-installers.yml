@@ -57,7 +57,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: 22
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 
@@ -68,6 +68,8 @@ jobs:
 
       - name: Build installer on native operating system
         env:
+          APPIMAGE_EXTRACT_AND_RUN: '1'
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
           VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY || 'AIzaSyAsTIhiNu7UhTwOh-gfY5exLLIX9qGRtyk' }}
           VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN || 'ayatrisya.firebaseapp.com' }}
           VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID || 'ayatrisya' }}
@@ -184,24 +186,33 @@ jobs:
 
       - name: Download Linux installer artifact
         uses: actions/download-artifact@v4
-        continue-on-error: true
         with:
           name: Ayatrisya-linux
           path: dist-release
 
       - name: Download Windows installer artifact
         uses: actions/download-artifact@v4
-        continue-on-error: true
         with:
           name: Ayatrisya-windows
           path: dist-release
 
       - name: Download macOS installer artifact
         uses: actions/download-artifact@v4
-        continue-on-error: true
         with:
           name: Ayatrisya-mac
           path: dist-release
+
+      - name: Validate All Required Platform Installers Exist
+        shell: bash
+        run: |
+          count_exe=$(ls dist-release/*.exe 2>/dev/null | wc -l)
+          count_dmg=$(ls dist-release/*.dmg 2>/dev/null | wc -l)
+          count_appimage=$(ls dist-release/*.AppImage 2>/dev/null | wc -l)
+          if [ "$count_exe" -lt 1 ] || [ "$count_dmg" -lt 1 ] || [ "$count_appimage" -lt 1 ]; then
+            echo "::error::Incomplete release! Missing one or more platform installers (exe: $count_exe, dmg: $count_dmg, AppImage: $count_appimage)."
+            exit 1
+          fi
+          echo "Verification passed: All three platform installers (.exe, .dmg, .AppImage) are present."
 
       - name: Generate Checksums and Manifest
         shell: bash
