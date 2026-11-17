@@ -102,4 +102,10 @@ if (target === 'all') {
   packageTarget(target);
 }
 
+try {
+  run(['exec', 'node', 'scripts/generate-release-manifest.mjs'], 'release manifest generation');
+} catch (err) {
+  console.warn('Manifest generation warning:', err.message);
+}
+
 console.log(`\nDesktop package artifacts location: ../../generated-artifacts/ayatrisya-desktop`);

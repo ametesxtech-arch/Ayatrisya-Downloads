@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   DEFAULT_PUBLISHED_RELEASES,
+  STAGED_V0_0_1_RELEASE,
   formatInstallerSize,
   resolveDesktopRelease,
 } from "@/data/desktop-releases";
@@ -173,6 +174,25 @@ describe("desktop installer release metadata", () => {
       // Verify distinct byte sizes
       expect(windows.sizeBytes).not.toBe(linux.sizeBytes);
       expect(windows.sizeBytes).not.toBe(macos.sizeBytes);
+    });
+  });
+
+  describe("staged v0.0.1 candidate release configuration", () => {
+    it("validates Windows v0.0.1 installer metadata matching fresh build and SHA256", () => {
+      const windows = resolveDesktopRelease(STAGED_V0_0_1_RELEASE.windows);
+      expect(windows.status).toBe("available-unverified");
+      expect(windows.downloadUrl).toBe(
+        "https://github.com/ametesxtech-arch/Ayatrisya-Downloads/releases/download/v0.0.1/Ayatrisya.Setup.0.0.1.exe",
+      );
+      expect(windows.version).toBe("0.0.1");
+      expect(windows.sizeBytes).toBe(126450520);
+      expect(windows.sha256).toBe(
+        "af4a048e1359d719e015a753f7e81f5c6c4ecdb567c30c23d080a914dac7d35b",
+      );
+      expect(windows.releaseNotesUrl).toBe(
+        "https://github.com/ametesxtech-arch/Ayatrisya-Downloads/releases/tag/v0.0.1",
+      );
+      expect(formatInstallerSize(windows.sizeBytes!)).toBe("120.6 MiB");
     });
   });
 });

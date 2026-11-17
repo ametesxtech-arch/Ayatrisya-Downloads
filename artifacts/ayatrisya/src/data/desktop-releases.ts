@@ -29,6 +29,27 @@ export interface DesktopReleaseInput {
 export const OFFICIAL_RELEASE_TAG_URL =
   "https://github.com/ametesxtech-arch/Ayatrisya-Downloads/releases/tag/v0.0.0";
 
+export const STAGED_V0_0_1_RELEASE_TAG_URL =
+  "https://github.com/ametesxtech-arch/Ayatrisya-Downloads/releases/tag/v0.0.1";
+
+/**
+ * Verified Candidate Metadata for v0.0.1.
+ * Ready to promote to DEFAULT_PUBLISHED_RELEASES or via VITE_DESKTOP_DOWNLOAD_* env vars
+ * as soon as the v0.0.1 GitHub Release is published with user approval.
+ */
+export const STAGED_V0_0_1_RELEASE = {
+  windows: {
+    downloadUrl:
+      "https://github.com/ametesxtech-arch/Ayatrisya-Downloads/releases/download/v0.0.1/Ayatrisya.Setup.0.0.1.exe",
+    expectedExtension: ".exe",
+    version: "0.0.1",
+    sizeBytes: "126450520",
+    sha256: "af4a048e1359d719e015a753f7e81f5c6c4ecdb567c30c23d080a914dac7d35b",
+    releaseNotesUrl: STAGED_V0_0_1_RELEASE_TAG_URL,
+    verificationSummary: "Windows installer build, silent install, executable verification, and clean uninstall verified.",
+  },
+} as const;
+
 export const DEFAULT_PUBLISHED_RELEASES = {
   windows: {
     downloadUrl:

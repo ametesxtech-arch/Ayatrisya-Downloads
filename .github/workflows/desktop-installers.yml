@@ -2,11 +2,29 @@ name: Build Ayatrisya desktop installers
 
 on:
   workflow_dispatch:
+    inputs:
+      publish_release:
+        description: 'Publish release to GitHub Releases'
+        required: false
+        type: boolean
+        default: false
+      release_tag:
+        description: 'Release tag override (e.g. v0.0.1)'
+        required: false
+        type: string
+        default: ''
+      is_prerelease:
+        description: 'Mark as pre-release / beta'
+        required: false
+        type: boolean
+        default: true
   push:
     branches:
+      - main
       - replit/desktop-installers
       - "replit/desktop-installers-*"
     tags:
+      - "v*"
       - "desktop-v*"
 
 permissions:
@@ -150,3 +168,72 @@ jobs:
           path: ${{ matrix.artifact }}
           if-no-files-found: error
           retention-days: 30
+
+  release:
+    name: Publish GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v') || startsWith(github.ref, 'refs/tags/desktop-v') || (github.event_name == 'workflow_dispatch' && inputs.publish_release)
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup output directory
+        run: mkdir -p dist-release
+
+      - name: Download Linux installer artifact
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: Ayatrisya-linux
+          path: dist-release
+
+      - name: Download Windows installer artifact
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: Ayatrisya-windows
+          path: dist-release
+
+      - name: Download macOS installer artifact
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: Ayatrisya-mac
+          path: dist-release
+
+      - name: Generate Checksums and Manifest
+        shell: bash
+        run: |
+          cd dist-release
+          ls -la
+          sha256sum *.* > SHA256SUMS.txt || true
+          cat SHA256SUMS.txt
+
+      - name: Determine Release Tag
+        id: tag_info
+        shell: bash
+        run: |
+          if [ -n "${{ inputs.release_tag }}" ]; then
+            TAG="${{ inputs.release_tag }}"
+          elif [[ "$GITHUB_REF" =~ ^refs/tags/ ]]; then
+            TAG="${GITHUB_REF#refs/tags/}"
+          else
+            TAG="v$(node -p "require('./artifacts/ayatrisya/package.json').version")"
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Create / Update GitHub Release
+        uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          files: |
+            dist-release/*
+          tag_name: ${{ steps.tag_info.outputs.tag }}
+          name: Ayatrisya Desktop ${{ steps.tag_info.outputs.tag }}
+          generate_release_notes: true
+          draft: false
+          prerelease: ${{ inputs.is_prerelease || true }}
+          make_latest: true
