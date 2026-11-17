@@ -109,3 +109,4 @@ export function getTheme(themeId?: string): ThemePalette {
   }
   return THEME_PALETTES.slate_emerald;
 }
+

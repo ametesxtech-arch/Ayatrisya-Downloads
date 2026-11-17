@@ -106,3 +106,4 @@ export function synthesizeEnhancedSpeechWav(
 
   return Buffer.concat([wavHeader, pcmBytes]);
 }
+

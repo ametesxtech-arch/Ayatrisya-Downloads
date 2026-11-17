@@ -5,6 +5,7 @@ import app from "../app";
 describe("Presentation Engine API", () => {
   let server: http.Server;
   let baseUrl: string;
+  const userAuth = "Bearer guest:alice";
 
   beforeAll(async () => {
     await new Promise<void>((resolve) => {
@@ -21,7 +22,7 @@ describe("Presentation Engine API", () => {
     await new Promise<void>((resolve) => server.close(() => resolve()));
   });
 
-  it("GET /api/presentations/themes returns curated palettes with WCAG ratings", async () => {
+  it("GET /api/presentations/themes returns curated palettes with WCAG ratings publicly", async () => {
     const res = await fetch(`${baseUrl}/api/presentations/themes`);
     expect(res.status).toBe(200);
     const data = (await res.json()) as any;
@@ -34,10 +35,33 @@ describe("Presentation Engine API", () => {
     expect(emeraldTheme.wcagRating).toBe("AAA");
   });
 
-  it("POST /api/presentations/generate creates a 16:9 deck with diverse archetypes", async () => {
+  it("rejects unauthenticated presentation requests with 401", async () => {
     const res = await fetch(`${baseUrl}/api/presentations/generate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        topic: "Autonomous Distributed Agents",
+      }),
+    });
+    expect(res.status).toBe(401);
+
+    const exportRes = await fetch(`${baseUrl}/api/presentations/export-pptx`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        topic: "Autonomous Distributed Agents",
+      }),
+    });
+    expect(exportRes.status).toBe(401);
+  });
+
+  it("POST /api/presentations/generate creates a 16:9 deck with diverse archetypes for authenticated user", async () => {
+    const res = await fetch(`${baseUrl}/api/presentations/generate`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: userAuth,
+      },
       body: JSON.stringify({
         topic: "Autonomous Distributed Agents",
         slideCount: 6,
@@ -67,10 +91,13 @@ describe("Presentation Engine API", () => {
     }
   });
 
-  it("POST /api/presentations/export-pptx exports clean standards-compliant PPTX binary", async () => {
+  it("POST /api/presentations/export-pptx exports clean standards-compliant PPTX binary with slide master and layouts", async () => {
     const res = await fetch(`${baseUrl}/api/presentations/export-pptx`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: userAuth,
+      },
       body: JSON.stringify({
         topic: "Edge Computing in 2026",
         slideCount: 4,
@@ -96,7 +123,10 @@ describe("Presentation Engine API", () => {
   it("rejects invalid presentation generation requests with 400", async () => {
     const res = await fetch(`${baseUrl}/api/presentations/generate`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: userAuth,
+      },
       body: JSON.stringify({
         topic: "A", // too short (min 2)
       }),

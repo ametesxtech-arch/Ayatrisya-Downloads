@@ -202,4 +202,39 @@ describe('Ayatrisya — Unified Markdown Renderer Acceptance Test Suite', () => 
       expect(html).toContain('href="/workspace/canvas"');
     });
   });
+
+  describe('Priority 1 Quality Restoration: Math, Currency & Streaming KaTeX', () => {
+    it('protects standalone currency amounts ($50 and $100) from being misparsed as KaTeX math', () => {
+      const content = 'The monthly server cost is $50 and the extra disk is $20 per month.';
+      const html = render(content);
+      expect(html).not.toContain('class="katex"');
+      expect(html).toContain('$50');
+      expect(html).toContain('$20');
+    });
+
+    it('accurately renders legitimate inline and block LaTeX formulas via KaTeX', () => {
+      const inlineMath = 'Einstein formulated $E = mc^2$ as equivalence.';
+      const inlineHtml = render(inlineMath);
+      expect(inlineHtml).toContain('class="katex"');
+
+      const blockMath = 'The normal distribution:\n$$\\int_{-\\infty}^{\\infty} e^{-x^2} dx = \\sqrt{\\pi}$$';
+      const blockHtml = render(blockMath);
+      expect(blockHtml).toContain('class="katex"');
+    });
+
+    it('stabilizes streaming incomplete block LaTeX ($$) without leaking broken raw dollars', () => {
+      const streamingMath = 'Computing integral:\n$$\\int_0^1 x^2 dx';
+      const stabilized = stabilizeStreamingMarkdown(streamingMath);
+      expect(stabilized.endsWith('$$')).toBe(true);
+
+      const html = render(streamingMath, { isStreaming: true });
+      expect(html).toContain('class="katex"');
+    });
+
+    it('stabilizes streaming incomplete single italic (*)', () => {
+      const streamingItalic = 'This is *critical';
+      const stabilized = stabilizeStreamingMarkdown(streamingItalic);
+      expect(stabilized).toBe('This is *critical*');
+    });
+  });
 });

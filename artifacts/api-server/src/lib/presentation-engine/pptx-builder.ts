@@ -16,7 +16,7 @@ function escapeXml(unsafe: string): string {
 
 /**
  * Builds a standards-compliant OpenXML PowerPoint (.pptx) file
- * with widescreen 16:9 layout, theme colors, cards, bullets, and speaker notes.
+ * with widescreen 16:9 layout, slide master, slide layouts, theme colors, cards, bullets, and speaker notes.
  */
 export function buildPptxBuffer(deck: PresentationDeck): Buffer {
   const zip = new SimpleZip();
@@ -30,6 +30,8 @@ export function buildPptxBuffer(deck: PresentationDeck): Buffer {
   <Default Extension="xml" ContentType="application/xml"/>
   <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
   <Override PartName="/ppt/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>
+  <Override PartName="/ppt/slideMasters/slideMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"/>
+  <Override PartName="/ppt/slideLayouts/slideLayout1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"/>
   <Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>
   <Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>`;
 
@@ -100,12 +102,77 @@ export function buildPptxBuffer(deck: PresentationDeck): Buffer {
 </a:theme>`;
   zip.addFile("ppt/theme/theme1.xml", themeXml);
 
-  // 6. ppt/presentation.xml (16:9 widescreen = 12192000 x 6858000 EMU)
+  // 6. ppt/slideMasters/slideMaster1.xml & relationships
+  const slideMasterXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+  xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+  xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld>
+    <p:bg>
+      <p:bgPr>
+        <a:solidFill><a:srgbClr val="${theme.background}"/></a:solidFill>
+      </p:bgPr>
+    </p:bg>
+    <p:spTree>
+      <p:nvGrpSpPr>
+        <p:cNvPr id="1" name=""/>
+        <p:cNvGrpSpPr/>
+        <p:nvPr/>
+      </p:nvGrpSpPr>
+      <p:grpSpPr>
+        <a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/><a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm>
+      </p:grpSpPr>
+    </p:spTree>
+  </p:cSld>
+  <p:clrMap bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink"/>
+  <p:sldLayoutIdLst>
+    <p:sldLayoutId id="2147483649" r:id="rIdLayout1"/>
+  </p:sldLayoutIdLst>
+</p:sldMaster>`;
+  zip.addFile("ppt/slideMasters/slideMaster1.xml", slideMasterXml);
+
+  const slideMasterRelsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rIdLayout1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/>
+  <Relationship Id="rIdTheme1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="../theme/theme1.xml"/>
+</Relationships>`;
+  zip.addFile("ppt/slideMasters/_rels/slideMaster1.xml.rels", slideMasterRelsXml);
+
+  // 7. ppt/slideLayouts/slideLayout1.xml & relationships
+  const slideLayoutXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldLayout xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+  xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+  xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" type="blank">
+  <p:cSld>
+    <p:spTree>
+      <p:nvGrpSpPr>
+        <p:cNvPr id="1" name=""/>
+        <p:cNvGrpSpPr/>
+        <p:nvPr/>
+      </p:nvGrpSpPr>
+      <p:grpSpPr>
+        <a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/><a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm>
+      </p:grpSpPr>
+    </p:spTree>
+  </p:cSld>
+  <p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr>
+</p:sldLayout>`;
+  zip.addFile("ppt/slideLayouts/slideLayout1.xml", slideLayoutXml);
+
+  const slideLayoutRelsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rIdMaster1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="../slideMasters/slideMaster1.xml"/>
+</Relationships>`;
+  zip.addFile("ppt/slideLayouts/_rels/slideLayout1.xml.rels", slideLayoutRelsXml);
+
+  // 8. ppt/presentation.xml (16:9 widescreen = 12192000 x 6858000 EMU)
   let presentationXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
   xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
   xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
-  <p:sldMasterIdLst/>
+  <p:sldMasterIdLst>
+    <p:sldMasterId id="2147483648" r:id="rIdMaster1"/>
+  </p:sldMasterIdLst>
   <p:sldIdLst>`;
 
   for (let i = 1; i <= slideCount; i++) {
@@ -118,10 +185,11 @@ export function buildPptxBuffer(deck: PresentationDeck): Buffer {
 </p:presentation>`;
   zip.addFile("ppt/presentation.xml", presentationXml);
 
-  // 7. ppt/_rels/presentation.xml.rels
+  // 9. ppt/_rels/presentation.xml.rels
   let presRelsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Id="rIdTheme1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/>`;
+  <Relationship Id="rIdTheme1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/>
+  <Relationship Id="rIdMaster1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/>`;
 
   for (let i = 1; i <= slideCount; i++) {
     presRelsXml += `\n  <Relationship Id="rIdSlide${i}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide${i}.xml"/>`;
@@ -129,7 +197,7 @@ export function buildPptxBuffer(deck: PresentationDeck): Buffer {
   presRelsXml += `\n</Relationships>`;
   zip.addFile("ppt/_rels/presentation.xml.rels", presRelsXml);
 
-  // 8. Generate each slide and notesSlide
+  // 10. Generate each slide and notesSlide
   deck.slides.forEach((slide, idx) => {
     const slideNum = idx + 1;
     const slideXml = generateSlideXml(slide, theme);
@@ -137,6 +205,7 @@ export function buildPptxBuffer(deck: PresentationDeck): Buffer {
 
     const slideRelsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rIdLayout1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/>
   <Relationship Id="rIdNotes" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/notesSlide" Target="../notesSlides/notesSlide${slideNum}.xml"/>
 </Relationships>`;
     zip.addFile(`ppt/slides/_rels/slide${slideNum}.xml.rels`, slideRelsXml);

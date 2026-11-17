@@ -69,8 +69,10 @@ export async function verifiedFirebaseUid(
   } catch (firebaseErr) {
     // Check for guest authorization (e.g. Bearer guest or guest:...)
     if (match[1] === "guest" || match[1].startsWith("guest:")) {
-      const clientIp = req.ip || req.socket.remoteAddress || "guest";
-      const guestUid = `guest-${clientIp.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
+      const guestSuffix = match[1].startsWith("guest:")
+        ? match[1].slice(6)
+        : (req.ip || req.socket.remoteAddress || "guest");
+      const guestUid = `guest-${guestSuffix.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
       return guestUid;
     }
 

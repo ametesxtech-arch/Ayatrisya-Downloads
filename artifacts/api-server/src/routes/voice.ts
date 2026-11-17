@@ -1,9 +1,16 @@
 import express, { Router, type IRouter, type Request, type Response } from "express";
 import { z } from "zod";
+import { verifiedFirebaseUid } from "../lib/firebase-auth";
 import { normalizePhoneticsForSpeech } from "../lib/voice-engine/phonetic-normalizer";
 import { synthesizeEnhancedSpeechWav, type VoicePersona } from "../lib/voice-engine/voice-synthesizer";
 
 const router: IRouter = Router();
+
+const authMessages = {
+  missing: "Sign in to Ayatrisya to access speech synthesis.",
+  unavailable: "Authentication service is temporarily unavailable.",
+  invalid: "Your sign-in session expired. Sign in again and retry.",
+};
 
 const SynthesizeVoiceSchema = z.object({
   text: z.string().min(1, "Text is required for speech synthesis"),
@@ -13,7 +20,7 @@ const SynthesizeVoiceSchema = z.object({
   phoneticPreprocess: z.boolean().optional().default(true),
 });
 
-// GET /api/voice/profiles
+// GET /api/voice/profiles - public discovery
 router.get("/voice/profiles", (_req: Request, res: Response) => {
   res.status(200).json({
     defaultProfile: "ayatrisya-neural",
@@ -45,8 +52,11 @@ router.get("/voice/profiles", (_req: Request, res: Response) => {
   });
 });
 
-// POST /api/voice/normalize (preview phonetic transformation)
-router.post("/voice/normalize", (req: Request, res: Response) => {
+// POST /api/voice/normalize (authenticated)
+router.post("/voice/normalize", async (req: Request, res: Response) => {
+  const uid = await verifiedFirebaseUid(req, res, authMessages);
+  if (!uid) return;
+
   const text = req.body?.text;
   if (!text || typeof text !== "string") {
     res.status(400).json({ error: "Text string is required" });
@@ -60,8 +70,11 @@ router.post("/voice/normalize", (req: Request, res: Response) => {
   });
 });
 
-// POST /api/voice/synthesize
-router.post("/voice/synthesize", (req: Request, res: Response) => {
+// POST /api/voice/synthesize (authenticated)
+router.post("/voice/synthesize", async (req: Request, res: Response) => {
+  const uid = await verifiedFirebaseUid(req, res, authMessages);
+  if (!uid) return;
+
   const parsed = SynthesizeVoiceSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({

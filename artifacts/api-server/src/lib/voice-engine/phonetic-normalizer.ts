@@ -76,3 +76,4 @@ export function normalizePhoneticsForSpeech(rawText: string): string {
   // Clean extra whitespace
   return text.replace(/\s+/g, " ").trim();
 }
+

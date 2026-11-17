@@ -1,9 +1,16 @@
 import express, { Router, type IRouter, type Request, type Response } from "express";
 import { z } from "zod";
+import { verifiedFirebaseUid } from "../lib/firebase-auth";
 import { globalUploadEngine } from "../lib/upload-engine/session-store";
 import { analyzeDocument, queryDocumentGrounding } from "../lib/document-intelligence/extractor";
 
 const router: IRouter = Router();
+
+const authMessages = {
+  missing: "Sign in to Ayatrisya to upload and process files.",
+  unavailable: "Authentication service is temporarily unavailable.",
+  invalid: "Your sign-in session expired. Sign in again and retry.",
+};
 
 const InitUploadSchema = z.object({
   fileName: z.string().min(1, "fileName is required"),
@@ -13,11 +20,18 @@ const InitUploadSchema = z.object({
   clientHash: z.string().optional(),
 });
 
-// Cache completed document analysis in memory for grounded retrieval
-const documentAnalysisCache = new Map<string, any>();
+// Cache completed document analysis in memory with user ownership tag
+interface CachedAnalysis {
+  userId: string;
+  analysis: any;
+}
+const documentAnalysisCache = new Map<string, CachedAnalysis>();
 
 // 1. POST /api/uploads/init
-router.post("/uploads/init", (req: Request, res: Response) => {
+router.post("/uploads/init", async (req: Request, res: Response) => {
+  const uid = await verifiedFirebaseUid(req, res, authMessages);
+  if (!uid) return;
+
   const parsed = InitUploadSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({
@@ -34,6 +48,7 @@ router.post("/uploads/init", (req: Request, res: Response) => {
       mimeType: parsed.data.mimeType,
       totalChunks: parsed.data.totalChunks,
       clientHash: parsed.data.clientHash,
+      userId: uid,
     });
 
     res.status(201).json({
@@ -50,10 +65,12 @@ router.post("/uploads/init", (req: Request, res: Response) => {
 });
 
 // 2. PATCH /api/uploads/:uploadId/chunk
-// Use raw body buffer middleware specifically for this chunk endpoint
 const rawParser = express.raw({ type: "*/*", limit: "20mb" });
 
 router.patch("/uploads/:uploadId/chunk", rawParser, async (req: Request, res: Response) => {
+  const uid = await verifiedFirebaseUid(req, res, authMessages);
+  if (!uid) return;
+
   const uploadId = req.params.uploadId as string;
   const rawIndex = req.headers["x-chunk-index"];
   const checksum = req.headers["x-chunk-checksum"] as string | undefined;
@@ -83,6 +100,7 @@ router.patch("/uploads/:uploadId/chunk", rawParser, async (req: Request, res: Re
   try {
     const result = await globalUploadEngine.saveChunk({
       uploadId,
+      userId: uid,
       chunkIndex,
       chunkBuffer: buffer,
       chunkChecksum: checksum,
@@ -96,12 +114,16 @@ router.patch("/uploads/:uploadId/chunk", rawParser, async (req: Request, res: Re
       bytesUploaded: result.bytesUploaded,
     });
   } catch (err: any) {
-    res.status(400).json({ error: err?.message || "Failed to process chunk" });
+    const isAuth = err?.message?.includes("Unauthorized");
+    res.status(isAuth ? 403 : 400).json({ error: err?.message || "Failed to process chunk" });
   }
 });
 
 // 3. POST /api/uploads/:uploadId/complete
 router.post("/uploads/:uploadId/complete", async (req: Request, res: Response) => {
+  const uid = await verifiedFirebaseUid(req, res, authMessages);
+  if (!uid) return;
+
   const uploadId = req.params.uploadId as string;
   const session = globalUploadEngine.getSession(uploadId);
 
@@ -110,14 +132,19 @@ router.post("/uploads/:uploadId/complete", async (req: Request, res: Response) =
     return;
   }
 
+  if (session.userId && session.userId !== uid) {
+    res.status(403).json({ error: "Unauthorized: you do not have permission to assemble this session." });
+    return;
+  }
+
   try {
-    const assembled = await globalUploadEngine.assembleFile(uploadId);
+    const assembled = await globalUploadEngine.assembleFile(uploadId, uid);
 
     // Run document intelligence analysis on assembled file
     let analysis = null;
     try {
       analysis = await analyzeDocument(assembled.assembledPath, session.fileName, session.mimeType);
-      documentAnalysisCache.set(uploadId, analysis);
+      documentAnalysisCache.set(uploadId, { userId: uid, analysis });
     } catch {}
 
     res.status(200).json({
@@ -135,17 +162,26 @@ router.post("/uploads/:uploadId/complete", async (req: Request, res: Response) =
       } : null,
     });
   } catch (err: any) {
-    res.status(400).json({ error: err?.message || "Failed to assemble file" });
+    const isAuth = err?.message?.includes("Unauthorized");
+    res.status(isAuth ? 403 : 400).json({ error: err?.message || "Failed to assemble file" });
   }
 });
 
 // 4. GET /api/uploads/:uploadId/status
-router.get("/uploads/:uploadId/status", (req: Request, res: Response) => {
+router.get("/uploads/:uploadId/status", async (req: Request, res: Response) => {
+  const uid = await verifiedFirebaseUid(req, res, authMessages);
+  if (!uid) return;
+
   const uploadId = req.params.uploadId as string;
   const session = globalUploadEngine.getSession(uploadId);
 
   if (!session) {
     res.status(404).json({ error: `Upload session '${uploadId}' not found.` });
+    return;
+  }
+
+  if (session.userId && session.userId !== uid) {
+    res.status(403).json({ error: "Unauthorized: you cannot view another user's upload session." });
     return;
   }
 
@@ -165,7 +201,10 @@ router.get("/uploads/:uploadId/status", (req: Request, res: Response) => {
 });
 
 // 5. POST /api/uploads/:uploadId/query (Grounded Q&A with citations)
-router.post("/uploads/:uploadId/query", (req: Request, res: Response) => {
+router.post("/uploads/:uploadId/query", async (req: Request, res: Response) => {
+  const uid = await verifiedFirebaseUid(req, res, authMessages);
+  if (!uid) return;
+
   const uploadId = req.params.uploadId as string;
   const query = req.body?.query;
 
@@ -174,13 +213,18 @@ router.post("/uploads/:uploadId/query", (req: Request, res: Response) => {
     return;
   }
 
-  const analysis = documentAnalysisCache.get(uploadId);
-  if (!analysis) {
+  const cached = documentAnalysisCache.get(uploadId);
+  if (!cached) {
     res.status(404).json({ error: "Document intelligence analysis not found for this session." });
     return;
   }
 
-  const citations = queryDocumentGrounding(analysis.chunks, query, 4);
+  if (cached.userId !== uid) {
+    res.status(403).json({ error: "Unauthorized: you do not have permission to query this document." });
+    return;
+  }
+
+  const citations = queryDocumentGrounding(cached.analysis.chunks, query, 4);
 
   res.status(200).json({
     success: true,
@@ -191,17 +235,30 @@ router.post("/uploads/:uploadId/query", (req: Request, res: Response) => {
 });
 
 // 6. DELETE /api/uploads/:uploadId
-router.delete("/uploads/:uploadId", (req: Request, res: Response) => {
-  const uploadId = req.params.uploadId as string;
-  const deleted = globalUploadEngine.deleteSession(uploadId);
-  documentAnalysisCache.delete(uploadId);
+router.delete("/uploads/:uploadId", async (req: Request, res: Response) => {
+  const uid = await verifiedFirebaseUid(req, res, authMessages);
+  if (!uid) return;
 
-  if (!deleted) {
+  const uploadId = req.params.uploadId as string;
+  const session = globalUploadEngine.getSession(uploadId);
+
+  if (!session) {
     res.status(404).json({ error: `Upload session '${uploadId}' not found.` });
     return;
   }
 
-  res.status(200).json({ success: true, message: `Session ${uploadId} cleaned up.` });
+  if (session.userId && session.userId !== uid) {
+    res.status(403).json({ error: "Unauthorized: you cannot delete another user's upload session." });
+    return;
+  }
+
+  try {
+    globalUploadEngine.deleteSession(uploadId, uid);
+    documentAnalysisCache.delete(uploadId);
+    res.status(200).json({ success: true, message: `Session ${uploadId} cleaned up.` });
+  } catch (err: any) {
+    res.status(403).json({ error: err?.message || "Failed to delete session" });
+  }
 });
 
 export default router;

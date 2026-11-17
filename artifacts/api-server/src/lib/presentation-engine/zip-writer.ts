@@ -125,3 +125,4 @@ export class SimpleZip {
     return Buffer.concat(parts);
   }
 }
+

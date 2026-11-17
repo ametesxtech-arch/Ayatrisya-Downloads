@@ -5,6 +5,7 @@ import app from "../app";
 describe("Voice Intelligence & Speech Synthesis API", () => {
   let server: http.Server;
   let baseUrl: string;
+  const userAuth = "Bearer guest:alice";
 
   beforeAll(async () => {
     await new Promise<void>((resolve) => {
@@ -21,7 +22,7 @@ describe("Voice Intelligence & Speech Synthesis API", () => {
     await new Promise<void>((resolve) => server.close(() => resolve()));
   });
 
-  it("GET /api/voice/profiles returns neural personas and multilingual capability", async () => {
+  it("GET /api/voice/profiles returns neural personas and multilingual capability publicly", async () => {
     const res = await fetch(`${baseUrl}/api/voice/profiles`);
     expect(res.status).toBe(200);
     const data = (await res.json()) as any;
@@ -31,10 +32,29 @@ describe("Voice Intelligence & Speech Synthesis API", () => {
     expect(data.supportedLanguages).toContain("Odia");
   });
 
-  it("POST /api/voice/normalize correctly normalizes currency, acronyms, and Indian phonetics", async () => {
-    const res = await fetch(`${baseUrl}/api/voice/normalize`, {
+  it("rejects unauthenticated voice normalization and synthesis with 401", async () => {
+    const normRes = await fetch(`${baseUrl}/api/voice/normalize`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: "Hello" }),
+    });
+    expect(normRes.status).toBe(401);
+
+    const synthRes = await fetch(`${baseUrl}/api/voice/synthesize`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: "Hello" }),
+    });
+    expect(synthRes.status).toBe(401);
+  });
+
+  it("POST /api/voice/normalize correctly normalizes currency, acronyms, and Indian phonetics for authenticated user", async () => {
+    const res = await fetch(`${baseUrl}/api/voice/normalize`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: userAuth,
+      },
       body: JSON.stringify({
         text: "Namaste! Welcome to Ayatrisya API. The subscription fee is ₹500 with 18% GST.",
       }),
@@ -48,10 +68,13 @@ describe("Voice Intelligence & Speech Synthesis API", () => {
     expect(data.normalizedText).toContain("Aaya-tree-sha");
   });
 
-  it("POST /api/voice/synthesize returns valid 24kHz PCM WAV audio binary", async () => {
+  it("POST /api/voice/synthesize returns valid 24kHz PCM WAV audio binary for authenticated user", async () => {
     const res = await fetch(`${baseUrl}/api/voice/synthesize`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: userAuth,
+      },
       body: JSON.stringify({
         text: "Ayatrisya distributed engine is operational.",
         voice: "ayatrisya-neural",
@@ -75,7 +98,10 @@ describe("Voice Intelligence & Speech Synthesis API", () => {
   it("rejects invalid speech synthesis parameters with 400", async () => {
     const res = await fetch(`${baseUrl}/api/voice/synthesize`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: userAuth,
+      },
       body: JSON.stringify({
         text: "", // empty text
       }),

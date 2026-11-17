@@ -2,11 +2,12 @@ import { createHash, randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
-import { pipeline } from "node:stream/promises";
 
 export const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500 MB max limit
 export const MAX_CHUNK_SIZE = 15 * 1024 * 1024; // 15 MB max per chunk
 export const SESSION_TTL_MS = 60 * 60 * 1000; // 1 hour TTL
+export const MAX_GLOBAL_STAGING_BYTES = 1500 * 1024 * 1024; // 1.5 GB global buffer cap
+export const MAX_USER_CONCURRENT_UPLOADS = 2; // 2 concurrent uploads per user
 
 export interface UploadSession {
   uploadId: string;
@@ -59,6 +60,27 @@ export class UploadEngine {
       throw new Error("Total chunks must be at least 1.");
     }
 
+    // 1. Check Global Staging Quota
+    let currentStagedBytes = 0;
+    let userActiveUploads = 0;
+    for (const s of this.sessions.values()) {
+      if (s.status === "uploading" || s.status === "assembled") {
+        currentStagedBytes += s.fileSize;
+        if (params.userId && s.userId === params.userId) {
+          userActiveUploads++;
+        }
+      }
+    }
+
+    if (currentStagedBytes + params.fileSize > MAX_GLOBAL_STAGING_BYTES) {
+      throw new Error("Global upload staging capacity reached (1.5 GB limit). Please wait for active uploads to finalize.");
+    }
+
+    // 2. Check User Concurrency Quota
+    if (params.userId && userActiveUploads >= MAX_USER_CONCURRENT_UPLOADS) {
+      throw new Error(`User upload concurrency quota exceeded (maximum ${MAX_USER_CONCURRENT_UPLOADS} active uploads per user).`);
+    }
+
     const uploadId = `upl_${randomUUID().replace(/-/g, "")}`;
     const sessionTempDir = path.join(this.baseTempDir, uploadId);
     fs.mkdirSync(sessionTempDir, { recursive: true });
@@ -82,16 +104,27 @@ export class UploadEngine {
     return { uploadId, session };
   }
 
+  verifySessionOwner(uploadId: string, userId?: string): UploadSession {
+    const session = this.sessions.get(uploadId);
+    if (!session) {
+      throw new Error(`Upload session '${uploadId}' was not found or has expired.`);
+    }
+
+    if (session.userId && userId && session.userId !== userId) {
+      throw new Error("Unauthorized: you do not have permission to access or modify this upload session.");
+    }
+
+    return session;
+  }
+
   async saveChunk(params: {
     uploadId: string;
+    userId?: string;
     chunkIndex: number;
     chunkBuffer: Buffer;
     chunkChecksum?: string;
   }): Promise<{ chunkIndex: number; verified: boolean; bytesUploaded: number; progressPercent: number }> {
-    const session = this.sessions.get(params.uploadId);
-    if (!session) {
-      throw new Error(`Upload session '${params.uploadId}' was not found or has expired.`);
-    }
+    const session = this.verifySessionOwner(params.uploadId, params.userId);
 
     if (params.chunkIndex < 0 || params.chunkIndex >= session.totalChunks) {
       throw new Error(`Chunk index ${params.chunkIndex} out of bounds (total: ${session.totalChunks}).`);
@@ -127,11 +160,8 @@ export class UploadEngine {
     };
   }
 
-  async assembleFile(uploadId: string): Promise<{ assembledPath: string; sha256: string; totalBytes: number }> {
-    const session = this.sessions.get(uploadId);
-    if (!session) {
-      throw new Error(`Upload session '${uploadId}' was not found.`);
-    }
+  async assembleFile(uploadId: string, userId?: string): Promise<{ assembledPath: string; sha256: string; totalBytes: number }> {
+    const session = this.verifySessionOwner(uploadId, userId);
 
     if (session.uploadedChunks.size < session.totalChunks) {
       throw new Error(
@@ -203,11 +233,26 @@ export class UploadEngine {
         this.sessions.delete(id);
       }
     }
+
+    // Clean orphaned directories on disk (e.g. from prior process crashes)
+    try {
+      if (fs.existsSync(this.baseTempDir)) {
+        const dirs = fs.readdirSync(this.baseTempDir);
+        for (const dirName of dirs) {
+          if (!this.sessions.has(dirName)) {
+            const fullPath = path.join(this.baseTempDir, dirName);
+            const stats = fs.statSync(fullPath);
+            if (now - stats.mtimeMs > SESSION_TTL_MS) {
+              fs.rmSync(fullPath, { recursive: true, force: true });
+            }
+          }
+        }
+      }
+    } catch {}
   }
 
-  deleteSession(uploadId: string): boolean {
-    const session = this.sessions.get(uploadId);
-    if (!session) return false;
+  deleteSession(uploadId: string, userId?: string): boolean {
+    const session = this.verifySessionOwner(uploadId, userId);
     try {
       if (fs.existsSync(session.tempDir)) {
         fs.rmSync(session.tempDir, { recursive: true, force: true });

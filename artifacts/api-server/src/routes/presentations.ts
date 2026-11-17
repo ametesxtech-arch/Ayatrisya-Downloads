@@ -1,5 +1,6 @@
 import express, { Router, type IRouter, type Request, type Response } from "express";
 import { z } from "zod";
+import { verifiedFirebaseUid } from "../lib/firebase-auth";
 import { GenerateDeckRequestSchema } from "../lib/presentation-engine/types";
 import { generateStructuredDeck } from "../lib/presentation-engine/deck-generator";
 import { buildPptxBuffer } from "../lib/presentation-engine/pptx-builder";
@@ -7,7 +8,13 @@ import { THEME_PALETTES } from "../lib/presentation-engine/theme-system";
 
 const router: IRouter = Router();
 
-// GET /api/presentations/themes - returns curated themes and contrast metrics
+const authMessages = {
+  missing: "Sign in to Ayatrisya to generate and export presentations.",
+  unavailable: "Authentication service is temporarily unavailable.",
+  invalid: "Your sign-in session expired. Sign in again and retry.",
+};
+
+// GET /api/presentations/themes - returns curated themes and contrast metrics (public metadata)
 router.get("/presentations/themes", (_req: Request, res: Response) => {
   const themes = Object.values(THEME_PALETTES).map((t) => ({
     id: t.id,
@@ -23,8 +30,11 @@ router.get("/presentations/themes", (_req: Request, res: Response) => {
   res.status(200).json({ themes });
 });
 
-// POST /api/presentations/generate - generates structured deck
-router.post("/presentations/generate", (req: Request, res: Response) => {
+// POST /api/presentations/generate - generates structured deck (authenticated)
+router.post("/presentations/generate", async (req: Request, res: Response) => {
+  const uid = await verifiedFirebaseUid(req, res, authMessages);
+  if (!uid) return;
+
   const parsed = GenerateDeckRequestSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({
@@ -41,8 +51,11 @@ router.post("/presentations/generate", (req: Request, res: Response) => {
   });
 });
 
-// POST /api/presentations/export-pptx - builds downloadable PPTX binary
-router.post("/presentations/export-pptx", (req: Request, res: Response) => {
+// POST /api/presentations/export-pptx - builds downloadable PPTX binary (authenticated)
+router.post("/presentations/export-pptx", async (req: Request, res: Response) => {
+  const uid = await verifiedFirebaseUid(req, res, authMessages);
+  if (!uid) return;
+
   let deck = req.body?.deck;
 
   // If client passed generate parameters instead of full deck, generate it first

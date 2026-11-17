@@ -76,8 +76,33 @@ export function stabilizeStreamingMarkdown(raw: string): string {
         segment += '__';
       }
 
-      // 4. Incomplete table rows (e.g. '| Col 1 | Col 2' without trailing | or newline)
-      if (segment.includes('|') && segment.includes('---')) {
+      // 4. Unclosed block math: $$
+      const blockMathMatches = segment.match(/(?<!\\)\$\$/g);
+      if (blockMathMatches && blockMathMatches.length % 2 === 1) {
+        segment += '$$';
+        return segment;
+      }
+
+      // 5. Unclosed inline math: $ (not block math)
+      const inlineMathMatches = segment.match(/(?<!\\|\$)\$(?!\$)/g);
+      if (inlineMathMatches && inlineMathMatches.length % 2 === 1) {
+        segment += '$';
+        return segment;
+      }
+
+      // 6. Unclosed single italic: * or _ (outside math)
+      const italicMatches = segment.match(/(?<!\*)\*(?!\*)/g);
+      if (italicMatches && italicMatches.length % 2 === 1) {
+        segment += '*';
+      }
+
+      const underscoreItalics = segment.match(/(?<!_)_(?!_)/g);
+      if (underscoreItalics && underscoreItalics.length % 2 === 1) {
+        segment += '_';
+      }
+
+      // 7. Incomplete table rows (e.g. '| Col 1 | Col 2' without trailing | or newline)
+      if (segment.includes('|')) {
         const lines = segment.split('\n');
         const lastLine = lines[lines.length - 1];
         if (lastLine.trim().startsWith('|') && !lastLine.trim().endsWith('|')) {
@@ -132,8 +157,11 @@ export function normalizeMarkdown(
 
           let prose = sub;
 
+          // Disambiguate standalone currency amounts ($50, $1,000, $4.99) so remark-math does not misparse them as LaTeX
+          prose = prose.replace(/(^|[\s(])\$(\d+(?:,\d+)*(?:\.\d+)?)(?=$|[\s),.?!;:])/g, (_m, p1, p2) => `${p1}&#36;${p2}`);
+
           // Normalize KaTeX math output (\[ ... \] -> $$, \( ... \) -> $)
-          prose = prose.replace(/\\\[([\s\S]*?)\\\]/g, (_m, math: string) => `$$\n${math.trim()}\n$$`);
+          prose = prose.replace(/\\\[([\s\S]*?)\\\]/g, (_m, math: string) => `\n\n$$\n${math.trim()}\n$$\n\n`);
           prose = prose.replace(/\\\(([\s\S]*?)\\\)/g, (_m, math: string) => `$${math.trim()}$`);
           prose = prose.replace(/\\\$([^\s$][^$]*?[^\s$]?)\\\$/g, (_m, math: string) => `$${math.trim()}$`);
 

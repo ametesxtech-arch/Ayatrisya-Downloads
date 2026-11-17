@@ -45,3 +45,4 @@ describe("Streaming Markdown Recovery", () => {
     expect(res.safeText.endsWith("|")).toBe(true);
   });
 });
+

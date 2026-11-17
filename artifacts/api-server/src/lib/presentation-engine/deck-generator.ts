@@ -208,3 +208,4 @@ export function generateStructuredDeck(req: GenerateDeckRequest): PresentationDe
     updatedAt: new Date().toISOString(),
   };
 }
+
