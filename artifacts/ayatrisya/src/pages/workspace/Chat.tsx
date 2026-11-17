@@ -718,7 +718,7 @@ function ChatContent({ path, goto, notify }: { path: string; goto: (h: string) =
                       <MarkdownRenderer content={m.content} messageId={m.id} />
 
                       {/* Render generated images and attachments */}
-                      {m.attachmentIds.length > 0 && <div className="mt-3 flex flex-col gap-2">
+                      {(m.attachmentIds?.length ?? 0) > 0 && <div className="mt-3 flex flex-col gap-2">
                         {m.attachmentIds.map((a) => {
                           const att = attMap.get(a);
                           if (!att) return null;
